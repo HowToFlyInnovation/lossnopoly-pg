@@ -70,8 +70,8 @@ const RegisterPage: React.FC = () => {
         setMessage(
           "Registration successful! A verification email has been sent to your email address. Please verify to log in."
         );
-        // Redirect user to the /loginVerifyReminderPage page after successful registration and email sent
-        navigate("/loginVerifyReminderPage");
+        // Redirect user to the /verify-email page after successful registration and email sent
+        navigate("/verify-email");
       }
     } catch (err: any) {
       console.error("Registration error:", err.message);

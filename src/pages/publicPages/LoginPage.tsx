@@ -3,47 +3,82 @@ import React from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import LoginLogo from "@/assets/LoginLogo.png";
 import LoginBackground from "@/assets/LoginBackground.png";
-import { auth } from "../firebase/config"; // Import auth instance
-import { signInWithEmailAndPassword } from "firebase/auth"; // Import Firebase auth function
-import { useNavigate } from "react-router-dom"; // Import useNavigate hook
+import { auth, db } from "../firebase/config";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
+// Import the necessary Firestore functions
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+  increment,
+} from "firebase/firestore";
 
-// Define the component as a Functional Component with React.FC
 const LoginPage: React.FC = () => {
-  // Type the state variables
   const [email, setEmail] = React.useState<string>("");
   const [password, setPassword] = React.useState<string>("");
   const [showPassword, setShowPassword] = React.useState<boolean>(false);
-  const [error, setError] = React.useState<string | null>(null); // State for error messages
-  const navigate = useNavigate(); // Initialize navigate hook
+  const [error, setError] = React.useState<string | null>(null);
+  const navigate = useNavigate();
 
-  // Type the event for the password toggle button
   const handlePasswordToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault(); // Prevent form submission on button click
+    e.preventDefault();
     setShowPassword(!showPassword);
   };
 
-  // Type the event for the form submission
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null); // Clear previous errors
+    setError(null);
 
     try {
-      // Sign in user with email and password
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email,
         password
       );
       const user = userCredential.user;
-      console.log("Logged in user:", user);
-      // Redirect to homepage after successful login
-      navigate("/homepage"); // Redirect to the homepage after successful login
+
+      if (user) {
+        // --- ✨ NEW FRONT-END LOGIC ✨ ---
+        const playerDocRef = doc(db, "players", user.uid);
+        const playerDocSnap = await getDoc(playerDocRef);
+
+        if (playerDocSnap.exists()) {
+          // Document exists: This is a returning user.
+          // Update their last login time and increment login count.
+          await updateDoc(playerDocRef, {
+            lastLogin: serverTimestamp(),
+            loginCount: increment(1),
+          });
+          console.log("Player stats updated for returning user:", user.uid);
+        } else {
+          // Document does not exist: This is a new user's first login.
+          // Create the player document.
+          await setDoc(playerDocRef, {
+            userId: user.uid,
+            email: user.email || "",
+            displayName: user.displayName || "Anonymous", // Get displayName set during registration
+            profilePic:
+              "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png",
+            lastLogin: serverTimestamp(),
+            loginCount: 1, // First login
+            createdAt: serverTimestamp(),
+          });
+          console.log("New player document created for user:", user.uid);
+        }
+        // --- END OF NEW LOGIC ---
+
+        navigate("/homepage");
+      }
     } catch (err: any) {
       console.error("Login error:", err.message);
-      setError(err.message); // Display Firebase error messages to the user
+      setError(err.message);
     }
   };
 
+  // ... rest of your component JSX
   return (
     <div
       className="flex items-center justify-center min-h-screen w-screen bg-center bg-fixed"
@@ -54,6 +89,7 @@ const LoginPage: React.FC = () => {
           <img src={LoginLogo} alt="Logo" className="w-[80%]" />
         </div>
         <form className="space-y-6" onSubmit={handleLogin}>
+          {/* Email */}
           <div>
             <label
               htmlFor="email"
@@ -65,15 +101,13 @@ const LoginPage: React.FC = () => {
               type="email"
               id="email"
               value={email}
-              // Type the change event
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setEmail(e.target.value)
-              }
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full p-2 mt-1 text-gray-100 bg-transparent border-b-2 border-gray-300 focus:outline-none focus:border-blue-400"
               placeholder="you@example.com"
               required
             />
           </div>
+          {/* Password */}
           <div className="relative">
             <label
               htmlFor="password"
@@ -85,10 +119,7 @@ const LoginPage: React.FC = () => {
               type={showPassword ? "text" : "password"}
               id="password"
               value={password}
-              // Type the change event
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setPassword(e.target.value)
-              }
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full p-2 mt-1 text-gray-100 bg-transparent border-b-2 border-gray-300 focus:outline-none focus:border-blue-400"
               placeholder="********"
               required

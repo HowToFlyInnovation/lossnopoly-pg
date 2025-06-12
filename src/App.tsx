@@ -1,88 +1,108 @@
-// src/App.tsx
-import React, { useState, useContext } from "react"; // Import useContext
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-// Update import path to .tsx
-import {
-  AuthContext,
-  AuthContextProvider,
-} from "./pages/context/AuthContext.tsx";
+import React, { useContext, useState } from "react";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { AuthContext } from "./pages/context/AuthContext";
 
-import LoginPage from "./pages/publicPages/LoginPage.tsx";
-import LoginVerifyReminderPage from "./pages/publicPages/LoginVerifyReminderPage.tsx";
-import RegisterPage from "./pages/publicPages/RegisterPage.tsx";
-import IdeationHomePage from "./pages/privatePages/IdeationHomePage.tsx";
+// Import your page components
+import LoginPage from "./pages/publicPages/LoginPage";
+import RegisterPage from "./pages/publicPages/RegisterPage";
+import IdeationHomePage from "./pages/privatePages/IdeationHomePage";
+// Corrected the import path by adding the file extension
+import LoginVerifyReminderPage from "./pages/publicPages/LoginPageVerify.tsx";
 
-const App: React.FC = () => {
-  const [menuActive, setMenuActive] = useState<boolean>(false);
-  const [, setVisibleContent] = useState<string>("some-default-view");
-  const customTheme = true;
+/**
+ * A component to protect routes that require authentication.
+ */
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const context = useContext(AuthContext);
 
-  return (
-    <div className="App">
-      <BrowserRouter>
-        <AuthContextProvider>
-          {" "}
-          {/* Wrap your routes with AuthContextProvider*/}
-          <Routes>
-            <Route path="/" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route
-              path="/loginverifyreminderpage"
-              element={<LoginVerifyReminderPage />}
-            />
-            <Route
-              path="/homepage"
-              element={
-                <AuthRoute>
-                  {" "}
-                  {/* Protect the IdeationHomePage route */}
-                  <IdeationHomePage
-                    customTheme={customTheme}
-                    menuActive={menuActive}
-                    setMenuActive={setMenuActive}
-                    setVisibleContent={setVisibleContent}
-                  />
-                </AuthRoute>
-              }
-            />
-          </Routes>
-        </AuthContextProvider>
-      </BrowserRouter>
-    </div>
-  );
+  if (!context) {
+    return <Navigate to="/" replace />;
+  }
+
+  const { user, authIsReady } = context;
+
+  if (!authIsReady) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (!user.emailVerified) {
+    return <Navigate to="/verify-email" replace />;
+  }
+
+  return <>{children}</>;
 };
 
-// Component to protect routes based on authentication state
-const AuthRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Explicitly type the context consumption
-  const authContext = useContext(AuthContext);
+function App() {
+  const context = useContext(AuthContext);
 
-  // Handle the case where authContext is null (e.g., AuthContextProvider not rendered)
-  if (!authContext) {
-    console.error(
-      "AuthContext is not provided. Is AuthContextProvider rendered?"
-    );
-    // You might want to render an error message or throw an error here
-    // For production, you might want a more user-friendly fallback
+  // State for the IdeationHomePage component
+  const [menuActive, setMenuActive] = useState(false);
+  const [visibleContent, setVisibleContent] = useState("Default");
+  const [customTheme, setCustomTheme] = useState(false);
+
+  if (!context) {
     return (
       <div>
-        Error: Authentication context not available. Please ensure
-        AuthContextProvider is rendered.
+        Error: AuthContext not found. Ensure App is wrapped in
+        AuthContextProvider.
       </div>
     );
   }
 
-  // Destructure from the now-typed authContext
-  const { user, authIsReady } = authContext;
+  const { user } = context;
 
-  // If auth is not ready, you might want to show a loading spinner
-  if (!authIsReady) {
-    return <div>Loading authentication...</div>;
-  }
+  return (
+    <div className="App">
+      <BrowserRouter>
+        <Routes>
+          {/* --- Public Routes --- */}
+          <Route
+            path="/"
+            element={user ? <Navigate to="/homepage" /> : <LoginPage />}
+          />
+          <Route
+            path="/register"
+            element={user ? <Navigate to="/homepage" /> : <RegisterPage />}
+          />
 
-  // If user is logged in, render the children (protected component)
-  // Otherwise, redirect to the login page
-  return user ? <>{children}</> : <Navigate to="/" />;
-};
+          {/* --- CORRECTED VERIFY EMAIL ROUTE --- */}
+          <Route
+            path="/verify-email"
+            element={
+              !user ? (
+                <Navigate to="/" /> // If not logged in, go to login
+              ) : user.emailVerified ? (
+                <Navigate to="/homepage" /> // If already verified, go to home
+              ) : (
+                <LoginVerifyReminderPage />
+              ) // Otherwise, show the reminder page
+            }
+          />
+
+          {/* --- Private Route --- */}
+          <Route
+            path="/homepage"
+            element={
+              <ProtectedRoute>
+                <IdeationHomePage
+                  customTheme={customTheme}
+                  menuActive={menuActive}
+                  setMenuActive={setMenuActive}
+                  setVisibleContent={setVisibleContent}
+                />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </div>
+  );
+}
 
 export default App;

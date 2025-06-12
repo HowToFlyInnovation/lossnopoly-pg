@@ -1,12 +1,10 @@
-// src/pages/context/AuthContext.tsx
 import React, { createContext, useReducer, useEffect } from "react";
-import { auth } from "../firebase/config"; // Ensure this path is correct
-import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
-import type { User } from "firebase/auth"; // Changed to import type
+import { auth } from "../firebase/config";
+import { onAuthStateChanged, type User } from "firebase/auth";
 
 // 1. Define the type for your authentication state
 interface AuthState {
-  user: User | null; // Firebase User object or null if not logged in
+  user: User | null;
   authIsReady: boolean;
 }
 
@@ -17,13 +15,10 @@ type AuthAction =
   | { type: "AUTH_IS_READY"; payload: User | null };
 
 // 3. Define the type for the AuthContext value
-// This is what will be provided by the context and consumed by useContext
 interface AuthContextType extends AuthState {
   dispatch: React.Dispatch<AuthAction>;
 }
 
-// Create context with a default value that matches AuthContextType or null
-// The non-null assertion `as AuthContextType` tells TypeScript it will be provided correctly
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export const authReducer = (
@@ -51,21 +46,21 @@ export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   useEffect(() => {
-    // This listener will fire when the auth state changes (e.g., user logs in/out)
+    // This listener stays active to fire whenever auth state changes.
+    // This is the correct way to use onAuthStateChanged for persistent login.
     const unsub = onAuthStateChanged(auth, (user) => {
-      // Dispatch AUTH_IS_READY with the current user (or null)
+      // Dispatch AUTH_IS_READY with the current user object (or null).
+      // The user object contains the `emailVerified` property.
       dispatch({ type: "AUTH_IS_READY", payload: user });
-      unsub(); // Unsubscribe after the initial check
     });
 
-    // Cleanup function for the effect
-    return () => unsub(); // Ensure unsub is called if component unmounts earlier
-  }, []);
+    // Cleanup: Unsubscribe when the component unmounts.
+    return () => unsub();
+  }, []); // The empty dependency array ensures this effect runs only once on mount.
 
   console.log("AuthContext state:", state);
 
   return (
-    // Provide the state and dispatch to the context consumers
     <AuthContext.Provider value={{ ...state, dispatch }}>
       {children}
     </AuthContext.Provider>

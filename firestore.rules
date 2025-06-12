@@ -1,8 +1,19 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /artifacts/{appId}/users/{userId}/{documents=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    match /players/{userId} {
+      // Allow a user to read their own document.
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Allow a user to CREATE their own player document, but only if
+      // the userId in the document matches their own authentication UID.
+      allow create: if request.auth != null && request.auth.uid == userId
+                    && request.resource.data.userId == request.auth.uid;
+
+      // Allow a user to UPDATE their own document.
+      // You can add more specific field-level rules here if needed.
+      allow update: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
