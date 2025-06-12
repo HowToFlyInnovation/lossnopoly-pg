@@ -1,7 +1,15 @@
+// src/pages/publicPages/RegisterPage.tsx
 import React from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import LoginLogo from "@/assets/LoginLogo.png";
 import LoginBackground from "@/assets/LoginBackground.png";
+import { auth } from "../firebase/config"; // Import auth instance
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  updateProfile, // Import updateProfile
+} from "firebase/auth"; // Import Firebase auth functions
+import { useNavigate } from "react-router-dom"; // Import useNavigate hook
 
 // Define the component as a Functional Component with React.FC
 const RegisterPage: React.FC = () => {
@@ -13,6 +21,9 @@ const RegisterPage: React.FC = () => {
   const [showPassword, setShowPassword] = React.useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] =
     React.useState<boolean>(false);
+  const [error, setError] = React.useState<string | null>(null); // State for error messages
+  const [message, setMessage] = React.useState<string | null>(null); // State for success/info messages
+  const navigate = useNavigate(); // Initialize navigate hook
 
   // Toggle visibility for the main password field
   const handlePasswordToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -29,16 +40,43 @@ const RegisterPage: React.FC = () => {
   };
 
   // Handle registration logic
-  const handleRegister = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null); // Clear previous errors
+    setMessage(null); // Clear previous messages
+
     if (password !== confirmPassword) {
-      console.error("Passwords do not match!");
-      // In a real app, you'd show a user-friendly error message here (e.g., a modal or inline text)
+      setError("Passwords do not match!");
       return;
     }
-    // Handle registration logic here, for example:
-    console.log("Registering with:", { email, password, codename });
-    // You would typically send this data to an authentication API
+
+    try {
+      // Create user with email and password
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
+      console.log("Registered user:", user);
+
+      if (user) {
+        // Update the user's profile with the codename as displayName
+        await updateProfile(user, { displayName: codename });
+
+        // Send email verification
+        await sendEmailVerification(user);
+
+        setMessage(
+          "Registration successful! A verification email has been sent to your email address. Please verify to log in."
+        );
+        // Redirect user to the /loginVerifyReminderPage page after successful registration and email sent
+        navigate("/loginVerifyReminderPage");
+      }
+    } catch (err: any) {
+      console.error("Registration error:", err.message);
+      setError(err.message); // Display Firebase error messages to the user
+    }
   };
 
   return (
@@ -75,7 +113,6 @@ const RegisterPage: React.FC = () => {
               required
             />
           </div>
-
           {/* Password Input */}
           <div className="relative">
             <label
@@ -104,7 +141,6 @@ const RegisterPage: React.FC = () => {
               {showPassword ? <FaEyeSlash /> : <FaEye />}
             </button>
           </div>
-
           {/* Confirm Password Input */}
           <div className="relative">
             <label
@@ -133,7 +169,6 @@ const RegisterPage: React.FC = () => {
               {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
             </button>
           </div>
-
           {/* Codename Input */}
           <div>
             <label
@@ -154,7 +189,9 @@ const RegisterPage: React.FC = () => {
               required
             />
           </div>
-
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {message && <p className="text-green-600 text-sm">{message}</p>}{" "}
+          {/* Display success message */}
           {/* Register Button */}
           <button
             type="submit"
@@ -163,7 +200,6 @@ const RegisterPage: React.FC = () => {
           >
             Register
           </button>
-
           {/* Already registered link */}
           <div className="text-center">
             <a href="./" className="text-sm" style={{ color: "black" }}>

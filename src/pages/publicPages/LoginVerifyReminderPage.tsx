@@ -8,7 +8,7 @@ import { signInWithEmailAndPassword } from "firebase/auth"; // Import Firebase a
 import { useNavigate } from "react-router-dom"; // Import useNavigate hook
 
 // Define the component as a Functional Component with React.FC
-const LoginPage: React.FC = () => {
+const LoginVerifyReminderPage: React.FC = () => {
   // Type the state variables
   const [email, setEmail] = React.useState<string>("");
   const [password, setPassword] = React.useState<string>("");
@@ -55,6 +55,12 @@ const LoginPage: React.FC = () => {
         </div>
         <form className="space-y-6" onSubmit={handleLogin}>
           <div>
+            <p className="text-green-700 mb-8 text-center">
+              Thanks for registering. We've sent an email to the provide
+              address. <b>Before login</b>, please{" "}
+              <b>click on the verification link in your email</b> to verify it's
+              really your email address.
+            </p>
             <label
               htmlFor="email"
               className="text-sm font-bold text-gray-200 block"
@@ -128,4 +134,4 @@ const LoginPage: React.FC = () => {
   );
 };
 
-export default LoginPage;
+export default LoginVerifyReminderPage;
