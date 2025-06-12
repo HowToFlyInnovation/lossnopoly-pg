@@ -1,8 +1,6 @@
 import React from "react";
 
 // --- Type Definitions ---
-
-// Defines the props for the ImageCard component
 interface ImageCardProps {
   imageUrl: string;
   title: string;
@@ -10,18 +8,11 @@ interface ImageCardProps {
   onActionClick: () => void;
 }
 
-// Defines the props for the main IdeationHomePage component
-interface IdeationHomePageProps {
-  // These props are kept for compatibility with the parent component,
-  // though their direct styling effect has been removed in favor of Tailwind.
-  customTheme: boolean;
-  menuActive: boolean;
-
-  setMenuActive: (active: boolean) => void;
-  setVisibleContent: (content: string) => void;
+interface HomePageViewProps {
+  handleMissionClick: (contentId: string) => void;
+  handleSignOut: () => void;
 }
 
-// Defines the structure for an inspiration card object
 interface InspirationCard {
   imageUrl: string;
   title: string;
@@ -29,8 +20,7 @@ interface InspirationCard {
   action: () => void;
 }
 
-// --- Sub-Components => The mission image card -------------------------------------------------------------------------------------------
-
+// --- Sub-Components ---
 const ImageCard: React.FC<ImageCardProps> = ({
   imageUrl,
   title,
@@ -41,29 +31,23 @@ const ImageCard: React.FC<ImageCardProps> = ({
     onClick={onActionClick}
     className="bg-white border border-gray-200 rounded-lg shadow-md p-4 text-center cursor-pointer hover:shadow-xl transition-shadow duration-300 flex flex-col"
   >
-    {/* Image Container */}
     <div className="mb-3">
       <img
         src={imageUrl}
         alt={title}
         className="max-w-full h-auto rounded-md mx-auto"
-        // Error handler for broken image links
         onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
           const target = e.target as HTMLImageElement;
-          target.onerror = null; // prevents infinite loop
+          target.onerror = null;
           target.src =
             "https://placehold.co/600x400/e2e8f0/4a5568?text=Image+Missing";
         }}
       />
     </div>
-
-    {/* Card Content */}
     <div className="flex-grow">
       <h5 className="text-xl font-bold text-gray-800 mb-2">{title}</h5>
       <p className="text-base text-gray-600 mb-4">{text}</p>
     </div>
-
-    {/* Action Button */}
     <div>
       <button
         onClick={onActionClick}
@@ -75,60 +59,36 @@ const ImageCard: React.FC<ImageCardProps> = ({
   </div>
 );
 
-//------------------------------------------------------------------------------------------------------------*/
-
-const IdeationHomePage: React.FC<IdeationHomePageProps> = ({
-  setMenuActive,
-  setVisibleContent,
+// --- Home Page View Component ---
+const HomePageView: React.FC<HomePageViewProps> = ({
+  handleMissionClick,
+  handleSignOut,
 }) => {
-  // --- Event Handlers ---
-  // These functions navigate to different "missions" in the application.
-
-  const handleMission1Click = () => {
-    setVisibleContent("BlackboxArcadeGameQuiz");
-    setMenuActive(false);
-  };
-
-  const handleMission2Click = () => {
-    setVisibleContent("BlackboxMission2ScavengerHuntLicence");
-    setMenuActive(true);
-  };
-
-  const handleMission3Click = () => {
-    setVisibleContent("BlackboxMission3SongPicker");
-    setMenuActive(true);
-  };
-
   // --- Data ---
-
-  // Array of mission card data.
-  // Placeholder URLs are used for images.
   const inspirationCards: InspirationCard[] = [
     {
       imageUrl: "https://placehold.co/600x400/a2c/fff?text=Mission+1",
       title: "Mission 1: Wild West Quiz",
       text: "Show what you know about CBN, OGSM, and SMART KPI's by capturing all the liers in the game.",
-      action: handleMission1Click,
+      action: () => handleMissionClick("BlackboxArcadeGameQuiz"),
     },
     {
       imageUrl: "https://placehold.co/600x400/c2a/fff?text=Mission+2",
       title: "Mission 2: Scavenger Licence",
       text: "Complete your scavenger hunt licence by uploading a profile picture and completing a quick questionnaire.",
-      action: handleMission2Click,
+      action: () => handleMissionClick("BlackboxMission2ScavengerHuntLicence"),
     },
     {
       imageUrl: "https://placehold.co/600x400/ac2/fff?text=Mission+3",
       title: "Mission 3: Jukebox",
       text: "Share a song that you believe entails the spirit of our CBN/OGSM.",
-      action: handleMission3Click,
+      action: () => handleMissionClick("BlackboxMission3SongPicker"),
     },
   ];
 
-  // --- Render ---
-
   return (
-    <div className="p-5 font-sans bg-gray-50 min-h-screen w-screen">
-      <header className="text-center mb-10">
+    <>
+      <header className="text-center mb-10 relative px-5 pt-5">
         <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800">
           Welcome to
           <br />
@@ -142,9 +102,15 @@ const IdeationHomePage: React.FC<IdeationHomePageProps> = ({
           to navigate through the different Missions. Every week, a new mission
           will be unlocked.
         </p>
+        <button
+          onClick={handleSignOut}
+          className="absolute top-4 right-4 py-2 px-4 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75 transition-colors duration-300"
+        >
+          Sign Out
+        </button>
       </header>
 
-      <main>
+      <main className="p-5">
         <h2 className="text-2xl md:text-3xl font-bold text-gray-800 text-center mb-8">
           <span role="img" aria-label="info icon" className="mr-2">
             ℹ️
@@ -152,12 +118,6 @@ const IdeationHomePage: React.FC<IdeationHomePageProps> = ({
           Ready to get started?
         </h2>
 
-        {/* Responsive Grid for Mission Cards.
-          - 1 column on small screens (default)
-          - 2 columns on medium screens (md:)
-          - 3 columns on large screens (lg:)
-          This single block replaces the need for separate mobile/desktop divs.
-        */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {inspirationCards.map((card, index) => (
             <ImageCard
@@ -170,8 +130,8 @@ const IdeationHomePage: React.FC<IdeationHomePageProps> = ({
           ))}
         </div>
       </main>
-    </div>
+    </>
   );
 };
 
-export default IdeationHomePage;
+export default HomePageView;

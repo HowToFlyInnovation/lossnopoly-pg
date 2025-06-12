@@ -1,12 +1,11 @@
-// src/pages/publicPages/LoginPage.tsx
-import React from "react";
+// src/pages/publicPages/LoginPageVerify.tsx
+import React, { useContext } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import LoginLogo from "@/assets/LoginLogo.png";
 import LoginBackground from "@/assets/LoginBackground.png";
 import { auth, db } from "../firebase/config";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
-// Import the necessary Firestore functions
+import { AuthContext, type AuthContextType } from "../context/AuthContext"; // 👈 FIX: Added 'type' keyword
 import {
   doc,
   getDoc,
@@ -21,7 +20,8 @@ const LoginPageVerify: React.FC = () => {
   const [password, setPassword] = React.useState<string>("");
   const [showPassword, setShowPassword] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
-  const navigate = useNavigate();
+
+  const { dispatch } = useContext(AuthContext) as AuthContextType;
 
   const handlePasswordToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -41,36 +41,32 @@ const LoginPageVerify: React.FC = () => {
       const user = userCredential.user;
 
       if (user) {
-        // --- ✨ NEW FRONT-END LOGIC ✨ ---
+        await user.reload();
+
+        if (auth.currentUser) {
+          dispatch({ type: "LOGIN", payload: auth.currentUser });
+        }
+
         const playerDocRef = doc(db, "players", user.uid);
         const playerDocSnap = await getDoc(playerDocRef);
 
         if (playerDocSnap.exists()) {
-          // Document exists: This is a returning user.
-          // Update their last login time and increment login count.
           await updateDoc(playerDocRef, {
             lastLogin: serverTimestamp(),
             loginCount: increment(1),
           });
-          console.log("Player stats updated for returning user:", user.uid);
         } else {
-          // Document does not exist: This is a new user's first login.
-          // Create the player document.
           await setDoc(playerDocRef, {
             userId: user.uid,
             email: user.email || "",
-            displayName: user.displayName || "Anonymous", // Get displayName set during registration
+            displayName: user.displayName || "Anonymous",
             profilePic:
               "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png",
             lastLogin: serverTimestamp(),
-            loginCount: 1, // First login
+            loginCount: 1,
             createdAt: serverTimestamp(),
           });
-          console.log("New player document created for user:", user.uid);
         }
-        // --- END OF NEW LOGIC ---
-
-        navigate("/homepage");
       }
     } catch (err: any) {
       console.error("Login error:", err.message);
@@ -78,7 +74,6 @@ const LoginPageVerify: React.FC = () => {
     }
   };
 
-  // ... rest of your component JSX
   return (
     <div
       className="flex items-center justify-center min-h-screen w-screen bg-center bg-fixed"

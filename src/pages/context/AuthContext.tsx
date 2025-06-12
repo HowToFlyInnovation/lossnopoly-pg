@@ -1,22 +1,24 @@
-import React, { createContext, useReducer, useEffect } from "react";
-import { auth } from "../firebase/config";
-import { onAuthStateChanged, type User } from "firebase/auth";
+// src/pages/context/AuthContext.tsx
 
-// 1. Define the type for your authentication state
-interface AuthState {
+import { createContext, useReducer, useEffect, type Dispatch } from "react"; // 👈 FIX: Added 'type' keyword
+import { auth } from "../firebase/config";
+import { onAuthStateChanged, type User } from "firebase/auth"; // 👈 FIX: Added 'type' keyword
+
+// Define the shape of the state
+export interface AuthState {
   user: User | null;
   authIsReady: boolean;
 }
 
-// 2. Define the types for your actions
-type AuthAction =
-  | { type: "LOGIN"; payload: User }
+// Define the shape of the actions
+export type AuthAction =
+  | { type: "LOGIN"; payload: User | null }
   | { type: "LOGOUT" }
   | { type: "AUTH_IS_READY"; payload: User | null };
 
-// 3. Define the type for the AuthContext value
-interface AuthContextType extends AuthState {
-  dispatch: React.Dispatch<AuthAction>;
+// Define and export the shape of the context value
+export interface AuthContextType extends AuthState {
+  dispatch: Dispatch<AuthAction>;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -27,7 +29,7 @@ export const authReducer = (
 ): AuthState => {
   switch (action.type) {
     case "LOGIN":
-      return { ...state, user: action.payload };
+      return { ...state, user: action.payload as User };
     case "LOGOUT":
       return { ...state, user: null };
     case "AUTH_IS_READY":
@@ -46,17 +48,12 @@ export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   useEffect(() => {
-    // This listener stays active to fire whenever auth state changes.
-    // This is the correct way to use onAuthStateChanged for persistent login.
     const unsub = onAuthStateChanged(auth, (user) => {
-      // Dispatch AUTH_IS_READY with the current user object (or null).
-      // The user object contains the `emailVerified` property.
       dispatch({ type: "AUTH_IS_READY", payload: user });
     });
 
-    // Cleanup: Unsubscribe when the component unmounts.
     return () => unsub();
-  }, []); // The empty dependency array ensures this effect runs only once on mount.
+  }, []);
 
   console.log("AuthContext state:", state);
 
