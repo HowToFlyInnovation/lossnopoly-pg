@@ -4,7 +4,8 @@ import { auth } from "../firebase/config";
 import { AuthContext, type AuthContextType } from "../context/AuthContext";
 import PlatformSideMenu from "../../components/PlatformSideMenu";
 import type { Dispatch, SetStateAction } from "react";
-import HomePageView from "./views/HomePageView"; // Import the new view
+import HomePageView from "./views/HomePageView"; // Import the existing view
+import IdeationSpaceView from "./views/IdeationSpaceView"; // Import the new view
 
 // --- Type Definitions ---
 interface IdeationPlatformProps {
@@ -78,6 +79,8 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
             handleSignOut={handleSignOut}
           />
         );
+      case "IdeationSpace":
+        return <IdeationSpaceView />;
       // Add other cases here for different views
       // case "SomeOtherView":
       //   return <SomeOtherViewComponent />;
@@ -112,7 +115,7 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
         </button>
       )}
 
-      <div className={mainContentClasses}>{renderContent()}</div>
+      <main className={mainContentClasses}>{renderContent()}</main>
     </div>
   );
 };

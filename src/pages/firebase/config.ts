@@ -3,7 +3,8 @@ import { initializeApp } from "firebase/app";
 import type { FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import type { Auth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore"; // Import getFirestore
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage"; // Import getStorage
 
 // Define a type for your Firebase configuration object for better type checking
 interface FirebaseConfig {
@@ -35,4 +36,7 @@ const auth: Auth = getAuth(app);
 // Initialize Cloud Firestore and get a reference to the service
 const db = getFirestore(app); // Get Firestore instance
 
-export { auth, db }; // Export both auth and db
+// Initialize Cloud Storage and get a reference to the service
+const storage = getStorage(app); // Get Storage instance
+
+export { auth, db, storage }; // Export auth, db, and storage

@@ -2,18 +2,61 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Rules for the 'players' collection
     match /players/{userId} {
-      // Allow a user to read their own document.
       allow read: if request.auth != null && request.auth.uid == userId;
-
-      // Allow a user to CREATE their own player document, but only if
-      // the userId in the document matches their own authentication UID.
       allow create: if request.auth != null && request.auth.uid == userId
-                    && request.resource.data.userId == request.auth.uid;
-
-      // Allow a user to UPDATE their own document.
-      // You can add more specific field-level rules here if needed.
+                      && request.resource.data.userId == request.auth.uid;
       allow update: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rule for the 'successfulLogins' collection
+    match /successfulLogins/{logId} {
+      allow read, update, delete: if false;
+      allow create: if
+        request.auth != null &&
+        request.resource.data.Email == request.auth.token.email &&
+        request.resource.data.Time == request.time &&
+        request.resource.data.DisplayName is string &&
+        request.resource.data.browser is string &&
+        request.resource.data.location is map &&
+        request.resource.data.keys().hasOnly(['Time', 'Email', 'DisplayName', 'location', 'browser']);
+    }
+
+    // Rule for the 'failedLogins' collection
+    match /failedLogins/{logId} {
+      allow read, update, delete: if false;
+      allow create: if
+        request.resource.data.Time == request.time &&
+        request.resource.data.Email is string && request.resource.data.Email.size() < 256 &&
+        request.resource.data.browser is string && request.resource.data.browser.size() < 512 &&
+        request.resource.data.location is map &&
+        request.resource.data.loginError is string &&
+        request.resource.data.keys().hasOnly(['Time', 'Email', 'location', 'browser', 'loginError']);
+    }
+
+    // [NEW] Rule for the 'failedRegistrations' collection
+    match /failedRegistrations/{logId} {
+      // Nobody can read, update, or delete logs from the client.
+      allow read, update, delete: if false;
+
+      // Anyone can create a "failed registration" record.
+      allow create: if
+        // Data validation for the log entry.
+        request.resource.data.Time == request.time &&
+        request.resource.data.Email is string && request.resource.data.Email.size() < 256 &&
+        request.resource.data.browser is string && request.resource.data.browser.size() < 512 &&
+        request.resource.data.location is map &&
+        request.resource.data.registrationError is string &&
+        // Enforce document structure.
+        request.resource.data.keys().hasOnly(['Time', 'Email', 'location', 'browser', 'registrationError']);
+    }
+
+    // Rule for allowedEmailSuffixes collection
+    match /allowedEmailSuffixes/{suffix} {
+        allow read: if true;
+        allow write: if false; 
     }
   }
 }

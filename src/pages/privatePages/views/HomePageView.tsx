@@ -1,4 +1,7 @@
-import React from "react";
+import React, { useState, useEffect, useContext } from "react";
+import { db } from "../../firebase/config"; // Make sure to export auth and db from your firebase config
+import { doc, getDoc } from "firebase/firestore";
+import { AuthContext, type AuthContextType } from "../../context/AuthContext"; // Assuming you have AuthContext
 
 // --- Type Definitions ---
 interface ImageCardProps {
@@ -64,6 +67,35 @@ const HomePageView: React.FC<HomePageViewProps> = ({
   handleMissionClick,
   handleSignOut,
 }) => {
+  // --- [NEW] State for player name ---
+  const [playerName, setPlayerName] = useState<string | null>(null);
+  const { user } = useContext(AuthContext) as AuthContextType;
+
+  // --- [NEW] Effect to fetch player data ---
+  useEffect(() => {
+    const fetchPlayerData = async () => {
+      if (user) {
+        const playerDocRef = doc(db, "players", user.uid);
+        try {
+          const playerDocSnap = await getDoc(playerDocRef);
+          if (playerDocSnap.exists()) {
+            // Set player name from the 'displayName' field in the document
+            setPlayerName(playerDocSnap.data().displayName);
+          } else {
+            // Fallback to the display name from auth if player doc doesn't exist
+            setPlayerName(user.displayName);
+          }
+        } catch (error) {
+          console.error("Error fetching player data:", error);
+          // Fallback to auth display name on error
+          setPlayerName(user.displayName);
+        }
+      }
+    };
+
+    fetchPlayerData();
+  }, [user]); // Rerun effect if the user object changes
+
   // --- Data ---
   const inspirationCards: InspirationCard[] = [
     {
@@ -88,11 +120,10 @@ const HomePageView: React.FC<HomePageViewProps> = ({
 
   return (
     <>
-      <header className="text-center mb-10 relative px-5 pt-5">
+      <header className="text-center mb-10 relative px-5 pt-[12vh]">
+        {/* --- [UPDATED] Welcome message --- */}
         <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800">
-          Welcome to
-          <br />
-          lossNOpoly
+          {playerName ? `Welcome, ${playerName}` : "Welcome to lossNOpoly"}
         </h1>
         <p className="text-gray-600 mt-4 max-w-2xl mx-auto">
           Using the lossNOpoly platform is pretty easy. Use the{" "}

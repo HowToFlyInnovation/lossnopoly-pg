@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@theme {
+  --color-monopoly-red: #e7262e;
+  --color-monopoly-red-darker: #e11923;
+  --color-monopoly-green-light: #ddf1db;
+}
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -27,11 +32,6 @@ body {
   margin: 0;
   display: flex;
   place-items: center;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
 }
 
 @media (prefers-color-scheme: light) {

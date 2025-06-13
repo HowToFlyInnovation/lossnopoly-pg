@@ -1,14 +1,20 @@
-// src/pages/publicPages/RegisterPage.tsx
 import React from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import LoginLogo from "@/assets/LoginLogo.png";
 import LoginBackground from "@/assets/LoginBackground.png";
-import { auth } from "../firebase/config"; // Import auth instance
+import { auth, db } from "../firebase/config"; // Import auth and db instances
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
   updateProfile, // Import updateProfile
 } from "firebase/auth"; // Import Firebase auth functions
+import {
+  doc,
+  getDoc,
+  collection,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore"; // Import Firestore functions
 import { useNavigate } from "react-router-dom"; // Import useNavigate hook
 
 // Define the component as a Functional Component with React.FC
@@ -22,7 +28,6 @@ const RegisterPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] =
     React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null); // State for error messages
-  const [message, setMessage] = React.useState<string | null>(null); // State for success/info messages
   const navigate = useNavigate(); // Initialize navigate hook
 
   // Toggle visibility for the main password field
@@ -43,10 +48,75 @@ const RegisterPage: React.FC = () => {
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null); // Clear previous errors
-    setMessage(null); // Clear previous messages
+
+    // --- [NEW] Prepare common data for logging ---
+    let locationInfo = {};
+    try {
+      const response = await fetch("https://ip-api.com/json");
+      if (response.ok) {
+        const data = await response.json();
+        locationInfo = {
+          country: data.country,
+          city: data.city,
+          ip: data.query,
+        };
+      }
+    } catch (locationError) {
+      console.error("Could not fetch location", locationError);
+      locationInfo = { error: "Location could not be fetched." };
+    }
+
+    const commonLogData = {
+      Time: serverTimestamp(),
+      Email: email,
+      browser: navigator.userAgent,
+      location: locationInfo,
+    };
+
+    const logFailedRegistration = async (errorMessage: string) => {
+      const failedRegistrationData = {
+        ...commonLogData,
+        registrationError: errorMessage,
+      };
+      await addDoc(
+        collection(db, "failedRegistrations"),
+        failedRegistrationData
+      );
+    };
+    // --- End of new logic ---
 
     if (password !== confirmPassword) {
       setError("Passwords do not match!");
+      await logFailedRegistration("Passwords do not match.");
+      return;
+    }
+
+    const emailSuffix = email.substring(email.lastIndexOf("@") + 1);
+    if (!emailSuffix || email.lastIndexOf("@") === -1) {
+      setError("Invalid email format.");
+      await logFailedRegistration("Invalid email format.");
+      return;
+    }
+
+    try {
+      const suffixDocRef = doc(db, "allowedEmailSuffixes", emailSuffix);
+      const suffixDocSnap = await getDoc(suffixDocRef);
+
+      if (!suffixDocSnap.exists()) {
+        setError("Your email domain is not authorized for registration.");
+        await logFailedRegistration(
+          "Attempted registration with unauthorized email domain."
+        );
+        return;
+      }
+    } catch (checkError: any) {
+      console.error("Error checking email suffix:", checkError);
+      setError(
+        "An error occurred while verifying your email. Please try again."
+      );
+      await logFailedRegistration(
+        `Server error during email suffix check: ${checkError.message}`
+      );
       return;
     }
 
@@ -67,15 +137,13 @@ const RegisterPage: React.FC = () => {
         // Send email verification
         await sendEmailVerification(user);
 
-        setMessage(
-          "Registration successful! A verification email has been sent to your email address. Please verify to log in."
-        );
-        // Redirect user to the /verify-email page after successful registration and email sent
-        navigate("/verify-email");
+        // Redirect user to the login page with state to show the verification message
+        navigate("/", { state: { showVerificationMessage: true } });
       }
     } catch (err: any) {
       console.error("Registration error:", err.message);
       setError(err.message); // Display Firebase error messages to the user
+      await logFailedRegistration(err.message);
     }
   };
 
@@ -190,12 +258,10 @@ const RegisterPage: React.FC = () => {
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          {message && <p className="text-green-600 text-sm">{message}</p>}{" "}
-          {/* Display success message */}
           {/* Register Button */}
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-red-400 text-white font-bold rounded-lg transition duration-300"
+            className="w-full py-2 px-4 bg-monopoly-red hover:bg-monopoly-red-darker text-white font-bold rounded-lg transition duration-300 cursor-pointer"
             style={{ background: "#E7262E" }}
           >
             Register

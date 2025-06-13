@@ -1,11 +1,10 @@
-// src/pages/publicPages/LoginPageVerify.tsx
 import React, { useContext } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import LoginLogo from "@/assets/LoginLogo.png";
 import LoginBackground from "@/assets/LoginBackground.png";
 import { auth, db } from "../firebase/config";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { AuthContext, type AuthContextType } from "../context/AuthContext"; // 👈 FIX: Added 'type' keyword
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { AuthContext, type AuthContextType } from "../context/AuthContext";
 import {
   doc,
   getDoc,
@@ -13,7 +12,10 @@ import {
   updateDoc,
   serverTimestamp,
   increment,
+  collection,
+  addDoc,
 } from "firebase/firestore";
+import { useLocation } from "react-router-dom";
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = React.useState<string>("");
@@ -22,6 +24,8 @@ const LoginPage: React.FC = () => {
   const [error, setError] = React.useState<string | null>(null);
 
   const { dispatch } = useContext(AuthContext) as AuthContextType;
+  const location = useLocation();
+  const showVerificationMessage = location.state?.showVerificationMessage;
 
   const handlePasswordToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -32,6 +36,63 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     setError(null);
 
+    // Prepare common data for logging
+    let locationInfo = {};
+    try {
+      const response = await fetch("https://ip-api.com/json");
+      if (response.ok) {
+        const data = await response.json();
+        locationInfo = {
+          country: data.country,
+          city: data.city,
+          ip: data.query,
+        };
+      }
+    } catch (locationError) {
+      console.error("Could not fetch location", locationError);
+      locationInfo = { error: "Location could not be fetched." };
+    }
+
+    const commonLogData = {
+      Time: serverTimestamp(),
+      Email: email,
+      browser: navigator.userAgent,
+      location: locationInfo,
+    };
+
+    // Check for allowed email suffix
+    const emailSuffix = email.substring(email.lastIndexOf("@") + 1);
+    if (!emailSuffix || email.lastIndexOf("@") === -1) {
+      setError("Invalid email format.");
+      return;
+    }
+
+    try {
+      const suffixDocRef = doc(db, "allowedEmailSuffixes", emailSuffix);
+      const suffixDocSnap = await getDoc(suffixDocRef);
+
+      if (!suffixDocSnap.exists()) {
+        setError("Your email domain is not authorized for access.");
+        const failedLoginData = {
+          ...commonLogData,
+          loginError: "Attempted login with unauthorized email domain.",
+        };
+        await addDoc(collection(db, "failedLogins"), failedLoginData);
+        return;
+      }
+    } catch (checkError: any) {
+      console.error("Error checking email suffix:", checkError);
+      setError(
+        "An error occurred while verifying your email. Please try again."
+      );
+      const failedLoginData = {
+        ...commonLogData,
+        loginError: `Server error during email suffix check: ${checkError.message}`,
+      };
+      await addDoc(collection(db, "failedLogins"), failedLoginData);
+      return;
+    }
+
     try {
       const userCredential = await signInWithEmailAndPassword(
         auth,
@@ -40,16 +101,40 @@ const LoginPage: React.FC = () => {
       );
       const user = userCredential.user;
 
-      if (user) {
-        await user.reload();
+      // --- [NEW] Check if email is verified ---
+      if (user && !user.emailVerified) {
+        setError(
+          "Your email has not been verified. Please check your inbox for the verification link."
+        );
 
+        // Log the unverified login attempt
+        const failedLoginData = {
+          ...commonLogData,
+          loginError: "Attempted login with unverified email.",
+        };
+        await addDoc(collection(db, "failedLogins"), failedLoginData);
+
+        // Sign the user out because their email is not yet verified
+        await signOut(auth);
+        return;
+      }
+      // --- End of new logic ---
+
+      if (user) {
+        // --- Log successful login ---
+        const successfulLoginData = {
+          ...commonLogData,
+          DisplayName: user.displayName || "Anonymous",
+        };
+        await addDoc(collection(db, "successfulLogins"), successfulLoginData);
+
+        // --- Continue with app logic ---
+        await user.reload();
         if (auth.currentUser) {
           dispatch({ type: "LOGIN", payload: auth.currentUser });
         }
-
         const playerDocRef = doc(db, "players", user.uid);
         const playerDocSnap = await getDoc(playerDocRef);
-
         if (playerDocSnap.exists()) {
           await updateDoc(playerDocRef, {
             lastLogin: serverTimestamp(),
@@ -69,8 +154,14 @@ const LoginPage: React.FC = () => {
         }
       }
     } catch (err: any) {
+      // --- Log general failed login (e.g., wrong password) ---
       console.error("Login error:", err.message);
       setError(err.message);
+      const failedLoginData = {
+        ...commonLogData,
+        loginError: err.message,
+      };
+      await addDoc(collection(db, "failedLogins"), failedLoginData);
     }
   };
 
@@ -83,6 +174,14 @@ const LoginPage: React.FC = () => {
         <div className="flex justify-center">
           <img src={LoginLogo} alt="Logo" className="w-[80%]" />
         </div>
+        {showVerificationMessage && (
+          <p className="text-green-700 mb-8 text-center">
+            Thanks for registering. We've sent an email to the provided address.{" "}
+            <b>Before login</b>, please{" "}
+            <b>click on the verification link in your email</b> to verify it's
+            really your email address.
+          </p>
+        )}
         <form className="space-y-6" onSubmit={handleLogin}>
           {/* Email */}
           <div>
@@ -133,8 +232,7 @@ const LoginPage: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-red-400 text-white font-bold rounded-lg transition duration-300"
-            style={{ background: "#E7262E" }}
+            className="w-full py-2 px-4 bg-monopoly-red hover:bg-monopoly-red-darker text-white font-bold rounded-lg transition duration-300 cursor-pointer"
           >
             Login
           </button>
