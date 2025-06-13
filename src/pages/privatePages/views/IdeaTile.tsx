@@ -15,7 +15,8 @@ import {
   arrayRemove,
 } from "firebase/firestore";
 import DOMPurify from "dompurify";
-import { FaThumbsUp, FaPlus, FaEye, FaComment } from "react-icons/fa";
+import { FaThumbsUp, FaRobot, FaComment, FaLightbulb } from "react-icons/fa";
+import { PiLegoBold } from "react-icons/pi";
 import { AuthContext, type AuthContextType } from "../../context/AuthContext";
 import { db } from "../../firebase/config";
 
@@ -35,6 +36,7 @@ export interface Idea {
   email?: string;
   ideationMission: string;
   tags: string[];
+  inspiredBy?: { id: string; ideaTitle: string; imageUrl: string }[];
 }
 
 export interface Vote {
@@ -57,7 +59,6 @@ export interface Evaluation {
   FeasibilityScore: string;
 }
 
-// New Comment Interface
 export interface Comment {
   id: string;
   ideaId: string;
@@ -65,8 +66,8 @@ export interface Comment {
   displayName: string;
   text: string;
   createdAt: Timestamp;
-  likes: string[]; // Array of user IDs who liked the comment
-  parentId: string | null; // For threading replies
+  likes: string[];
+  parentId: string | null;
 }
 
 interface IdeaTileProps {
@@ -74,6 +75,9 @@ interface IdeaTileProps {
   handleVote: (voteType: "agree" | "disagree", item: Idea) => void;
   votesData: Vote[];
   handleAddToBuildDeck: (card: any) => void;
+  onSelect: (item: Idea) => void;
+  isSelected: boolean;
+  isSelectionLocked: boolean;
 }
 
 const costImpactOptions = [
@@ -110,10 +114,13 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   handleVote,
   votesData,
   handleAddToBuildDeck,
+  onSelect,
+  isSelected,
+  isSelectionLocked,
 }) => {
   const { user } = useContext(AuthContext) as AuthContextType;
 
-  // --- EXISTING STATE ---
+  // --- STATE ---
   const [userVote, setUserVote] = useState<"agree" | "disagree" | null>(null);
   const [hasRead, setHasRead] = useState(false);
   const [readMoreVisible, setReadMoreVisible] = useState(false);
@@ -125,8 +132,6 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
-
-  // --- NEW COMMENT STATE ---
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -135,8 +140,6 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     name: string;
   } | null>(null);
   const [isPostingComment, setIsPostingComment] = useState(false);
-
-  // --- NEW EVALUATION STATE ---
   const [allEvaluations, setAllEvaluations] = useState<Evaluation[]>([]);
   const [averageScores, setAverageScores] = useState<{
     impact: string;
@@ -145,9 +148,9 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   const [evaluationView, setEvaluationView] = useState<"user" | "average">(
     "user"
   );
+  const [inspiredByVisible, setInspiredByVisible] = useState(false);
 
   // --- EFFECTS ---
-
   useEffect(() => {
     if (item.createdAt) {
       setCreationDate(
@@ -171,8 +174,8 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
             id: docSnap.id,
             ...docSnap.data(),
           } as Evaluation);
-          setIsEvaluating(false); // Hide the form if evaluation exists
-          setEvaluationView("user"); // Default to user view
+          setIsEvaluating(false);
+          setEvaluationView("user");
         } else {
           setUserEvaluation(null);
         }
@@ -181,10 +184,8 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     }
   }, [item, user, votesData]);
 
-  // --- New Effect for fetching all evaluations for the idea ---
   useEffect(() => {
     if (!item.id) return;
-
     const evaluationsQuery = query(
       collection(db, "evaluations"),
       where("ideaId", "==", item.id)
@@ -195,17 +196,14 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
       );
       setAllEvaluations(fetchedEvaluations);
     });
-
     return () => unsubscribe();
   }, [item.id]);
 
-  // --- New Effect to calculate average scores ---
   useEffect(() => {
     if (allEvaluations.length === 0) {
       setAverageScores(null);
       return;
     }
-
     const getAverageLabel = (scores: string[], options: string[]): string => {
       const numericScores = scores.map((score) => options.indexOf(score));
       const validScores = numericScores.filter((s) => s !== -1);
@@ -215,38 +213,31 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
       );
       return options[averageIndex] || "N/A";
     };
-
     const impactScores = allEvaluations.map((e) => e.ImpactScore);
     const feasibilityScores = allEvaluations.map((e) => e.FeasibilityScore);
-
     setAverageScores({
       impact: getAverageLabel(impactScores, costImpactOptions),
       feasibility: getAverageLabel(feasibilityScores, feasibilityOptions),
     });
   }, [allEvaluations]);
 
-  // --- New Effect for fetching comments ---
   useEffect(() => {
     if (!item.id) return;
-
     const commentsQuery = query(
       collection(db, "comments"),
       where("ideaId", "==", item.id),
       orderBy("createdAt", "asc")
     );
-
     const unsubscribe = onSnapshot(commentsQuery, (snapshot) => {
       const fetchedComments = snapshot.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() } as Comment)
       );
       setComments(fetchedComments);
     });
-
     return () => unsubscribe();
   }, [item.id]);
 
-  // --- HANDLERS ---
-
+  // --- RENDER LOGIC AND HANDLERS ---
   const handleToggleReadStatus = () => setHasRead(!hasRead);
 
   const handleEvaluationSubmit = async (e: React.FormEvent) => {
@@ -278,8 +269,6 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     }
   };
 
-  // --- NEW COMMENT HANDLERS ---
-
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newComment.trim()) return;
@@ -310,15 +299,11 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     const comment = comments.find((c) => c.id === commentId);
 
     if (comment && comment.likes.includes(user.uid)) {
-      // Unlike
       await updateDoc(commentRef, { likes: arrayRemove(user.uid) });
     } else {
-      // Like
       await updateDoc(commentRef, { likes: arrayUnion(user.uid) });
     }
   };
-
-  // --- RENDER LOGIC ---
 
   const getEvaluationClasses = (
     impact: string,
@@ -328,12 +313,11 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     const feasibilityIndex = feasibilityOptions.indexOf(feasibility);
 
     if (impactIndex === -1 || feasibilityIndex === -1) {
-      return "bg-gray-800 text-white"; // Fallback for N/A or other errors
+      return "bg-gray-800 text-white";
     }
 
     const impactScore = impactIndex + 1;
     const feasibilityScore = 8 - feasibilityIndex;
-
     const isHighImpact = impactScore > 4;
     const isHighFeasibility = feasibilityScore > 4;
 
@@ -382,7 +366,6 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
               Reply
             </button>
           </div>
-          {/* Render replies recursively */}
           {renderComments(comment.id)}
         </div>
       ));
@@ -392,282 +375,331 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   const headerColor = missionColors[item.ideationMission] || "bg-gray-600";
 
   return (
-    <div className="rounded-lg shadow-lg overflow-hidden break-words bg-gray-800">
-      {/* --- Card Header & Image --- */}
-      <div className={`${headerColor} p-4`}>
-        <h4 className="font-bold text-xl text-white text-center uppercase">
-          {item.ideaTitle}
-        </h4>
-        <h5 className="text-sm text-center text-white">
-          {item.ideationMission}
-        </h5>
-      </div>
-      <img
-        src={item.imageUrl}
-        alt={item.ideaTitle}
-        className="w-full h-48 object-cover"
-      />
-      {/* --- Card Body --- */}
-      <div className="p-4">
-        <div className="text-gray-300">
-          {readMoreVisible ? (
-            <div className="flex flex-col gap-4 mb-4">
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(ideaDescription),
-                }}
-              />
-              <div>
-                <b>Cost Estimate: </b>
-                {item.costEstimate}
-              </div>
-              {item.tags && item.tags.length > 0 && (
-                <div>
-                  <b>Tags:</b>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {item.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="bg-gray-700 text-gray-300 text-xs font-semibold px-2.5 py-0.5 rounded-full"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <p>{`${item.shortDescription.substring(0, 100)}...`}</p>
-          )}
+    <>
+      <div
+        className={`rounded-lg shadow-lg relative overflow-hidden break-words bg-gray-800 border-2 transition-all duration-300 ${
+          isSelected ? "border-green-500" : "border-transparent"
+        }`}
+      >
+        {item.inspiredBy && item.inspiredBy.length > 0 && (
           <button
-            onClick={() => setReadMoreVisible(!readMoreVisible)}
-            className="text-blue-500 hover:underline mt-2"
+            onClick={() => setInspiredByVisible(true)}
+            className="bg-gray-700/60 absolute top-2 right-2 hover:bg-yellow-600 text-white rounded-full w-8 h-8 flex items-center justify-center"
+            title="Inspired by other ideas"
           >
-            {readMoreVisible ? "Read Less" : "Read More"}
+            <FaLightbulb />
           </button>
+        )}
+        <div className={`${headerColor} p-4`}>
+          <h4 className="font-bold text-xl text-white text-center uppercase">
+            {item.ideaTitle}
+          </h4>
+          <h5 className="text-sm text-center text-white">
+            {item.ideationMission}
+          </h5>
         </div>
-      </div>
+        <img
+          src={item.imageUrl}
+          alt={item.ideaTitle}
+          className="w-full h-48 object-cover"
+        />
 
-      {/* --- Evaluation Section --- */}
-      <div className="p-4 border-y border-gray-700 text-gray-300">
-        {userEvaluation ? (
-          <div>
-            {/* --- NEW: Evaluation Toggle --- */}
-            <div className="flex justify-start mb-4 rounded-md overflow-hidden border border-gray-600">
-              <button
-                onClick={() => setEvaluationView("user")}
-                className={`px-3 py-1 text-sm font-semibold transition-colors w-1/2 ${
-                  evaluationView === "user"
-                    ? "bg-red-600 text-white"
-                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                }`}
-              >
-                Your Evaluation
-              </button>
-              <button
-                onClick={() => setEvaluationView("average")}
-                className={`px-3 py-1 text-sm font-semibold transition-colors w-1/2 ${
-                  evaluationView === "average"
-                    ? "bg-red-600 text-white"
-                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                }`}
-              >
-                Average ({allEvaluations.length})
-              </button>
-            </div>
-
-            {/* --- User Evaluation View --- */}
-            {evaluationView === "user" && (
-              <div>
-                <h5 className="text-lg font-bold text-center mb-2">
-                  Your Evaluation
-                </h5>
-                <div className="flex flex-row items-center gap-2">
-                  <div
-                    className={`${getEvaluationClasses(
-                      userEvaluation.ImpactScore,
-                      userEvaluation.FeasibilityScore
-                    )} h-10 w-10`}
-                  ></div>
-                  <div>
-                    <p>
-                      <strong>Cost Impact:</strong> {userEvaluation.ImpactScore}
-                    </p>
-                    <p>
-                      <strong>Feasibility:</strong>{" "}
-                      {userEvaluation.FeasibilityScore}
-                    </p>
-                  </div>
+        {/* --- Card Body --- */}
+        <div className="p-4">
+          <div className="text-gray-300">
+            {readMoreVisible ? (
+              <div className="flex flex-col gap-4 mb-4">
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: DOMPurify.sanitize(ideaDescription),
+                  }}
+                />
+                <div>
+                  <b>Cost Estimate: </b>
+                  {item.costEstimate}
                 </div>
+                {item.tags && item.tags.length > 0 && (
+                  <div>
+                    <b>Tags:</b>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {item.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="bg-gray-700 text-gray-300 text-xs font-semibold px-2.5 py-0.5 rounded-full"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
+            ) : (
+              <p>{`${item.shortDescription.substring(0, 100)}...`}</p>
             )}
+            <button
+              onClick={() => setReadMoreVisible(!readMoreVisible)}
+              className="text-blue-500 hover:underline mt-2"
+            >
+              {readMoreVisible ? "Read Less" : "Read More"}
+            </button>
+          </div>
+        </div>
 
-            {/* --- Average Evaluation View --- */}
-            {evaluationView === "average" &&
-              averageScores &&
-              allEvaluations.length > 0 && (
+        {/* --- Evaluation Section --- */}
+        <div className="p-4 border-y border-gray-700 text-gray-300">
+          {userEvaluation ? (
+            <div>
+              {/* --- NEW: Evaluation Toggle --- */}
+              <div className="flex justify-start mb-4 rounded-md overflow-hidden border border-gray-600">
+                <button
+                  onClick={() => setEvaluationView("user")}
+                  className={`px-3 py-1 text-sm font-semibold transition-colors w-1/2 ${
+                    evaluationView === "user"
+                      ? "bg-red-600 text-white"
+                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  }`}
+                >
+                  Your Evaluation
+                </button>
+                <button
+                  onClick={() => setEvaluationView("average")}
+                  className={`px-3 py-1 text-sm font-semibold transition-colors w-1/2 ${
+                    evaluationView === "average"
+                      ? "bg-red-600 text-white"
+                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  }`}
+                >
+                  Average ({allEvaluations.length})
+                </button>
+              </div>
+
+              {/* --- User Evaluation View --- */}
+              {evaluationView === "user" && (
                 <div>
                   <h5 className="text-lg font-bold text-center mb-2">
-                    Average Evaluation
+                    Your Evaluation
                   </h5>
                   <div className="flex flex-row items-center gap-2">
                     <div
                       className={`${getEvaluationClasses(
-                        averageScores.impact,
-                        averageScores.feasibility
+                        userEvaluation.ImpactScore,
+                        userEvaluation.FeasibilityScore
                       )} h-10 w-10`}
                     ></div>
                     <div>
                       <p>
-                        <strong>Cost Impact:</strong> {averageScores.impact}
+                        <strong>Cost Impact:</strong>{" "}
+                        {userEvaluation.ImpactScore}
                       </p>
                       <p>
                         <strong>Feasibility:</strong>{" "}
-                        {averageScores.feasibility}
+                        {userEvaluation.FeasibilityScore}
                       </p>
                     </div>
                   </div>
                 </div>
               )}
-          </div>
-        ) : isEvaluating ? (
-          <form onSubmit={handleEvaluationSubmit}>
-            <h5 className="text-lg font-bold text-center mb-4">
-              Evaluate This Idea
-            </h5>
-            <div className="mb-4">
-              <label className="block mb-1 font-semibold">Cost Impact</label>
-              <select
-                value={impactScore}
-                onChange={(e) => setImpactScore(e.target.value)}
-                className="w-full p-2 bg-gray-700 text-white rounded"
-              >
-                {costImpactOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+
+              {/* --- Average Evaluation View --- */}
+              {evaluationView === "average" &&
+                averageScores &&
+                allEvaluations.length > 0 && (
+                  <div>
+                    <h5 className="text-lg font-bold text-center mb-2">
+                      Average Evaluation
+                    </h5>
+                    <div className="flex flex-row items-center gap-2">
+                      <div
+                        className={`${getEvaluationClasses(
+                          averageScores.impact,
+                          averageScores.feasibility
+                        )} h-10 w-10`}
+                      ></div>
+                      <div>
+                        <p>
+                          <strong>Cost Impact:</strong> {averageScores.impact}
+                        </p>
+                        <p>
+                          <strong>Feasibility:</strong>{" "}
+                          {averageScores.feasibility}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
             </div>
-            <div className="mb-4">
-              <label className="block mb-1 font-semibold">Feasibility</label>
-              <select
-                value={feasibilityScore}
-                onChange={(e) => setFeasibilityScore(e.target.value)}
-                className="w-full p-2 bg-gray-700 text-white rounded"
+          ) : isEvaluating ? (
+            <form onSubmit={handleEvaluationSubmit}>
+              <h5 className="text-lg font-bold text-center mb-4">
+                Evaluate This Idea
+              </h5>
+              <div className="mb-4">
+                <label className="block mb-1 font-semibold">Cost Impact</label>
+                <select
+                  value={impactScore}
+                  onChange={(e) => setImpactScore(e.target.value)}
+                  className="w-full p-2 bg-gray-700 text-white rounded"
+                >
+                  {costImpactOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mb-4">
+                <label className="block mb-1 font-semibold">Feasibility</label>
+                <select
+                  value={feasibilityScore}
+                  onChange={(e) => setFeasibilityScore(e.target.value)}
+                  className="w-full p-2 bg-gray-700 text-white rounded"
+                >
+                  {feasibilityOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="submit"
+                className="w-full py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 font-semibold"
+                disabled={isSubmitting}
               >
-                {feasibilityOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
+                Submit Evaluation
+              </button>
+            </form>
+          ) : (
             <button
-              type="submit"
-              className="w-full py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 font-semibold"
-              disabled={isSubmitting}
+              onClick={() => setIsEvaluating(true)}
+              className="w-full py-3 px-4 bg-gray-900 rounded-lg hover:bg-black text-white font-bold text-lg"
             >
-              Submit Evaluation
+              Evaluate Card
             </button>
-          </form>
-        ) : (
-          <button
-            onClick={() => setIsEvaluating(true)}
-            className="w-full py-3 px-4 bg-gray-900 rounded-lg hover:bg-black text-white font-bold text-lg"
-          >
-            Evaluate Card
-          </button>
+          )}
+        </div>
+
+        <div className="bg-gray-800">
+          <div className="p-4 flex justify-between items-center">
+            <div className="text-xs italic text-gray-400">
+              By {item.displayName} on {creationDate}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCommentsVisible(!commentsVisible)}
+                className="bg-gray-700 hover:bg-gray-600 text-white rounded-full w-8 h-8 flex items-center justify-center"
+                title="Comments"
+              >
+                <FaComment />
+              </button>
+              <button
+                onClick={() => onSelect(item)}
+                className={`rounded-full w-8 h-8 flex items-center justify-center transition-colors ${
+                  isSelected
+                    ? "bg-green-500 text-white"
+                    : isSelectionLocked
+                    ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                    : "bg-gray-700 hover:bg-gray-600 text-white"
+                }`}
+                title={
+                  isSelectionLocked && !isSelected
+                    ? "Max selection reached"
+                    : "Select Idea"
+                }
+                disabled={isSelectionLocked && !isSelected}
+              >
+                <PiLegoBold />
+              </button>
+              <button
+                onClick={handleToggleReadStatus}
+                className={`rounded-full w-8 h-8 flex items-center text-white justify-center transition-colors ${
+                  hasRead ? "bg-green-500" : "bg-gray-700 hover:bg-gray-600"
+                }`}
+                title="Mark as Read"
+              >
+                <FaRobot />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {commentsVisible && (
+          <div className="p-4 border-t border-gray-700">
+            <h4 className="font-bold text-lg text-white mb-2">
+              Comments ({comments.length})
+            </h4>
+            <form onSubmit={handleCommentSubmit} className="mb-4">
+              {replyingTo && (
+                <div className="text-sm text-gray-400 mb-2">
+                  Replying to {replyingTo.name}{" "}
+                  <button
+                    onClick={() => setReplyingTo(null)}
+                    className="text-red-500"
+                  >
+                    [Cancel]
+                  </button>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder={
+                    user ? "Add a comment..." : "Please log in to comment"
+                  }
+                  className="w-full p-2 bg-gray-700 text-white rounded"
+                  disabled={!user || isPostingComment}
+                />
+                <button
+                  type="submit"
+                  className="py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 font-semibold disabled:bg-gray-500"
+                  disabled={!user || isPostingComment || !newComment.trim()}
+                >
+                  {isPostingComment ? "..." : "Post"}
+                </button>
+              </div>
+            </form>
+            <div className="max-h-60 overflow-y-auto pr-2">
+              {renderComments(null)}
+            </div>
+          </div>
         )}
       </div>
 
-      {/* --- Footer & Actions --- */}
-      <div className="bg-gray-800">
-        <div className="p-4 flex justify-between items-center">
-          <div className="text-xs italic text-gray-400">
-            By {item.displayName} on {creationDate}
-          </div>
-          <div className="flex items-center gap-2">
-            {/* --- NEW COMMENT BUTTON --- */}
-            <button
-              onClick={() => setCommentsVisible(!commentsVisible)}
-              className="bg-gray-700 hover:bg-gray-600 text-white rounded-full w-8 h-8 flex items-center justify-center"
-              title="Comments"
-            >
-              <FaComment />
-            </button>
-            <button
-              onClick={() =>
-                handleAddToBuildDeck({
-                  /* ...props... */
-                })
-              }
-              className="bg-gray-700 hover:bg-gray-600 text-white rounded-full w-8 h-8 flex items-center justify-center"
-              title="Add to Build Deck"
-            >
-              <FaPlus />
-            </button>
-            <button
-              onClick={handleToggleReadStatus}
-              className={`rounded-full w-8 h-8 flex items-center justify-center transition-colors ${
-                hasRead ? "bg-green-500" : "bg-gray-700 hover:bg-gray-600"
-              }`}
-              title="Mark as Read"
-            >
-              <FaEye />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* --- NEW COMMENT SECTION --- */}
-      {commentsVisible && (
-        <div className="p-4 border-t border-gray-700">
-          <h4 className="font-bold text-lg text-white mb-2">
-            Comments ({comments.length})
-          </h4>
-          {/* Comment Form */}
-          <form onSubmit={handleCommentSubmit} className="mb-4">
-            {replyingTo && (
-              <div className="text-sm text-gray-400 mb-2">
-                Replying to {replyingTo.name}{" "}
-                <button
-                  onClick={() => setReplyingTo(null)}
-                  className="text-red-500"
-                >
-                  [Cancel]
-                </button>
-              </div>
-            )}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder={
-                  user ? "Add a comment..." : "Please log in to comment"
-                }
-                className="w-full p-2 bg-gray-700 text-white rounded"
-                disabled={!user || isPostingComment}
-              />
-              <button
-                type="submit"
-                className="py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 font-semibold disabled:bg-gray-500"
-                disabled={!user || isPostingComment || !newComment.trim()}
-              >
-                {isPostingComment ? "..." : "Post"}
-              </button>
+      {inspiredByVisible && item.inspiredBy && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
+          onClick={() => setInspiredByVisible(false)}
+        >
+          <div
+            className="bg-gray-800 text-white p-6 rounded-lg shadow-2xl max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold mb-4">Inspired By</h3>
+            <div className="flex flex-col gap-4">
+              {item.inspiredBy.map((idea) => (
+                <div key={idea.id} className="flex items-center gap-4">
+                  <img
+                    src={idea.imageUrl}
+                    alt={idea.ideaTitle}
+                    className="w-16 h-16 object-cover rounded-md"
+                  />
+                  <span className="font-semibold">{idea.ideaTitle}</span>
+                </div>
+              ))}
             </div>
-          </form>
-
-          {/* Comment List */}
-          <div className="max-h-60 overflow-y-auto pr-2">
-            {renderComments(null)}
+            <button
+              onClick={() => setInspiredByVisible(false)}
+              className="mt-6 w-full py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 font-semibold"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

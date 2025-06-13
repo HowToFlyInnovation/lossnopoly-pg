@@ -4,9 +4,11 @@ import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { AuthContext } from "../../context/AuthContext";
 import type { AuthContextType } from "../../context/AuthContext";
+import type { Idea } from "./IdeaTile"; // Import Idea type
 
 interface IdeaModalProps {
   onClose: () => void;
+  inspiredBy?: Idea[];
 }
 
 const missionOptions = [
@@ -21,7 +23,7 @@ const tagsByMission: { [key: string]: string[] } = {
   "Waste Reduction": ["RR1", "RR2", "RR3", "RR4", "RR5"],
 };
 
-const IdeaModal: React.FC<IdeaModalProps> = ({ onClose }) => {
+const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
   const { user } = useContext(AuthContext) as AuthContextType;
   const [ideaTitle, setIdeaTitle] = useState("");
   const [shortDescription, setShortDescription] = useState("");
@@ -34,7 +36,6 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Reset tags when mission changes
     setSelectedTags([]);
   }, [ideationMission]);
 
@@ -84,31 +85,66 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose }) => {
         reasoning,
         costEstimate,
         imageUrl,
-        ideationMission, // Add selected mission
-        tags: selectedTags, // Add selected tags
+        ideationMission,
+        tags: selectedTags,
         userId: user.uid,
         displayName: user.displayName || "Anonymous",
         createdAt: Timestamp.now(),
         approved: false,
+        inspiredBy:
+          inspiredBy?.map((idea) => ({
+            id: idea.id,
+            ideaTitle: idea.ideaTitle,
+            imageUrl: idea.imageUrl,
+          })) || [],
       };
 
       await addDoc(collection(db, "ideas"), newIdea);
 
-      onClose(); // Close modal on successful submission
+      onClose();
     } catch (err) {
       console.error("Error submitting idea:", err);
       setError("Failed to submit idea. Please try again.");
+    } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
-      <div className="bg-gray-800 text-white p-8 rounded-lg shadow-2xl max-w-lg w-full">
-        <h2 className="text-2xl font-bold mb-6">Share Your Idea</h2>
+      <div className="bg-gray-800 text-white p-8 rounded-lg shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <h2 className="text-2xl font-bold mb-6">
+          {inspiredBy && inspiredBy.length > 0
+            ? "Build Upon an Idea"
+            : "Share Your Idea"}
+        </h2>
         {error && <p className="text-red-500 mb-4">{error}</p>}
         <form onSubmit={handleSubmit}>
-          {/* Mission Dropdown */}
+          {inspiredBy && inspiredBy.length > 0 && (
+            <div className="mb-6 p-4 bg-gray-700 rounded-lg">
+              <h3 className="text-lg font-semibold mb-3 text-white">
+                Inspired By:
+              </h3>
+              <div className="flex flex-wrap gap-4">
+                {inspiredBy.map((idea) => (
+                  <div
+                    key={idea.id}
+                    className="flex flex-col items-center text-center"
+                  >
+                    <img
+                      src={idea.imageUrl}
+                      alt={idea.ideaTitle}
+                      className="w-20 h-20 object-cover rounded-md"
+                    />
+                    <p className="text-xs mt-1 text-gray-300 w-20 truncate">
+                      {idea.ideaTitle}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="mb-4">
             <label
               htmlFor="ideationMission"
@@ -129,7 +165,6 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose }) => {
               ))}
             </select>
           </div>
-          {/* Team Involvement Tags */}
           <div className="mb-4">
             <label className="block mb-2 font-semibold">Team Involvement</label>
             <div className="flex flex-wrap gap-2">
@@ -138,7 +173,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose }) => {
                   key={tag}
                   type="button"
                   onClick={() => handleTagClick(tag)}
-                  className={`py-1 px-3 rounded-full text-sm ${
+                  className={`py-1 px-3 rounded-full text-sm transition-colors ${
                     selectedTags.includes(tag)
                       ? "bg-red-500 text-white"
                       : "bg-gray-600 hover:bg-gray-500"

@@ -66,7 +66,6 @@ const getEvaluationCategory = (
 };
 
 // --- MASONRY LAYOUT COMPONENT ---
-
 const MasonryLayout: React.FC<{
   children: React.ReactNode[];
   gap?: number;
@@ -112,7 +111,6 @@ const MasonryLayout: React.FC<{
 };
 
 // --- MAIN IDEATION SPACE VIEW ---
-
 const IdeationSpaceView: React.FC = () => {
   const { user } = useContext(AuthContext) as AuthContextType;
   const [ideasData, setIdeasData] = useState<Idea[]>([]);
@@ -121,8 +119,9 @@ const IdeationSpaceView: React.FC = () => {
   const [evaluationsData, setEvaluationsData] = useState<Evaluation[]>([]);
   const [filteredIdeas, setFilteredIdeas] = useState<Idea[]>([]);
   const [filter, setFilter] = useState("all");
-  const [missionFilter, setMissionFilter] = useState("all"); // New state for mission filter
+  const [missionFilter, setMissionFilter] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedIdeas, setSelectedIdeas] = useState<Idea[]>([]);
 
   useEffect(() => {
     const fetchIdeas = onSnapshot(collection(db, "ideas"), (snapshot) => {
@@ -169,13 +168,11 @@ const IdeationSpaceView: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    let newFilteredData = [...ideasData]; // Start with all ideas
+    let newFilteredData = [...ideasData];
 
-    // Apply the main view filter
     if (filter === "all") {
       newFilteredData = [...ideasData];
     } else if (user) {
-      // All other filters in this group require a user
       switch (filter) {
         case "userCreated":
           newFilteredData = ideasData.filter((s) => s.userId === user.uid);
@@ -258,9 +255,28 @@ const IdeationSpaceView: React.FC = () => {
     user,
   ]);
 
+  const handleSelectIdea = (idea: Idea) => {
+    setSelectedIdeas((prevSelected) => {
+      const isSelected = prevSelected.some((i) => i.id === idea.id);
+      if (isSelected) {
+        return prevSelected.filter((i) => i.id !== idea.id);
+      } else {
+        if (prevSelected.length < 3) {
+          return [...prevSelected, idea];
+        }
+        return prevSelected; // Max selection reached
+      }
+    });
+  };
+
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedIdeas([]); // Clear selection after modal closes
+  };
+
   const handleVote = async (voteType: "agree" | "disagree", item: Idea) => {
     if (!user) return;
-
     const voteDocRef = doc(db, "ideasVotes", `${user.uid}_${item.id}`);
     const currentVote = votesData.find(
       (v) => v.ideaId === item.id && v.userId === user.uid
@@ -282,6 +298,14 @@ const IdeationSpaceView: React.FC = () => {
     console.log("Added to build deck:", card);
   };
 
+  const isSelectionLocked = selectedIdeas.length >= 3;
+  const hasSelection = selectedIdeas.length > 0;
+
+  const buildButtonText =
+    selectedIdeas.length > 1
+      ? `Build upon ideas (${selectedIdeas.length})`
+      : "Build upon Idea";
+
   return (
     <div className="w-full pt-[11vh] px-4 md:px-20 text-black bg-gray-100">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
@@ -289,7 +313,6 @@ const IdeationSpaceView: React.FC = () => {
           Ideation Space
         </h1>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-          {/* Main Filter Dropdown */}
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -304,7 +327,6 @@ const IdeationSpaceView: React.FC = () => {
             <option value="mediumVoted">My Medium Ideas</option>
             <option value="lowVoted">My Low Ideas</option>
           </select>
-          {/* Mission Filter Dropdown */}
           <select
             value={missionFilter}
             onChange={(e) => setMissionFilter(e.target.value)}
@@ -316,10 +338,14 @@ const IdeationSpaceView: React.FC = () => {
             <option value="Waste Reduction">Waste Reduction</option>
           </select>
           <button
-            onClick={() => setIsModalOpen(true)}
-            className="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-700 w-full md:w-auto"
+            onClick={handleOpenModal}
+            className={`font-semibold py-2 px-4 rounded-lg shadow-md w-full md:w-auto transition-colors duration-300 ${
+              hasSelection
+                ? "bg-green-500 hover:bg-green-600 text-white"
+                : "bg-red-500 hover:bg-red-700 text-white"
+            }`}
           >
-            + Share Idea
+            {hasSelection ? buildButtonText : "+ Share Idea"}
           </button>
         </div>
       </div>
@@ -332,11 +358,16 @@ const IdeationSpaceView: React.FC = () => {
             handleVote={handleVote}
             votesData={votesData}
             handleAddToBuildDeck={handleAddToBuildDeck}
+            onSelect={handleSelectIdea}
+            isSelected={selectedIdeas.some((i) => i.id === item.id)}
+            isSelectionLocked={isSelectionLocked}
           />
         ))}
       </MasonryLayout>
 
-      {isModalOpen && <IdeaModal onClose={() => setIsModalOpen(false)} />}
+      {isModalOpen && (
+        <IdeaModal onClose={handleCloseModal} inspiredBy={selectedIdeas} />
+      )}
     </div>
   );
 };

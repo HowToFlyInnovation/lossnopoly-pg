@@ -1,7 +1,8 @@
 import React from "react";
 
 // Assuming your logo is in the `public` folder or handled by your build process
-const Logo = "../assets/LoginLogo.png";
+const Logo =
+  "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/LoginLogo.png?alt=media&token=e189b962-fd15-4642-9d1f-28cfda595042";
 
 // Interfaces for props
 interface MenuItemProps {
@@ -96,7 +97,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
     >
       <header className="flex flex-row items-center justify-between w-full h-16 mt-7 mb-10 z-[2]">
         <img
-          className="relative w-2/5 my-10 ml-5 md:w-3/5 md:top-1.5"
+          className="relative w-2/5 my-10 ml-5 md:w-2/4 md:top-1.5"
           alt="lossNOpolly Logo"
           src={Logo}
         />
