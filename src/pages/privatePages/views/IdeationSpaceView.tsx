@@ -121,6 +121,7 @@ const IdeationSpaceView: React.FC = () => {
   const [evaluationsData, setEvaluationsData] = useState<Evaluation[]>([]);
   const [filteredIdeas, setFilteredIdeas] = useState<Idea[]>([]);
   const [filter, setFilter] = useState("all");
+  const [missionFilter, setMissionFilter] = useState("all"); // New state for mission filter
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -168,80 +169,94 @@ const IdeationSpaceView: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    let newFilteredData = [...ideasData];
+    let newFilteredData = [...ideasData]; // Start with all ideas
 
-    if (!user) {
-      const publicFilters = [
-        "Touchless Processes",
-        "Touchless Innovation",
-        "Waste Reduction",
-        "all",
-      ];
-      if (!publicFilters.includes(filter)) {
-        setFilteredIdeas([]);
-        return;
+    // Apply the main view filter
+    if (filter === "all") {
+      newFilteredData = [...ideasData];
+    } else if (user) {
+      // All other filters in this group require a user
+      switch (filter) {
+        case "userCreated":
+          newFilteredData = ideasData.filter((s) => s.userId === user.uid);
+          break;
+        case "userVoted":
+          {
+            const votedIdeaIds = new Set(
+              votesData
+                .filter((v) => v.userId === user.uid)
+                .map((v) => v.ideaId)
+            );
+            newFilteredData = ideasData.filter((s) => votedIdeaIds.has(s.id));
+          }
+          break;
+        case "unvoted":
+          {
+            const votedIdeaIds = new Set(
+              votesData
+                .filter((v) => v.userId === user.uid)
+                .map((v) => v.ideaId)
+            );
+            newFilteredData = ideasData.filter((s) => !votedIdeaIds.has(s.id));
+          }
+          break;
+        case "commented":
+          {
+            const commentedIdeaIds = new Set(
+              commentsData
+                .filter((c) => c.userId === user.uid)
+                .map((c) => c.ideaId)
+            );
+            newFilteredData = ideasData.filter((idea) =>
+              commentedIdeaIds.has(idea.id)
+            );
+          }
+          break;
+        case "topVoted":
+        case "mediumVoted":
+        case "lowVoted":
+          {
+            const userEvaluations = evaluationsData.filter(
+              (e) => e.EvaluatorUserId === user.uid
+            );
+            const categorizedIdeaIds = new Set(
+              userEvaluations
+                .filter((e) => {
+                  const category = getEvaluationCategory(e);
+                  if (filter === "topVoted") return category === "green";
+                  if (filter === "mediumVoted") return category === "yellow";
+                  if (filter === "lowVoted") return category === "red";
+                  return false;
+                })
+                .map((e) => e.ideaId)
+            );
+            newFilteredData = ideasData.filter((idea) =>
+              categorizedIdeaIds.has(idea.id)
+            );
+          }
+          break;
+        default:
+          newFilteredData = [...ideasData];
       }
+    } else {
+      newFilteredData = [];
     }
-
-    if (filter === "userCreated") {
-      newFilteredData = ideasData.filter((s) => s.userId === user?.uid);
-    } else if (filter === "userVoted") {
-      const votedIdeaIds = new Set(
-        votesData.filter((v) => v.userId === user?.uid).map((v) => v.ideaId)
-      );
-      newFilteredData = ideasData.filter((s) => votedIdeaIds.has(s.id));
-    } else if (filter === "unvoted") {
-      const votedIdeaIds = new Set(
-        votesData.filter((v) => v.userId === user?.uid).map((v) => v.ideaId)
-      );
-      newFilteredData = ideasData.filter((s) => !votedIdeaIds.has(s.id));
-    } else if (
-      filter === "Touchless Processes" ||
-      filter === "Touchless Innovation" ||
-      filter === "Waste Reduction"
-    ) {
-      newFilteredData = ideasData.filter(
-        (idea) => idea.ideationMission === filter
-      );
-    } else if (filter === "commented") {
-      if (user) {
-        const commentedIdeaIds = new Set(
-          commentsData.filter((c) => c.userId === user.uid).map((c) => c.ideaId)
-        );
-        newFilteredData = ideasData.filter((idea) =>
-          commentedIdeaIds.has(idea.id)
-        );
-      } else {
-        newFilteredData = [];
-      }
-    } else if (
-      filter === "topVoted" ||
-      filter === "mediumVoted" ||
-      filter === "lowVoted"
-    ) {
-      const userEvaluations = evaluationsData.filter(
-        (e) => e.EvaluatorUserId === user?.uid
-      );
-
-      const categorizedIdeaIds = new Set(
-        userEvaluations
-          .filter((e) => {
-            const category = getEvaluationCategory(e);
-            if (filter === "topVoted") return category === "green";
-            if (filter === "mediumVoted") return category === "yellow";
-            if (filter === "lowVoted") return category === "red";
-            return false;
-          })
-          .map((e) => e.ideaId)
-      );
-
-      newFilteredData = ideasData.filter((idea) =>
-        categorizedIdeaIds.has(idea.id)
+    if (missionFilter !== "all") {
+      newFilteredData = newFilteredData.filter(
+        (idea) => idea.ideationMission === missionFilter
       );
     }
 
     setFilteredIdeas(newFilteredData);
-  }, [filter, ideasData, votesData, commentsData, evaluationsData, user]);
+  }, [
+    filter,
+    missionFilter,
+    ideasData,
+    votesData,
+    commentsData,
+    evaluationsData,
+    user,
+  ]);
 
   const handleVote = async (voteType: "agree" | "disagree", item: Idea) => {
     if (!user) return;
@@ -252,10 +267,8 @@ const IdeationSpaceView: React.FC = () => {
     );
 
     if (currentVote && currentVote.vote === voteType) {
-      // User is clicking the same button again, so remove the vote
       await deleteDoc(voteDocRef);
     } else {
-      // Add or update the vote
       await setDoc(voteDocRef, {
         ideaId: item.id,
         userId: user.uid,
@@ -271,32 +284,40 @@ const IdeationSpaceView: React.FC = () => {
 
   return (
     <div className="w-full pt-[11vh] px-4 md:px-20 text-black bg-gray-100">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-4 md:mb-0 uppercase">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase">
           Ideation Space
         </h1>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+          {/* Main Filter Dropdown */}
           <select
+            value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="bg-gray-800 text-white font-bold py-2 px-4 rounded-lg focus:outline-none"
+            className="bg-gray-800 text-white font-bold py-2 px-4 rounded-lg focus:outline-none w-full md:w-auto"
           >
             <option value="all">All Ideas</option>
             <option value="userCreated">My Ideas</option>
-            <option value="commented">Ideas Commented on by Me</option>
-            <option value="userVoted">Ideas Voted by Me</option>
-            <option value="topVoted">Top Voted by Me</option>
-            <option value="mediumVoted">Medium Voted by Me</option>
-            <option value="lowVoted">Low Voted by Me</option>
-            <option value="unvoted">Unvoted Ideas</option>
-            <option value="Touchless Processes">Touchless Process Ideas</option>
-            <option value="Touchless Innovation">
-              Touchless Innovation Ideas
-            </option>
-            <option value="Waste Reduction">Waste Reduction Ideas</option>
+            <option value="commented">Commented By Me</option>
+            <option value="userVoted">Voted By Me</option>
+            <option value="unvoted">Not Voted By Me</option>
+            <option value="topVoted">My Top Ideas</option>
+            <option value="mediumVoted">My Medium Ideas</option>
+            <option value="lowVoted">My Low Ideas</option>
+          </select>
+          {/* Mission Filter Dropdown */}
+          <select
+            value={missionFilter}
+            onChange={(e) => setMissionFilter(e.target.value)}
+            className="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none w-full md:w-auto"
+          >
+            <option value="all">All Missions</option>
+            <option value="Touchless Processes">Touchless Processes</option>
+            <option value="Touchless Innovation">Touchless Innovation</option>
+            <option value="Waste Reduction">Waste Reduction</option>
           </select>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-700"
+            className="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-700 w-full md:w-auto"
           >
             + Share Idea
           </button>
