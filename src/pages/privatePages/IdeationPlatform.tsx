@@ -5,7 +5,8 @@ import { AuthContext, type AuthContextType } from "../context/AuthContext";
 import PlatformSideMenu from "../../components/PlatformSideMenu";
 import type { Dispatch, SetStateAction } from "react";
 import HomePageView from "./views/HomePageView"; // Import the existing view
-import IdeationSpaceView from "./views/IdeationSpaceView"; // Import the new view
+import IdeationSpaceView from "./views/IdeationSpaceView";
+import IdeaAssessmentViewPage from "./views/IdeaAssessmentViewPage"; // Add this line// Import the new view
 
 // --- Type Definitions ---
 interface IdeationPlatformProps {
@@ -81,9 +82,8 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
         );
       case "IdeationSpace":
         return <IdeationSpaceView />;
-      // Add other cases here for different views
-      // case "SomeOtherView":
-      //   return <SomeOtherViewComponent />;
+      case "IdeaAssessments":
+        return <IdeaAssessmentViewPage />;
       default:
         return (
           <div className="w-full h-screen flex justify-center items-center">
