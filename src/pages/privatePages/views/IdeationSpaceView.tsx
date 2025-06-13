@@ -11,7 +11,59 @@ import { db } from "../../firebase/config";
 import { AuthContext } from "../../context/AuthContext";
 import type { AuthContextType } from "../../context/AuthContext";
 import IdeaModal from "./IdeaModal"; // Import the IdeaModal component
-import IdeaTile, { type Idea, type Vote } from "./IdeaTile"; // Import the new IdeaTile component and its types
+import IdeaTile, {
+  type Idea,
+  type Vote,
+  type Comment,
+  type Evaluation,
+} from "./IdeaTile"; // Import the new IdeaTile component and its types
+
+// --- CONSTANTS FOR EVALUATION ---
+const costImpactOptions = [
+  "Negative",
+  "$0-$10K",
+  "$10K-$30K",
+  "$30K-$100K",
+  "$100K-$250K",
+  "$250K-$500K",
+  "$500K-$1M",
+  "$1M+",
+];
+
+const feasibilityOptions = [
+  "Very easy to do",
+  "Straightforward to implement",
+  "Moderately easy",
+  "Doable, but requires significant effort",
+  "Challenging to accomplish",
+  "Very difficult to execute",
+  "Borderline impossible",
+  "Impossible to pull off",
+];
+
+// --- HELPER FUNCTION FOR EVALUATION CATEGORY ---
+const getEvaluationCategory = (
+  evaluation: Evaluation
+): "green" | "yellow" | "red" | "none" => {
+  const impactIndex = costImpactOptions.indexOf(evaluation.ImpactScore);
+  const feasibilityIndex = feasibilityOptions.indexOf(
+    evaluation.FeasibilityScore
+  );
+
+  if (impactIndex === -1 || feasibilityIndex === -1) {
+    return "none";
+  }
+
+  const impactScore = impactIndex + 1;
+  const feasibilityScore = 8 - feasibilityIndex;
+
+  const isHighImpact = impactScore > 4;
+  const isHighFeasibility = feasibilityScore > 4;
+
+  if (isHighImpact && isHighFeasibility) return "green";
+  if (isHighImpact || isHighFeasibility) return "yellow";
+  return "red";
+};
 
 // --- MASONRY LAYOUT COMPONENT ---
 
@@ -65,6 +117,8 @@ const IdeationSpaceView: React.FC = () => {
   const { user } = useContext(AuthContext) as AuthContextType;
   const [ideasData, setIdeasData] = useState<Idea[]>([]);
   const [votesData, setVotesData] = useState<Vote[]>([]);
+  const [commentsData, setCommentsData] = useState<Comment[]>([]);
+  const [evaluationsData, setEvaluationsData] = useState<Evaluation[]>([]);
   const [filteredIdeas, setFilteredIdeas] = useState<Idea[]>([]);
   const [filter, setFilter] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -86,14 +140,48 @@ const IdeationSpaceView: React.FC = () => {
       setVotesData(data);
     });
 
+    const fetchComments = onSnapshot(collection(db, "comments"), (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Comment[];
+      setCommentsData(data);
+    });
+
+    const fetchEvaluations = onSnapshot(
+      collection(db, "evaluations"),
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Evaluation[];
+        setEvaluationsData(data);
+      }
+    );
+
     return () => {
       fetchIdeas();
       fetchVotes();
+      fetchComments();
+      fetchEvaluations();
     };
   }, []);
 
   useEffect(() => {
     let newFilteredData = [...ideasData];
+
+    if (!user) {
+      const publicFilters = [
+        "Touchless Processes",
+        "Touchless Innovation",
+        "Waste Reduction",
+        "all",
+      ];
+      if (!publicFilters.includes(filter)) {
+        setFilteredIdeas([]);
+        return;
+      }
+    }
 
     if (filter === "userCreated") {
       newFilteredData = ideasData.filter((s) => s.userId === user?.uid);
@@ -102,10 +190,58 @@ const IdeationSpaceView: React.FC = () => {
         votesData.filter((v) => v.userId === user?.uid).map((v) => v.ideaId)
       );
       newFilteredData = ideasData.filter((s) => votedIdeaIds.has(s.id));
+    } else if (filter === "unvoted") {
+      const votedIdeaIds = new Set(
+        votesData.filter((v) => v.userId === user?.uid).map((v) => v.ideaId)
+      );
+      newFilteredData = ideasData.filter((s) => !votedIdeaIds.has(s.id));
+    } else if (
+      filter === "Touchless Processes" ||
+      filter === "Touchless Innovation" ||
+      filter === "Waste Reduction"
+    ) {
+      newFilteredData = ideasData.filter(
+        (idea) => idea.ideationMission === filter
+      );
+    } else if (filter === "commented") {
+      if (user) {
+        const commentedIdeaIds = new Set(
+          commentsData.filter((c) => c.userId === user.uid).map((c) => c.ideaId)
+        );
+        newFilteredData = ideasData.filter((idea) =>
+          commentedIdeaIds.has(idea.id)
+        );
+      } else {
+        newFilteredData = [];
+      }
+    } else if (
+      filter === "topVoted" ||
+      filter === "mediumVoted" ||
+      filter === "lowVoted"
+    ) {
+      const userEvaluations = evaluationsData.filter(
+        (e) => e.EvaluatorUserId === user?.uid
+      );
+
+      const categorizedIdeaIds = new Set(
+        userEvaluations
+          .filter((e) => {
+            const category = getEvaluationCategory(e);
+            if (filter === "topVoted") return category === "green";
+            if (filter === "mediumVoted") return category === "yellow";
+            if (filter === "lowVoted") return category === "red";
+            return false;
+          })
+          .map((e) => e.ideaId)
+      );
+
+      newFilteredData = ideasData.filter((idea) =>
+        categorizedIdeaIds.has(idea.id)
+      );
     }
 
     setFilteredIdeas(newFilteredData);
-  }, [filter, ideasData, votesData, user]);
+  }, [filter, ideasData, votesData, commentsData, evaluationsData, user]);
 
   const handleVote = async (voteType: "agree" | "disagree", item: Idea) => {
     if (!user) return;
@@ -145,8 +281,18 @@ const IdeationSpaceView: React.FC = () => {
             className="bg-gray-800 text-white font-bold py-2 px-4 rounded-lg focus:outline-none"
           >
             <option value="all">All Ideas</option>
-            <option value="userCreated">Your Ideas</option>
-            <option value="userVoted">Voted Ideas</option>
+            <option value="userCreated">My Ideas</option>
+            <option value="commented">Ideas Commented on by Me</option>
+            <option value="userVoted">Ideas Voted by Me</option>
+            <option value="topVoted">Top Voted by Me</option>
+            <option value="mediumVoted">Medium Voted by Me</option>
+            <option value="lowVoted">Low Voted by Me</option>
+            <option value="unvoted">Unvoted Ideas</option>
+            <option value="Touchless Processes">Touchless Process Ideas</option>
+            <option value="Touchless Innovation">
+              Touchless Innovation Ideas
+            </option>
+            <option value="Waste Reduction">Waste Reduction Ideas</option>
           </select>
           <button
             onClick={() => setIsModalOpen(true)}
