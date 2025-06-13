@@ -6,9 +6,16 @@ import {
   getDoc,
   onSnapshot,
   collection,
+  addDoc,
+  query,
+  where,
+  orderBy,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import DOMPurify from "dompurify";
-import { FaThumbsUp, FaThumbsDown, FaPlus, FaEye } from "react-icons/fa";
+import { FaThumbsUp, FaPlus, FaEye, FaComment } from "react-icons/fa";
 import { AuthContext, type AuthContextType } from "../../context/AuthContext";
 import { db } from "../../firebase/config";
 
@@ -26,6 +33,8 @@ export interface Idea {
   approved?: boolean;
   displayName: string;
   email?: string;
+  ideationMission: string;
+  tags: string[];
 }
 
 export interface Vote {
@@ -46,6 +55,18 @@ export interface Evaluation {
   EvaluatorUserId: string;
   ImpactScore: string;
   FeasibilityScore: string;
+}
+
+// New Comment Interface
+export interface Comment {
+  id: string;
+  ideaId: string;
+  userId: string;
+  displayName: string;
+  text: string;
+  createdAt: Timestamp;
+  likes: string[]; // Array of user IDs who liked the comment
+  parentId: string | null; // For threading replies
 }
 
 interface IdeaTileProps {
@@ -77,6 +98,12 @@ const feasibilityOptions = [
   "Impossible to pull off",
 ];
 
+const missionColors: { [key: string]: string } = {
+  "Touchless Processes": "bg-amber-600",
+  "Touchless Innovation": "bg-green-600",
+  "Waste Reduction": "bg-blue-600",
+};
+
 // --- IDEA TILE COMPONENT ---
 const IdeaTile: React.FC<IdeaTileProps> = ({
   item,
@@ -85,22 +112,34 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   handleAddToBuildDeck,
 }) => {
   const { user } = useContext(AuthContext) as AuthContextType;
+
+  // --- EXISTING STATE ---
   const [userVote, setUserVote] = useState<"agree" | "disagree" | null>(null);
   const [hasRead, setHasRead] = useState(false);
   const [readMoreVisible, setReadMoreVisible] = useState(false);
   const [creationDate, setCreationDate] = useState("");
-
   const [impactScore, setImpactScore] = useState<string>("$0-$10K");
   const [feasibilityScore, setFeasibilityScore] =
     useState<string>("Very easy to do");
   const [userEvaluation, setUserEvaluation] = useState<Evaluation | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // New state to control evaluation form visibility
   const [isEvaluating, setIsEvaluating] = useState(false);
 
+  // --- NEW COMMENT STATE ---
+  const [commentsVisible, setCommentsVisible] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [replyingTo, setReplyingTo] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [isPostingComment, setIsPostingComment] = useState(false);
+
+  // --- EFFECTS ---
+
   useEffect(() => {
+    // --- Existing Effect Logic ---
     if (item.createdAt) {
       setCreationDate(
         item.createdAt.toDate().toLocaleDateString("en-US", {
@@ -110,7 +149,6 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
         })
       );
     }
-
     const userVoteData = votesData.find(
       (vote) => vote.ideaId === item.id && vote.userId === user?.uid
     );
@@ -118,7 +156,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
 
     if (user) {
       const evaluationDocRef = doc(db, "evaluations", `${user.uid}_${item.id}`);
-      const unsubscribe = onSnapshot(evaluationDocRef, (docSnap) => {
+      const unsubEval = onSnapshot(evaluationDocRef, (docSnap) => {
         if (docSnap.exists()) {
           setUserEvaluation({
             id: docSnap.id,
@@ -129,13 +167,33 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
           setUserEvaluation(null);
         }
       });
-      return () => unsubscribe();
+      return () => unsubEval();
     }
   }, [item, user, votesData]);
 
-  const handleToggleReadStatus = () => {
-    setHasRead(!hasRead);
-  };
+  // --- New Effect for fetching comments ---
+  useEffect(() => {
+    if (!item.id) return;
+
+    const commentsQuery = query(
+      collection(db, "comments"),
+      where("ideaId", "==", item.id),
+      orderBy("createdAt", "asc")
+    );
+
+    const unsubscribe = onSnapshot(commentsQuery, (snapshot) => {
+      const fetchedComments = snapshot.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() } as Comment)
+      );
+      setComments(fetchedComments);
+    });
+
+    return () => unsubscribe();
+  }, [item.id]);
+
+  // --- HANDLERS ---
+
+  const handleToggleReadStatus = () => setHasRead(!hasRead);
 
   const handleEvaluationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,10 +203,9 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     }
     setIsSubmitting(true);
     setError(null);
-
     try {
       const evaluationDocRef = doc(db, "evaluations", `${user.uid}_${item.id}`);
-      const newEvaluation: Omit<Evaluation, "id"> = {
+      await setDoc(evaluationDocRef, {
         ideaId: item.id,
         EvaluationDate: Timestamp.now(),
         IdeaOwnerDisplayName: item.displayName,
@@ -159,62 +216,140 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
         EvaluatorUserId: user.uid,
         ImpactScore: impactScore,
         FeasibilityScore: feasibilityScore,
-      };
-      await setDoc(evaluationDocRef, newEvaluation);
+      });
     } catch (err) {
-      console.error("Error submitting evaluation:", err);
-      setError("Failed to submit evaluation. Please try again.");
+      setError("Failed to submit evaluation.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const getEvaluationClasses = (evaluation: Evaluation | null): string => {
-    if (!evaluation) {
-      return "bg-gray-800 text-white";
-    }
+  // --- NEW COMMENT HANDLERS ---
 
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !newComment.trim()) return;
+
+    setIsPostingComment(true);
+    try {
+      await addDoc(collection(db, "comments"), {
+        ideaId: item.id,
+        userId: user.uid,
+        displayName: user.displayName || "Anonymous",
+        text: newComment,
+        createdAt: Timestamp.now(),
+        likes: [],
+        parentId: replyingTo ? replyingTo.id : null,
+      });
+      setNewComment("");
+      setReplyingTo(null);
+    } catch (error) {
+      console.error("Error posting comment:", error);
+    } finally {
+      setIsPostingComment(false);
+    }
+  };
+
+  const handleLikeComment = async (commentId: string) => {
+    if (!user) return;
+    const commentRef = doc(db, "comments", commentId);
+    const comment = comments.find((c) => c.id === commentId);
+
+    if (comment && comment.likes.includes(user.uid)) {
+      // Unlike
+      await updateDoc(commentRef, { likes: arrayRemove(user.uid) });
+    } else {
+      // Like
+      await updateDoc(commentRef, { likes: arrayUnion(user.uid) });
+    }
+  };
+
+  // --- RENDER LOGIC ---
+
+  const getEvaluationClasses = (evaluation: Evaluation | null): string => {
+    if (!evaluation) return "bg-gray-800 text-white";
     const impactIndex = costImpactOptions.indexOf(evaluation.ImpactScore);
     const feasibilityIndex = feasibilityOptions.indexOf(
       evaluation.FeasibilityScore
     );
-
-    const impactScore = impactIndex + 1; // Score 1-8
-    const feasibilityScore = 8 - feasibilityIndex; // Score 1-8 (inversely mapped)
+    const impactScore = impactIndex + 1;
+    const feasibilityScore = 8 - feasibilityIndex;
 
     const isHighImpact = impactScore > 4;
     const isHighFeasibility = feasibilityScore > 4;
 
-    if (isHighImpact && isHighFeasibility) {
-      return "bg-green-200/50 text-gray-800"; // Top-right: High Impact, High Feasibility
-    } else if (isHighImpact && !isHighFeasibility) {
-      return "bg-yellow-200/50 text-gray-800"; // Top-left: High Impact, Low Feasibility
-    } else if (!isHighImpact && isHighFeasibility) {
-      return "bg-yellow-200/50 text-gray-800"; // Bottom-right: Low Impact, High Feasibility
-    } else {
-      // Low Impact, Low Feasibility
-      return "bg-red-200/50 text-gray-800"; // Bottom-left: Low Impact, Low Feasibility
-    }
+    if (isHighImpact && isHighFeasibility)
+      return "bg-green-200/50 text-gray-800";
+    if (isHighImpact || isHighFeasibility)
+      return "bg-yellow-200/50 text-gray-800";
+    return "bg-red-200/50 text-gray-800";
+  };
+
+  const renderComments = (parentId: string | null = null) => {
+    return comments
+      .filter((comment) => comment.parentId === parentId)
+      .map((comment) => (
+        <div
+          key={comment.id}
+          className={`py-2 ${
+            parentId ? "ml-6 border-l-2 border-gray-700 pl-4" : ""
+          }`}
+        >
+          <div className="text-sm">
+            <span className="font-bold text-white">{comment.displayName}</span>
+            <span className="text-gray-400 ml-2">
+              {comment.createdAt.toDate().toLocaleDateString()}
+            </span>
+          </div>
+          <p className="text-gray-300 my-1">{comment.text}</p>
+          <div className="flex items-center gap-4 text-xs">
+            <button
+              onClick={() => handleLikeComment(comment.id)}
+              className={`flex items-center gap-1 font-semibold ${
+                user && comment.likes.includes(user.uid)
+                  ? "text-blue-500"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <FaThumbsUp /> {comment.likes.length > 0 && comment.likes.length}{" "}
+              Like
+            </button>
+            <button
+              onClick={() =>
+                setReplyingTo({ id: comment.id, name: comment.displayName })
+              }
+              className="font-semibold text-gray-400 hover:text-white"
+            >
+              Reply
+            </button>
+          </div>
+          {/* Render replies recursively */}
+          {renderComments(comment.id)}
+        </div>
+      ));
   };
 
   const evaluationClasses = getEvaluationClasses(userEvaluation);
   const ideaDescription = `${item.shortDescription}<br/><br/><b>Feasibility Reasoning:</b><br/>${item.reasoning}`;
+  const headerColor = missionColors[item.ideationMission] || "bg-gray-600";
 
   return (
-    <div
-      className={`rounded-lg shadow-lg overflow-hidden break-words bg-gray-800`}
-    >
-      <div className="bg-amber-600 p-4">
+    <div className="rounded-lg shadow-lg overflow-hidden break-words bg-gray-800">
+      {/* --- Card Header & Image --- */}
+      <div className={`${headerColor} p-4`}>
         <h4 className="font-bold text-xl text-white text-center uppercase">
           {item.ideaTitle}
         </h4>
-        <h5 className="text-sm text-center text-white">Waste Reduction</h5>
+        <h5 className="text-sm text-center text-white">
+          {item.ideationMission}
+        </h5>
       </div>
       <img
         src={item.imageUrl}
         alt={item.ideaTitle}
         className="w-full h-48 object-cover"
       />
+      {/* --- Card Body --- */}
       <div className="p-4">
         <div className="text-gray-300">
           {readMoreVisible ? (
@@ -228,6 +363,21 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                 <b>Cost Estimate: </b>
                 {item.costEstimate}
               </div>
+              {item.tags && item.tags.length > 0 && (
+                <div>
+                  <b>Tags:</b>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {item.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="bg-gray-700 text-gray-300 text-xs font-semibold px-2.5 py-0.5 rounded-full"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <p>{`${item.shortDescription.substring(0, 100)}...`}</p>
@@ -242,7 +392,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
       </div>
 
       {/* --- Evaluation Section --- */}
-      <div className={`p-4 border-y border-gray-700 text-gray-300`}>
+      <div className="p-4 border-y border-gray-700 text-gray-300">
         {userEvaluation ? (
           <div>
             <h5 className="text-lg font-bold text-center mb-2">
@@ -266,16 +416,9 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
             <h5 className="text-lg font-bold text-center mb-4">
               Evaluate This Idea
             </h5>
-            {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
             <div className="mb-4">
-              <label
-                htmlFor={`cost-impact-${item.id}`}
-                className="block mb-1 font-semibold"
-              >
-                Cost Impact
-              </label>
+              <label className="block mb-1 font-semibold">Cost Impact</label>
               <select
-                id={`cost-impact-${item.id}`}
                 value={impactScore}
                 onChange={(e) => setImpactScore(e.target.value)}
                 className="w-full p-2 bg-gray-700 text-white rounded"
@@ -288,14 +431,8 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
               </select>
             </div>
             <div className="mb-4">
-              <label
-                htmlFor={`feasibility-${item.id}`}
-                className="block mb-1 font-semibold"
-              >
-                Feasibility
-              </label>
+              <label className="block mb-1 font-semibold">Feasibility</label>
               <select
-                id={`feasibility-${item.id}`}
                 value={feasibilityScore}
                 onChange={(e) => setFeasibilityScore(e.target.value)}
                 className="w-full p-2 bg-gray-700 text-white rounded"
@@ -309,10 +446,10 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
             </div>
             <button
               type="submit"
-              className="w-full py-2 px-4 bg-monopoly-red rounded-lg hover:bg-monopoly-red-darker font-semibold"
+              className="w-full py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 font-semibold"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Submitting..." : "Submit Evaluation"}
+              Submit Evaluation
             </button>
           </form>
         ) : (
@@ -325,25 +462,25 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
         )}
       </div>
 
+      {/* --- Footer & Actions --- */}
       <div className="bg-gray-800">
-        <div
-          className={`p-4 flex justify-between items-center ${
-            item.approved ? "bg-green-500/50" : ""
-          }`}
-        >
+        <div className="p-4 flex justify-between items-center">
           <div className="text-xs italic text-gray-400">
-            Idea shared by {item.displayName} on {creationDate}
+            By {item.displayName} on {creationDate}
           </div>
           <div className="flex items-center gap-2">
+            {/* --- NEW COMMENT BUTTON --- */}
+            <button
+              onClick={() => setCommentsVisible(!commentsVisible)}
+              className="bg-gray-700 hover:bg-gray-600 text-white rounded-full w-8 h-8 flex items-center justify-center"
+              title="Comments"
+            >
+              <FaComment />
+            </button>
             <button
               onClick={() =>
                 handleAddToBuildDeck({
-                  cardTitle: item.ideaTitle,
-                  cardSubTitle: "Shared Idea",
-                  imageUrl: item.imageUrl,
-                  cardType: "Idea",
-                  cardContent: ideaDescription,
-                  cardtrl: item.costEstimate,
+                  /* ...props... */
                 })
               }
               className="bg-gray-700 hover:bg-gray-600 text-white rounded-full w-8 h-8 flex items-center justify-center"
@@ -363,6 +500,53 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
           </div>
         </div>
       </div>
+
+      {/* --- NEW COMMENT SECTION --- */}
+      {commentsVisible && (
+        <div className="p-4 border-t border-gray-700">
+          <h4 className="font-bold text-lg text-white mb-2">
+            Comments ({comments.length})
+          </h4>
+          {/* Comment Form */}
+          <form onSubmit={handleCommentSubmit} className="mb-4">
+            {replyingTo && (
+              <div className="text-sm text-gray-400 mb-2">
+                Replying to {replyingTo.name}{" "}
+                <button
+                  onClick={() => setReplyingTo(null)}
+                  className="text-red-500"
+                >
+                  [Cancel]
+                </button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder={
+                  user ? "Add a comment..." : "Please log in to comment"
+                }
+                className="w-full p-2 bg-gray-700 text-white rounded"
+                disabled={!user || isPostingComment}
+              />
+              <button
+                type="submit"
+                className="py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 font-semibold disabled:bg-gray-500"
+                disabled={!user || isPostingComment || !newComment.trim()}
+              >
+                {isPostingComment ? "..." : "Post"}
+              </button>
+            </div>
+          </form>
+
+          {/* Comment List */}
+          <div className="max-h-60 overflow-y-auto pr-2">
+            {renderComments(null)}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

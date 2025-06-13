@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { db } from "../../firebase/config";
@@ -9,20 +9,47 @@ interface IdeaModalProps {
   onClose: () => void;
 }
 
+const missionOptions = [
+  "Touchless Processes",
+  "Touchless Innovation",
+  "Waste Reduction",
+];
+
+const tagsByMission: { [key: string]: string[] } = {
+  "Touchless Processes": ["DD1", "DD2", "DD3"],
+  "Touchless Innovation": ["PP1", "PP2", "PP3"],
+  "Waste Reduction": ["RR1", "RR2", "RR3", "RR4", "RR5"],
+};
+
 const IdeaModal: React.FC<IdeaModalProps> = ({ onClose }) => {
   const { user } = useContext(AuthContext) as AuthContextType;
   const [ideaTitle, setIdeaTitle] = useState("");
   const [shortDescription, setShortDescription] = useState("");
   const [reasoning, setReasoning] = useState("");
+  const [ideationMission, setIdeationMission] = useState(missionOptions[0]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [costEstimate, setCostEstimate] = useState("$1,000 - $10,000");
   const [ideaImage, setIdeaImage] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    // Reset tags when mission changes
+    setSelectedTags([]);
+  }, [ideationMission]);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setIdeaImage(e.target.files[0]);
     }
+  };
+
+  const handleTagClick = (tag: string) => {
+    setSelectedTags((prevTags) =>
+      prevTags.includes(tag)
+        ? prevTags.filter((t) => t !== tag)
+        : [...prevTags, tag]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,8 +84,10 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose }) => {
         reasoning,
         costEstimate,
         imageUrl,
+        ideationMission, // Add selected mission
+        tags: selectedTags, // Add selected tags
         userId: user.uid,
-        displayName: user.displayName || "Anonymous", // Include displayName
+        displayName: user.displayName || "Anonymous",
         createdAt: Timestamp.now(),
         approved: false,
       };
@@ -79,6 +108,47 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose }) => {
         <h2 className="text-2xl font-bold mb-6">Share Your Idea</h2>
         {error && <p className="text-red-500 mb-4">{error}</p>}
         <form onSubmit={handleSubmit}>
+          {/* Mission Dropdown */}
+          <div className="mb-4">
+            <label
+              htmlFor="ideationMission"
+              className="block mb-2 font-semibold"
+            >
+              Ideation Mission
+            </label>
+            <select
+              id="ideationMission"
+              value={ideationMission}
+              onChange={(e) => setIdeationMission(e.target.value)}
+              className="w-full p-2 bg-gray-700 rounded"
+            >
+              {missionOptions.map((mission) => (
+                <option key={mission} value={mission}>
+                  {mission}
+                </option>
+              ))}
+            </select>
+          </div>
+          {/* Team Involvement Tags */}
+          <div className="mb-4">
+            <label className="block mb-2 font-semibold">Team Involvement</label>
+            <div className="flex flex-wrap gap-2">
+              {tagsByMission[ideationMission].map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => handleTagClick(tag)}
+                  className={`py-1 px-3 rounded-full text-sm ${
+                    selectedTags.includes(tag)
+                      ? "bg-red-500 text-white"
+                      : "bg-gray-600 hover:bg-gray-500"
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="mb-4">
             <label htmlFor="ideaTitle" className="block mb-2 font-semibold">
               Idea Title
