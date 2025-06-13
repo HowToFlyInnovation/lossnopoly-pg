@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { collection, addDoc, Timestamp, getDocs } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { AuthContext } from "../../context/AuthContext";
 import type { AuthContextType } from "../../context/AuthContext";
@@ -79,7 +79,12 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
         imageUrl = await getDownloadURL(storageRef);
       }
 
+      const ideasCollection = collection(db, "ideas");
+      const ideasSnapshot = await getDocs(ideasCollection);
+      const ideaNumber = ideasSnapshot.size + 1;
+
       const newIdea = {
+        ideaNumber,
         ideaTitle,
         shortDescription,
         reasoning,
@@ -96,6 +101,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
             id: idea.id,
             ideaTitle: idea.ideaTitle,
             imageUrl: idea.imageUrl,
+            ideaNumber: idea.ideaNumber,
           })) || [],
       };
 
@@ -136,8 +142,8 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
                       alt={idea.ideaTitle}
                       className="w-20 h-20 object-cover rounded-md"
                     />
-                    <p className="text-xs mt-1 text-gray-300 w-20 truncate">
-                      {idea.ideaTitle}
+                    <p className="text-xs mt-1 text-gray-300 w-24 truncate">
+                      #{idea.ideaNumber}: {idea.ideaTitle}
                     </p>
                   </div>
                 ))}

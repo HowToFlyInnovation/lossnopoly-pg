@@ -84,7 +84,7 @@ const ChartDot: React.FC<ChartDotProps> = ({ idea, color }) => {
         1
       )}\nFeasibility: ${idea.avgFeasibility.toFixed(1)}`}
     >
-      {idea.id.substring(0, 2)}
+      {idea.ideaNumber}
     </div>
   );
 };
@@ -143,7 +143,9 @@ const IdeaListCard: React.FC<IdeaListCardProps> = ({ idea, color }) => (
   <div
     className={`w-full p-3 rounded-lg shadow-md text-white ${color} flex items-center`}
   >
-    <div className="w-12 h-12 bg-white/30 rounded-md flex-shrink-0 mr-3"></div>
+    <div className="w-12 h-12 bg-white/30 rounded-md flex-shrink-0 mr-3 flex items-center justify-center font-bold text-lg">
+      #{idea.ideaNumber}
+    </div>
     <div className="flex-grow">
       <h4 className="font-bold">{idea.ideaTitle}</h4>
       <p className="text-sm opacity-90">

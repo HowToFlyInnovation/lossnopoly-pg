@@ -24,6 +24,7 @@ import { db } from "../../firebase/config";
 
 export interface Idea {
   id: string;
+  ideaNumber: number;
   ideaTitle: string;
   imageUrl: string;
   shortDescription: string;
@@ -36,7 +37,12 @@ export interface Idea {
   email?: string;
   ideationMission: string;
   tags: string[];
-  inspiredBy?: { id: string; ideaTitle: string; imageUrl: string }[];
+  inspiredBy?: {
+    id: string;
+    ideaTitle: string;
+    imageUrl: string;
+    ideaNumber: number;
+  }[];
 }
 
 export interface Vote {
@@ -392,7 +398,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
         )}
         <div className={`${headerColor} p-4`}>
           <h4 className="font-bold text-xl text-white text-center uppercase">
-            {item.ideaTitle}
+            {`Idea #${item.ideaNumber}: ${item.ideaTitle}`}
           </h4>
           <h5 className="text-sm text-center text-white">
             {item.ideationMission}
@@ -686,7 +692,9 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                     alt={idea.ideaTitle}
                     className="w-16 h-16 object-cover rounded-md"
                   />
-                  <span className="font-semibold">{idea.ideaTitle}</span>
+                  <span className="font-semibold">
+                    #{idea.ideaNumber}: {idea.ideaTitle}
+                  </span>
                 </div>
               ))}
             </div>
