@@ -136,10 +136,19 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   } | null>(null);
   const [isPostingComment, setIsPostingComment] = useState(false);
 
+  // --- NEW EVALUATION STATE ---
+  const [allEvaluations, setAllEvaluations] = useState<Evaluation[]>([]);
+  const [averageScores, setAverageScores] = useState<{
+    impact: string;
+    feasibility: string;
+  } | null>(null);
+  const [evaluationView, setEvaluationView] = useState<"user" | "average">(
+    "user"
+  );
+
   // --- EFFECTS ---
 
   useEffect(() => {
-    // --- Existing Effect Logic ---
     if (item.createdAt) {
       setCreationDate(
         item.createdAt.toDate().toLocaleDateString("en-US", {
@@ -162,7 +171,8 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
             id: docSnap.id,
             ...docSnap.data(),
           } as Evaluation);
-          setIsEvaluating(false);
+          setIsEvaluating(false); // Hide the form if evaluation exists
+          setEvaluationView("user"); // Default to user view
         } else {
           setUserEvaluation(null);
         }
@@ -170,6 +180,50 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
       return () => unsubEval();
     }
   }, [item, user, votesData]);
+
+  // --- New Effect for fetching all evaluations for the idea ---
+  useEffect(() => {
+    if (!item.id) return;
+
+    const evaluationsQuery = query(
+      collection(db, "evaluations"),
+      where("ideaId", "==", item.id)
+    );
+    const unsubscribe = onSnapshot(evaluationsQuery, (snapshot) => {
+      const fetchedEvaluations = snapshot.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() } as Evaluation)
+      );
+      setAllEvaluations(fetchedEvaluations);
+    });
+
+    return () => unsubscribe();
+  }, [item.id]);
+
+  // --- New Effect to calculate average scores ---
+  useEffect(() => {
+    if (allEvaluations.length === 0) {
+      setAverageScores(null);
+      return;
+    }
+
+    const getAverageLabel = (scores: string[], options: string[]): string => {
+      const numericScores = scores.map((score) => options.indexOf(score));
+      const validScores = numericScores.filter((s) => s !== -1);
+      if (validScores.length === 0) return "N/A";
+      const averageIndex = Math.round(
+        validScores.reduce((a, b) => a + b, 0) / validScores.length
+      );
+      return options[averageIndex] || "N/A";
+    };
+
+    const impactScores = allEvaluations.map((e) => e.ImpactScore);
+    const feasibilityScores = allEvaluations.map((e) => e.FeasibilityScore);
+
+    setAverageScores({
+      impact: getAverageLabel(impactScores, costImpactOptions),
+      feasibility: getAverageLabel(feasibilityScores, feasibilityOptions),
+    });
+  }, [allEvaluations]);
 
   // --- New Effect for fetching comments ---
   useEffect(() => {
@@ -266,12 +320,17 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
 
   // --- RENDER LOGIC ---
 
-  const getEvaluationClasses = (evaluation: Evaluation | null): string => {
-    if (!evaluation) return "bg-gray-800 text-white";
-    const impactIndex = costImpactOptions.indexOf(evaluation.ImpactScore);
-    const feasibilityIndex = feasibilityOptions.indexOf(
-      evaluation.FeasibilityScore
-    );
+  const getEvaluationClasses = (
+    impact: string,
+    feasibility: string
+  ): string => {
+    const impactIndex = costImpactOptions.indexOf(impact);
+    const feasibilityIndex = feasibilityOptions.indexOf(feasibility);
+
+    if (impactIndex === -1 || feasibilityIndex === -1) {
+      return "bg-gray-800 text-white"; // Fallback for N/A or other errors
+    }
+
     const impactScore = impactIndex + 1;
     const feasibilityScore = 8 - feasibilityIndex;
 
@@ -329,7 +388,6 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
       ));
   };
 
-  const evaluationClasses = getEvaluationClasses(userEvaluation);
   const ideaDescription = `${item.shortDescription}<br/><br/><b>Feasibility Reasoning:</b><br/>${item.reasoning}`;
   const headerColor = missionColors[item.ideationMission] || "bg-gray-600";
 
@@ -395,21 +453,83 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
       <div className="p-4 border-y border-gray-700 text-gray-300">
         {userEvaluation ? (
           <div>
-            <h5 className="text-lg font-bold text-center mb-2">
-              Your Evaluation
-            </h5>
-            <div className="flex flex-row items-center gap-2">
-              <div className={`${evaluationClasses} h-10 w-10`}></div>
-              <div>
-                <p>
-                  <strong>Cost Impact:</strong> {userEvaluation.ImpactScore}
-                </p>
-                <p>
-                  <strong>Feasibility:</strong>{" "}
-                  {userEvaluation.FeasibilityScore}
-                </p>
-              </div>
+            {/* --- NEW: Evaluation Toggle --- */}
+            <div className="flex justify-start mb-4 rounded-md overflow-hidden border border-gray-600">
+              <button
+                onClick={() => setEvaluationView("user")}
+                className={`px-3 py-1 text-sm font-semibold transition-colors w-1/2 ${
+                  evaluationView === "user"
+                    ? "bg-red-600 text-white"
+                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                }`}
+              >
+                Your Evaluation
+              </button>
+              <button
+                onClick={() => setEvaluationView("average")}
+                className={`px-3 py-1 text-sm font-semibold transition-colors w-1/2 ${
+                  evaluationView === "average"
+                    ? "bg-red-600 text-white"
+                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                }`}
+              >
+                Average ({allEvaluations.length})
+              </button>
             </div>
+
+            {/* --- User Evaluation View --- */}
+            {evaluationView === "user" && (
+              <div>
+                <h5 className="text-lg font-bold text-center mb-2">
+                  Your Evaluation
+                </h5>
+                <div className="flex flex-row items-center gap-2">
+                  <div
+                    className={`${getEvaluationClasses(
+                      userEvaluation.ImpactScore,
+                      userEvaluation.FeasibilityScore
+                    )} h-10 w-10`}
+                  ></div>
+                  <div>
+                    <p>
+                      <strong>Cost Impact:</strong> {userEvaluation.ImpactScore}
+                    </p>
+                    <p>
+                      <strong>Feasibility:</strong>{" "}
+                      {userEvaluation.FeasibilityScore}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --- Average Evaluation View --- */}
+            {evaluationView === "average" &&
+              averageScores &&
+              allEvaluations.length > 0 && (
+                <div>
+                  <h5 className="text-lg font-bold text-center mb-2">
+                    Average Evaluation
+                  </h5>
+                  <div className="flex flex-row items-center gap-2">
+                    <div
+                      className={`${getEvaluationClasses(
+                        averageScores.impact,
+                        averageScores.feasibility
+                      )} h-10 w-10`}
+                    ></div>
+                    <div>
+                      <p>
+                        <strong>Cost Impact:</strong> {averageScores.impact}
+                      </p>
+                      <p>
+                        <strong>Feasibility:</strong>{" "}
+                        {averageScores.feasibility}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
           </div>
         ) : isEvaluating ? (
           <form onSubmit={handleEvaluationSubmit}>
