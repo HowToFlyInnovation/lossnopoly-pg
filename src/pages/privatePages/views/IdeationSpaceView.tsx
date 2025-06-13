@@ -5,6 +5,7 @@ import {
   setDoc,
   Timestamp,
   onSnapshot,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { AuthContext } from "../../context/AuthContext";
@@ -15,25 +16,23 @@ import IdeaModal from "./IdeaModal"; // Import the IdeaModal component
 
 // --- TYPE DEFINITIONS ---
 
-interface Solution {
-  solutionId: string;
+interface Idea {
+  id: string;
   ideaTitle: string;
-  image: string;
-  shortRecap?: string;
-  ideaDescription: string;
-  trl: string;
-  inspiration?: { title: string; imageUrl: string; type: string }[];
-  inspiredIdeas?: string[];
-  creationDate: Timestamp;
+  imageUrl: string;
+  shortDescription: string;
+  reasoning: string;
+  costEstimate: string;
+  createdAt: Timestamp;
   userId: string;
   approved?: boolean;
-  argumentsVisible?: boolean;
+  displayName: string;
 }
 
 interface Vote {
-  solutionId: string;
+  ideaId: string;
   userId: string;
-  vote: "agree" | "disagree" | "cancel";
+  vote: "agree" | "disagree";
 }
 
 // --- MASONRY LAYOUT COMPONENT ---
@@ -82,30 +81,23 @@ const MasonryLayout: React.FC<{
   );
 };
 
-// --- SOLUTION TILE COMPONENT ---
-const BBSolutionTile: React.FC<{
-  item: Solution;
-  handleSolutionVote: (voteType: "agree" | "disagree", item: Solution) => void;
-  solutionsVotesData: Vote[];
+// --- IDEA TILE COMPONENT ---
+const IdeaTile: React.FC<{
+  item: Idea;
+  handleVote: (voteType: "agree" | "disagree", item: Idea) => void;
+  votesData: Vote[];
   handleAddToBuildDeck: (card: any) => void;
-}> = ({
-  item,
-  handleSolutionVote,
-  solutionsVotesData,
-  handleAddToBuildDeck,
-}) => {
+}> = ({ item, handleVote, votesData, handleAddToBuildDeck }) => {
   const { user } = useContext(AuthContext) as AuthContextType;
-  const [userVote, setUserVote] = useState<
-    "agree" | "disagree" | "cancel" | false
-  >(false);
+  const [userVote, setUserVote] = useState<"agree" | "disagree" | null>(null);
   const [hasRead, setHasRead] = useState(false);
   const [readMoreVisible, setReadMoreVisible] = useState(false);
-  const [solutionCreationDate, setSolutionCreationDate] = useState("");
+  const [creationDate, setCreationDate] = useState("");
 
   useEffect(() => {
-    if (item.creationDate) {
-      setSolutionCreationDate(
-        item.creationDate.toDate().toLocaleDateString("en-US", {
+    if (item.createdAt) {
+      setCreationDate(
+        item.createdAt.toDate().toLocaleDateString("en-US", {
           year: "numeric",
           month: "long",
           day: "numeric",
@@ -113,73 +105,45 @@ const BBSolutionTile: React.FC<{
       );
     }
 
-    const userVoteData = solutionsVotesData.find(
-      (vote) => vote.solutionId === item.solutionId && vote.userId === user?.uid
+    const userVoteData = votesData.find(
+      (vote) => vote.ideaId === item.id && vote.userId === user?.uid
     );
     if (userVoteData) {
       setUserVote(userVoteData.vote);
+    } else {
+      setUserVote(null);
     }
-  }, [item, user, solutionsVotesData]);
+  }, [item, user, votesData]);
 
   const handleToggleReadStatus = () => {
     setHasRead(!hasRead);
-    console.log("Toggled read status for:", item.solutionId);
   };
+
+  const ideaDescription = `${item.shortDescription}<br/><br/><b>Feasibility Reasoning:</b><br/>${item.reasoning}`;
 
   return (
     <div className="bg-gray-800 text-white rounded-lg shadow-lg overflow-hidden break-words">
-      <div
-        className={`p-4 flex justify-between items-center ${
-          item.approved ? "bg-green-500/50" : ""
-        }`}
-      >
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() =>
-              handleAddToBuildDeck({
-                cardTitle: item.ideaTitle,
-                cardSubTitle: "shared Solution",
-                imageUrl: item.image,
-                cardType: "Idea",
-                cardContent: item.ideaDescription,
-                cardtrl: item.trl,
-              })
-            }
-            className="bg-gray-700 hover:bg-gray-600 rounded-full w-8 h-8 flex items-center justify-center"
-            title="Add to Build Deck"
-          >
-            <FaPlus />
-          </button>
-          <button
-            onClick={handleToggleReadStatus}
-            className={`rounded-full w-8 h-8 flex items-center justify-center transition-colors ${
-              hasRead ? "bg-green-500" : "bg-gray-700 hover:bg-gray-600"
-            }`}
-            title="Mark as Read"
-          >
-            <FaEye />
-          </button>
-        </div>
-        <div className="text-sm text-gray-400">{solutionCreationDate}</div>
+      <div className="bg-amber-600 p-4">
+        <h4 className="font-bold text-xl text-center uppercase">
+          {item.ideaTitle}
+        </h4>
+        <h5 className="text-sm text-center">Waste Reduction</h5>
       </div>
-
       <img
-        src={item.image}
+        src={item.imageUrl}
         alt={item.ideaTitle}
         className="w-full h-48 object-cover"
       />
-
       <div className="p-4">
-        <h4 className="font-bold text-xl mb-2">{item.ideaTitle}</h4>
         <div className="text-gray-300">
           {readMoreVisible ? (
             <div
               dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(item.ideaDescription),
+                __html: DOMPurify.sanitize(ideaDescription),
               }}
             />
           ) : (
-            <p>{`${item.ideaDescription.substring(0, 100)}...`}</p>
+            <p>{`${item.shortDescription.substring(0, 100)}...`}</p>
           )}
           <button
             onClick={() => setReadMoreVisible(!readMoreVisible)}
@@ -196,7 +160,7 @@ const BBSolutionTile: React.FC<{
         </p>
         <div className="flex justify-center gap-4">
           <button
-            onClick={() => handleSolutionVote("agree", item)}
+            onClick={() => handleVote("agree", item)}
             className={`py-2 px-6 rounded-lg font-semibold transition-colors ${
               userVote === "agree"
                 ? "bg-green-500 text-white"
@@ -206,7 +170,7 @@ const BBSolutionTile: React.FC<{
             <FaThumbsUp className="inline mr-2" /> Yes
           </button>
           <button
-            onClick={() => handleSolutionVote("disagree", item)}
+            onClick={() => handleVote("disagree", item)}
             className={`py-2 px-6 rounded-lg font-semibold transition-colors ${
               userVote === "disagree"
                 ? "bg-red-500 text-white"
@@ -217,6 +181,44 @@ const BBSolutionTile: React.FC<{
           </button>
         </div>
       </div>
+      <div className="bg-amber-600">
+        <div
+          className={`p-4 flex justify-between items-center ${
+            item.approved ? "bg-green-500/50" : ""
+          }`}
+        >
+          <div className="text-sm text-gray-100">
+            Created by {item.displayName} on {creationDate}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() =>
+                handleAddToBuildDeck({
+                  cardTitle: item.ideaTitle,
+                  cardSubTitle: "Shared Idea",
+                  imageUrl: item.imageUrl,
+                  cardType: "Idea",
+                  cardContent: ideaDescription,
+                  cardtrl: item.costEstimate,
+                })
+              }
+              className="bg-gray-700 hover:bg-gray-600 rounded-full w-8 h-8 flex items-center justify-center"
+              title="Add to Build Deck"
+            >
+              <FaPlus />
+            </button>
+            <button
+              onClick={handleToggleReadStatus}
+              className={`rounded-full w-8 h-8 flex items-center justify-center transition-colors ${
+                hasRead ? "bg-green-500" : "bg-gray-700 hover:bg-gray-600"
+              }`}
+              title="Mark as Read"
+            >
+              <FaEye />
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -225,80 +227,65 @@ const BBSolutionTile: React.FC<{
 
 const IdeationSpaceView: React.FC = () => {
   const { user } = useContext(AuthContext) as AuthContextType;
-  const [solutionsData, setSolutionsData] = useState<Solution[]>([]);
-  const [solutionsVotesData, setSolutionsVotesData] = useState<Vote[]>([]);
-  const [filteredSolutions, setFilteredSolutions] = useState<Solution[]>([]);
+  const [ideasData, setIdeasData] = useState<Idea[]>([]);
+  const [votesData, setVotesData] = useState<Vote[]>([]);
+  const [filteredIdeas, setFilteredIdeas] = useState<Idea[]>([]);
   const [filter, setFilter] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    const fetchSolutions = onSnapshot(
-      collection(db, "solutions"),
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          ...doc.data(),
-          solutionId: doc.id,
-        })) as Solution[];
-        const sortedData = data.sort(
-          (a, b) => b.creationDate.toMillis() - a.creationDate.toMillis()
-        );
-        setSolutionsData(sortedData);
-      }
-    );
+    const fetchIdeas = onSnapshot(collection(db, "ideas"), (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        ...doc.data(),
+        id: doc.id,
+      })) as Idea[];
+      const sortedData = data.sort(
+        (a, b) => b.createdAt.toMillis() - a.createdAt.toMillis()
+      );
+      setIdeasData(sortedData);
+    });
 
-    const fetchVotes = onSnapshot(
-      collection(db, "solutionsVotes"),
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => doc.data()) as Vote[];
-        setSolutionsVotesData(data);
-      }
-    );
+    const fetchVotes = onSnapshot(collection(db, "ideasVotes"), (snapshot) => {
+      const data = snapshot.docs.map((doc) => doc.data()) as Vote[];
+      setVotesData(data);
+    });
 
     return () => {
-      fetchSolutions();
+      fetchIdeas();
       fetchVotes();
     };
   }, []);
 
   useEffect(() => {
-    let newFilteredData = [...solutionsData];
+    let newFilteredData = [...ideasData];
 
     if (filter === "userCreated") {
-      newFilteredData = solutionsData.filter((s) => s.userId === user?.uid);
+      newFilteredData = ideasData.filter((s) => s.userId === user?.uid);
     } else if (filter === "userVoted") {
-      const votedSolutionIds = new Set(
-        solutionsVotesData
-          .filter((v) => v.userId === user?.uid)
-          .map((v) => v.solutionId)
+      const votedIdeaIds = new Set(
+        votesData.filter((v) => v.userId === user?.uid).map((v) => v.ideaId)
       );
-      newFilteredData = solutionsData.filter((s) =>
-        votedSolutionIds.has(s.solutionId)
-      );
+      newFilteredData = ideasData.filter((s) => votedIdeaIds.has(s.id));
     }
 
-    setFilteredSolutions(newFilteredData);
-  }, [filter, solutionsData, solutionsVotesData, user]);
+    setFilteredIdeas(newFilteredData);
+  }, [filter, ideasData, votesData, user]);
 
-  const handleSolutionVote = async (
-    voteType: "agree" | "disagree",
-    item: Solution
-  ) => {
+  const handleVote = async (voteType: "agree" | "disagree", item: Idea) => {
     if (!user) return;
 
-    const voteDocRef = doc(
-      db,
-      "solutionsVotes",
-      `${user.uid}_${item.solutionId}`
-    );
-    const currentVote = solutionsVotesData.find(
-      (v) => v.solutionId === item.solutionId && v.userId === user.uid
+    const voteDocRef = doc(db, "ideasVotes", `${user.uid}_${item.id}`);
+    const currentVote = votesData.find(
+      (v) => v.ideaId === item.id && v.userId === user.uid
     );
 
     if (currentVote && currentVote.vote === voteType) {
-      console.log("Toggling off vote");
+      // User is clicking the same button again, so remove the vote
+      await deleteDoc(voteDocRef);
     } else {
+      // Add or update the vote
       await setDoc(voteDocRef, {
-        solutionId: item.solutionId,
+        ideaId: item.id,
         userId: user.uid,
         vote: voteType,
         timestamp: Timestamp.now(),
@@ -311,7 +298,7 @@ const IdeationSpaceView: React.FC = () => {
   };
 
   return (
-    <div className="w-full pt-[11vh] px-! md:px-20">
+    <div className="w-full pt-[11vh] px-4 md:px-20 text-black">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8">
         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-4 md:mb-0 uppercase">
           Ideation Space
@@ -335,12 +322,12 @@ const IdeationSpaceView: React.FC = () => {
       </div>
 
       <MasonryLayout gap={20}>
-        {filteredSolutions.map((item) => (
-          <BBSolutionTile
-            key={item.solutionId}
+        {filteredIdeas.map((item) => (
+          <IdeaTile
+            key={item.id}
             item={item}
-            handleSolutionVote={handleSolutionVote}
-            solutionsVotesData={solutionsVotesData}
+            handleVote={handleVote}
+            votesData={votesData}
             handleAddToBuildDeck={handleAddToBuildDeck}
           />
         ))}
