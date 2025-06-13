@@ -3,55 +3,73 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Rules for the 'ideas' collection
+    // Rules for 'ideas' collection
     match /ideas/{ideaId} {
-      // Any authenticated user can read ideas
       allow read: if request.auth != null;
-      // Only the user who created the idea can update or delete it
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
-      // Any authenticated user can create an idea
       allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
-    // Rules for the 'ideasVotes' collection
+    // Rules for 'ideasVotes' collection
     match /ideasVotes/{voteId} {
-        // A user can only create, read, update, or delete their own vote.
-        // The voteId should be in the format 'userId_ideaId'
-        allow read, write, delete: if request.auth != null && request.auth.uid == split(voteId, '_')[0];
-        // Any authenticated user can create a vote, as long as the voteId starts with their uid.
-        allow create: if request.auth != null && request.auth.uid == split(voteId, '_')[0];
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && voteId == request.auth.uid + '_' + request.resource.data.ideaId;
+    }
+
+    // Rules for the 'evaluations' collection
+    match /evaluations/{evaluationId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null && evaluationId == request.auth.uid + '_' + request.resource.data.ideaId;
+        allow update, delete: if false;
     }
 
     // Rules for the 'players' collection
     match /players/{userId} {
-      // Allow users to read and update their own player data
-      allow read, update: if request.auth != null && request.auth.uid == userId;
-      // Allow users to create their own player document
-      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Rules for 'allowedEmailSuffixes'
-    // Allow read for any authenticated user, but no writes.
-    // This should be managed from the Firebase console.
+    // CORRECTED Rule for allowedEmailSuffixes collection
+    // This allows anyone to read, which is necessary for registration.
     match /allowedEmailSuffixes/{suffix} {
-        allow read: if request.auth != null;
-        allow write: if false; // Disallow client-side writes
+        allow read: if true;
+        allow write: if false;
     }
 
-    // Rules for logging collections. These are write-only from the client.
-    match /failedLogins/{logId} {
-        allow create: if true; // Allow anyone to write failed login attempts
-        allow read, update, delete: if false;
-    }
-
+    // SECURE Rules for Logging Collections
     match /successfulLogins/{logId} {
-        allow create: if true; // Allow anyone to write successful login attempts
-        allow read, update, delete: if false;
+      allow read, update, delete: if false;
+      allow create: if
+        request.auth != null &&
+        request.resource.data.Email == request.auth.token.email &&
+        request.resource.data.Time == request.time &&
+        request.resource.data.DisplayName is string &&
+        request.resource.data.browser is string &&
+        request.resource.data.location is map &&
+        request.resource.data.keys().hasOnly(['Time', 'Email', 'DisplayName', 'location', 'browser']);
     }
 
-     match /failedRegistrations/{logId} {
-        allow create: if true;
-        allow read, update, delete: if false;
+    match /failedLogins/{logId} {
+      allow read, update, delete: if false;
+      allow create: if
+        request.resource.data.Time == request.time &&
+        request.resource.data.Email is string && request.resource.data.Email.size() < 256 &&
+        request.resource.data.browser is string && request.resource.data.browser.size() < 512 &&
+        request.resource.data.location is map &&
+        request.resource.data.loginError is string &&
+        request.resource.data.keys().hasOnly(['Time', 'Email', 'location', 'browser', 'loginError']);
+    }
+
+    match /failedRegistrations/{logId} {
+      allow read, update, delete: if false;
+      allow create: if
+        request.resource.data.Time == request.time &&
+        request.resource.data.Email is string && request.resource.data.Email.size() < 256 &&
+        request.resource.data.browser is string && request.resource.data.browser.size() < 512 &&
+        request.resource.data.location is map &&
+        request.resource.data.registrationError is string &&
+        request.resource.data.keys().hasOnly(['Time', 'Email', 'location', 'browser', 'registrationError']);
     }
   }
 }

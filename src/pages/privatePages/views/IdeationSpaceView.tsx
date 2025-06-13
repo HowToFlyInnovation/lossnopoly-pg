@@ -134,7 +134,7 @@ const IdeationSpaceView: React.FC = () => {
   };
 
   return (
-    <div className="w-full pt-[11vh] px-4 md:px-20 text-black">
+    <div className="w-full pt-[11vh] px-4 md:px-20 text-black bg-gray-100">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8">
         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-4 md:mb-0 uppercase">
           Ideation Space
