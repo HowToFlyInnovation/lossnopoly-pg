@@ -15,11 +15,15 @@ interface ProcessedIdea extends Idea {
 interface ChartDotProps {
   idea: ProcessedIdea;
   color: string;
+  onClick: () => void;
+  isSelected: boolean;
 }
 
 interface IdeaListCardProps {
-  idea: Idea;
+  idea: ProcessedIdea;
   color: string;
+  onClick: () => void;
+  isSelected: boolean;
 }
 
 // --- CONSTANTS ---
@@ -46,13 +50,6 @@ const feasibilityOptions = [
   "Impossible to pull off",
 ];
 
-// Colors based on the provided image legend
-const missionChartColors: { [key: string]: string } = {
-  "Mission 1: Touchless Process": "#4682B4", // Steel Blue (like Mission 1)
-  "Mission 2: Touchless Innovation": "#8A2BE2", // Blue Violet (like Mission 2)
-  "Mission 3: Waste Reduction": "#DC143C", // Crimson (like Mission 3)
-};
-
 // Colors from IdeaTile for the list on the left
 const missionListColors: { [key: string]: string } = {
   "Touchless Processes": "bg-amber-600",
@@ -60,48 +57,58 @@ const missionListColors: { [key: string]: string } = {
   "Waste Reduction": "bg-blue-600",
 };
 
+// Updated mission chart colors to match the list colors
+const missionChartColors: { [key: string]: string } = {
+  "Mission 1: Touchless Process": "#D97706", // amber-600
+  "Mission 2: Touchless Innovation": "#16A34A", // green-600
+  "Mission 3: Waste Reduction": "#2563EB", // blue-600
+};
+
 // --- SUB-COMPONENTS ---
 
-/**
- * A single dot representing an idea on the Impact vs. Feasibility chart.
- */
-const ChartDot: React.FC<ChartDotProps> = ({ idea, color }) => {
-  // Positioning: 0% is bottom/left, 100% is top/right.
-  // We subtract a small amount to keep the dot's center from being on the edge.
+const ChartDot: React.FC<ChartDotProps> = ({
+  idea,
+  color,
+  onClick,
+  isSelected,
+}) => {
   const bottom = `calc(${(idea.avgFeasibility / 8) * 100}% - 10px)`;
   const left = `calc(${(idea.avgImpact / 8) * 100}% - 10px)`;
+  const size = isSelected ? "w-8 h-8" : "w-5 h-5";
+  const zIndex = isSelected ? 10 : 1;
 
   return (
     <div
-      className="absolute w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg"
+      className={`absolute rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg cursor-pointer transform transition-all duration-300 ${size} ${
+        isSelected ? "ring-4 ring-offset-2 ring-yellow-400" : ""
+      }`}
       style={{
         backgroundColor: color,
         bottom,
         left,
         transition: "all 0.3s ease-in-out",
+        zIndex,
       }}
       title={`${idea.ideaTitle}\nImpact: ${idea.avgImpact.toFixed(
         1
       )}\nFeasibility: ${idea.avgFeasibility.toFixed(1)}`}
+      onClick={onClick}
     >
       {idea.ideaNumber}
     </div>
   );
 };
 
-/**
- * The main Impact vs. Feasibility chart component.
- */
-const ImpactFeasibilityChart: React.FC<{ ideas: ProcessedIdea[] }> = ({
-  ideas,
-}) => {
+const ImpactFeasibilityChart: React.FC<{
+  ideas: ProcessedIdea[];
+  onSelectIdea: (idea: ProcessedIdea) => void;
+  selectedIdea: ProcessedIdea | null;
+}> = ({ ideas, onSelectIdea, selectedIdea }) => {
+  const chartIdeas = selectedIdea ? [selectedIdea] : ideas;
   return (
     <div className="w-full bg-gray-50 p-6 rounded-lg shadow-inner relative aspect-square">
-      {/* Grid Lines */}
       <div className="absolute top-0 left-1/2 w-px h-full bg-gray-300"></div>
       <div className="absolute top-1/2 left-0 h-px w-full bg-gray-300"></div>
-
-      {/* Axis Labels */}
       <span className="absolute bottom-[-2rem] left-1/2 -translate-x-1/2 text-gray-600 font-semibold">
         Impact
       </span>
@@ -121,48 +128,101 @@ const ImpactFeasibilityChart: React.FC<{ ideas: ProcessedIdea[] }> = ({
         High
       </span>
 
-      {/* Chart Dots */}
-      {ideas.map((idea) => {
-        // Find matching mission name from chart colors
+      {chartIdeas.map((idea) => {
         const missionName =
           Object.keys(missionChartColors).find((m) =>
             idea.ideationMission.includes(m.split(":")[1].trim())
           ) || "Default";
-        const color = missionChartColors[missionName] || "#808080"; // Default gray
-
-        return <ChartDot key={idea.id} idea={idea} color={color} />;
+        const color = missionChartColors[missionName] || "#808080";
+        return (
+          <ChartDot
+            key={idea.id}
+            idea={idea}
+            color={color}
+            onClick={() => onSelectIdea(idea)}
+            isSelected={selectedIdea?.id === idea.id}
+          />
+        );
       })}
     </div>
   );
 };
 
-/**
- * A card for the list of ideas on the left panel.
- */
-const IdeaListCard: React.FC<IdeaListCardProps> = ({ idea, color }) => (
-  <div
-    className={`w-full p-3 rounded-lg shadow-md text-white ${color} flex items-center`}
-  >
-    <div className="w-12 h-12 bg-white/30 rounded-md flex-shrink-0 mr-3 flex items-center justify-center font-bold text-lg">
-      #{idea.ideaNumber}
-    </div>
-    <div className="flex-grow">
-      <h4 className="font-bold">{idea.ideaTitle}</h4>
-      <p className="text-sm opacity-90">
-        {idea.shortDescription.substring(0, 50)}...
-      </p>
-    </div>
-  </div>
-);
+const IdeaListCard: React.FC<IdeaListCardProps> = ({
+  idea,
+  color,
+  onClick,
+  isSelected,
+}) => {
+  if (isSelected) {
+    return (
+      <div
+        className={`w-full p-3 rounded-lg shadow-md text-white ${color} flex flex-col cursor-pointer ring-4 ring-offset-2 ring-yellow-400`}
+        onClick={onClick}
+      >
+        {idea.imageUrl ? (
+          <img
+            src={idea.imageUrl}
+            alt={idea.ideaTitle}
+            className="w-full h-32 object-cover rounded-md mb-3"
+          />
+        ) : (
+          <div className="w-full h-32 bg-white/30 rounded-md mb-3 flex items-center justify-center font-bold text-3xl">
+            #{idea.ideaNumber}
+          </div>
+        )}
+        <div className="flex-grow">
+          <h4 className="font-bold">
+            #{idea.ideaNumber}: {idea.ideaTitle}
+          </h4>
+          <p className="text-sm opacity-90 mt-2">{idea.shortDescription}</p>
+        </div>
+        <div className="mt-4">
+          <p className="text-sm opacity-90 mb-2">{idea.reasoning}</p>
+          <p className="text-sm opacity-90 font-bold">
+            Cost: {idea.costEstimate}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-// --- MAIN VIEW COMPONENT ---
+  return (
+    <div
+      className={`w-full p-3 rounded-lg shadow-md text-white ${color} flex flex-col cursor-pointer`}
+      onClick={onClick}
+    >
+      <div className="flex items-center">
+        {idea.imageUrl ? (
+          <img
+            src={idea.imageUrl}
+            alt={idea.ideaTitle}
+            className="w-12 h-12 object-cover rounded-md flex-shrink-0 mr-3"
+          />
+        ) : (
+          <div className="w-12 h-12 bg-white/30 rounded-md flex-shrink-0 mr-3 flex items-center justify-center font-bold text-lg">
+            #{idea.ideaNumber}
+          </div>
+        )}
+        <div className="flex-grow">
+          <h4 className="font-bold">
+            #{idea.ideaNumber}: {idea.ideaTitle}
+          </h4>
+          <p className="text-sm opacity-90">
+            {`${idea.shortDescription.substring(0, 50)}...`}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const IdeaAssessmentViewPage: React.FC = () => {
   const [processedIdeas, setProcessedIdeas] = useState<ProcessedIdea[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIdea, setSelectedIdea] = useState<ProcessedIdea | null>(null);
 
   useEffect(() => {
-    // Unsubscribe functions
     let unsubIdeas: () => void;
     let unsubEvals: () => void;
 
@@ -188,7 +248,10 @@ const IdeaAssessmentViewPage: React.FC = () => {
     };
 
     const processData = (ideas: Idea[], evaluations: Evaluation[]) => {
-      if (!ideas.length) return;
+      if (!ideas.length) {
+        setLoading(false);
+        return;
+      }
 
       const newProcessedIdeas = ideas
         .map((idea) => {
@@ -201,18 +264,14 @@ const IdeaAssessmentViewPage: React.FC = () => {
               evaluationCount: 0,
             };
           }
-
           const totalImpact = relatedEvals.reduce((sum, e) => {
             const score = costImpactOptions.indexOf(e.ImpactScore);
             return sum + (score !== -1 ? score + 1 : 0);
           }, 0);
-
           const totalFeasibility = relatedEvals.reduce((sum, e) => {
             const score = feasibilityOptions.indexOf(e.FeasibilityScore);
-            // Invert feasibility: "Very easy" (index 0) is high (score 8)
             return sum + (score !== -1 ? 8 - score : 0);
           }, 0);
-
           return {
             ...idea,
             avgImpact: totalImpact / relatedEvals.length,
@@ -220,7 +279,7 @@ const IdeaAssessmentViewPage: React.FC = () => {
             evaluationCount: relatedEvals.length,
           };
         })
-        .filter((idea) => idea.evaluationCount > 0); // Only show ideas with evaluations
+        .filter((idea) => idea.evaluationCount > 0);
 
       setProcessedIdeas(newProcessedIdeas);
       setLoading(false);
@@ -228,14 +287,20 @@ const IdeaAssessmentViewPage: React.FC = () => {
 
     fetchData();
 
-    // Cleanup subscription on unmount
     return () => {
       if (unsubIdeas) unsubIdeas();
       if (unsubEvals) unsubEvals();
     };
   }, []);
 
-  // Use the new mission names from the image for the legend
+  const handleIdeaClick = (idea: ProcessedIdea) => {
+    if (selectedIdea?.id === idea.id) {
+      setSelectedIdea(null);
+    } else {
+      setSelectedIdea(idea);
+    }
+  };
+
   const legendItems = {
     "Mission 1: Touchless Process":
       missionChartColors["Mission 1: Touchless Process"],
@@ -245,38 +310,28 @@ const IdeaAssessmentViewPage: React.FC = () => {
       missionChartColors["Mission 3: Waste Reduction"],
   };
 
+  const listIdeas = selectedIdea ? [selectedIdea] : processedIdeas;
+
   return (
-    <div className="w-full pt-[11vh] px-4 md:px-10 bg-gray-100 min-h-screen">
+    <div className="w-full py-[11vh] px-8 md:px-10 bg-gray-100 min-h-screen">
       <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase mb-8">
         Idea Assessments
       </h1>
       {loading ? (
         <p>Loading assessment data...</p>
       ) : (
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Left Panel: Idea List */}
-          <div className="w-full md:w-1/4 lg:w-1/5">
-            <h2 className="text-xl font-bold text-gray-700 mb-4">All Ideas</h2>
-            <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto pr-2">
-              {processedIdeas.map((idea) => {
-                const missionName =
-                  Object.keys(missionListColors).find((m) =>
-                    idea.ideationMission.includes(m)
-                  ) || "Default";
-                const color = missionListColors[missionName] || "bg-gray-500";
-                return <IdeaListCard key={idea.id} idea={idea} color={color} />;
-              })}
-            </div>
-          </div>
-
-          {/* Right Panel: Chart and Legend */}
-          <div className="w-full md:w-3/4 lg:w-4/5">
+        <div className="flex flex-col md:flex-row-reverse gap-8">
+          {/* Right Panel (now first on mobile): Chart and Legend */}
+          <div className="w-[80%] mx-auto md:w-[55%] lg:w-[60%]">
             <h2 className="text-xl font-bold text-gray-700 mb-4 text-center">
               Impact VS Feasibility
             </h2>
-            <ImpactFeasibilityChart ideas={processedIdeas} />
-            {/* Legend */}
-            <div className="flex justify-center items-center gap-6 mt-6">
+            <ImpactFeasibilityChart
+              ideas={processedIdeas}
+              onSelectIdea={handleIdeaClick}
+              selectedIdea={selectedIdea}
+            />
+            <div className="flex justify-center items-center gap-6 mt-12">
               {Object.entries(legendItems).map(([name, color]) => (
                 <div key={name} className="flex items-center gap-2">
                   <div
@@ -288,6 +343,30 @@ const IdeaAssessmentViewPage: React.FC = () => {
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+          {/* Left Panel (now second on mobile): Idea List */}
+          <div className="w-full md:w-[35%] lg:w-[30%]">
+            <h2 className="text-xl font-bold text-gray-700 mb-4">
+              {selectedIdea ? "Selected Idea" : "All Ideas"}
+            </h2>
+            <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto pr-2">
+              {listIdeas.map((idea) => {
+                const missionName =
+                  Object.keys(missionListColors).find((m) =>
+                    idea.ideationMission.includes(m.split(":")[0])
+                  ) || "Default";
+                const color = missionListColors[missionName] || "bg-gray-500";
+                return (
+                  <IdeaListCard
+                    key={idea.id}
+                    idea={idea}
+                    color={color}
+                    onClick={() => handleIdeaClick(idea)}
+                    isSelected={selectedIdea?.id === idea.id}
+                  />
+                );
+              })}
             </div>
           </div>
         </div>
