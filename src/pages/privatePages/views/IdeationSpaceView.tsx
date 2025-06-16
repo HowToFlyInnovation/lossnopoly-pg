@@ -17,6 +17,8 @@ import IdeaTile, {
   type Comment,
   type Evaluation,
 } from "./IdeaTile"; // Import the new IdeaTile component and its types
+import { FaInfoCircle, FaComment, FaLightbulb } from "react-icons/fa"; // Added FaInfoCircle
+import { PiLegoBold } from "react-icons/pi";
 
 // --- CONSTANTS FOR EVALUATION ---
 const costImpactOptions = [
@@ -63,6 +65,155 @@ const getEvaluationCategory = (
   if (isHighImpact && isHighFeasibility) return "green";
   if (isHighImpact || isHighFeasibility) return "yellow";
   return "red";
+};
+
+// --- [NEW] INFO MODAL COMPONENT ---
+const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
+      onClick={onClose} // Close on overlay click
+    >
+      <div
+        className="bg-gray-800 text-white p-8 rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">How to Use the Ideation Space</h2>
+          <button
+            onClick={onClose}
+            className="text-2xl font-bold text-white hover:text-gray-400"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div className="space-y-6 text-gray-300">
+          {/* Video Placeholder */}
+          <div className="bg-gray-700 p-4 rounded-lg text-center">
+            <p className="font-bold">
+              [VIDEO: A quick walkthrough of the Ideation Space]
+            </p>
+            <p className="text-sm mt-1">
+              Watch this short video to get a complete overview of all the
+              features on this page.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold mb-2 text-white">
+              1. Sharing a New Idea
+            </h3>
+            <p>
+              To submit a completely new idea, simply click the{" "}
+              <strong>+ Share Idea</strong> button at the top right of the page.
+              A form will appear where you can detail your concept.
+            </p>
+            <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
+              <p className="font-bold">
+                [IMAGE: Screenshot of the 'Share Idea' modal]
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold mb-2 text-white">
+              2. Building Upon Existing Ideas
+            </h3>
+            <p>
+              If an existing idea inspires you, you can build upon it. Click the
+              Lego brick icon (
+              <span className="inline-block align-middle">
+                <PiLegoBold />
+              </span>
+              ) on up to three idea cards to select them. The button at the top
+              will change to <strong>Build upon ideas</strong>. Clicking this
+              will open the idea submission form, pre-linking your new idea to
+              the ones that inspired you.
+            </p>
+            <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
+              <p className="font-bold">
+                [IMAGE: Screenshot of selected ideas and the 'Build upon ideas'
+                button]
+              </p>
+            </div>
+            <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
+              <p className="font-bold">
+                [IMAGE: Screenshot of the 'Build upon Idea' modal showing the
+                'Inspired By' section]
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold mb-2 text-white">
+              3. Filtering and Sorting Ideas
+            </h3>
+            <p>
+              Use the dropdown menus at the top to filter the ideas shown. You
+              can filter by:
+            </p>
+            <ul className="list-disc list-inside ml-4 my-2">
+              <li>
+                <strong>Your activity:</strong> Show all ideas, only your ideas,
+                ideas you've voted on, etc.
+              </li>
+              <li>
+                <strong>Sub-Challenge:</strong> Focus on ideas related to a
+                specific sub-challenge.
+              </li>
+            </ul>
+            <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
+              <p className="font-bold">
+                [IMAGE: Screenshot of the filter dropdowns]
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold mb-2 text-white">
+              4. Interacting with Idea Cards
+            </h3>
+            <p>Each idea card has several interactive elements:</p>
+            <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
+              <p className="font-bold">
+                [IMAGE: Screenshot of an Idea Tile with callouts for different
+                interaction buttons]
+              </p>
+            </div>
+            <ul className="list-disc list-inside ml-4 mt-2 space-y-2">
+              <li>
+                <strong>Read More:</strong> Click to expand the card and see the
+                full description and reasoning.
+              </li>
+              <li>
+                <strong>Evaluate Card:</strong> Once expanded, you can provide
+                your own assessment of the idea's cost impact and feasibility.
+                You can also toggle between your evaluation and the average
+                score from all users.
+              </li>
+              <li>
+                <strong>
+                  Comments (<FaComment className="inline-block" />
+                  ):
+                </strong>{" "}
+                Open the comment section to discuss the idea with others. You
+                can reply to existing comments to create threads.
+              </li>
+              <li>
+                <strong>
+                  Inspired By (<FaLightbulb className="inline-block" />
+                  ):
+                </strong>{" "}
+                This icon appears if an idea was built upon others. Click it to
+                see the source ideas.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // --- MASONRY LAYOUT COMPONENT ---
@@ -121,6 +272,7 @@ const IdeationSpaceView: React.FC = () => {
   const [filter, setFilter] = useState("all");
   const [missionFilter, setMissionFilter] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedIdeas, setSelectedIdeas] = useState<Idea[]>([]);
 
   useEffect(() => {
@@ -307,12 +459,19 @@ const IdeationSpaceView: React.FC = () => {
       : "Build upon Idea";
 
   return (
-    <div className="w-full py-[11vh] px-8 md:px-20 text-black bg-gray-100">
+    <div className="w-full py-[11vh] px-8 md:px-20 text-black bg-gray-100 min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase">
           Ideation Space
         </h1>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+          <button
+            onClick={() => setIsInfoModalOpen(true)}
+            className="p-3 bg-gray-800 text-white rounded-lg shadow-md hover:bg-black focus:outline-none absolute top-5 right-5 cursor-pointer"
+            aria-label="Show info"
+          >
+            <FaInfoCircle size={20} />
+          </button>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -367,6 +526,10 @@ const IdeationSpaceView: React.FC = () => {
 
       {isModalOpen && (
         <IdeaModal onClose={handleCloseModal} inspiredBy={selectedIdeas} />
+      )}
+
+      {isInfoModalOpen && (
+        <InfoModal onClose={() => setIsInfoModalOpen(false)} />
       )}
     </div>
   );
