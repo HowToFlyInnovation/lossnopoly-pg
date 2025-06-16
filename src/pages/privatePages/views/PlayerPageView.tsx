@@ -58,7 +58,6 @@ const PlayerPageView = () => {
   useEffect(() => {
     const fetchAndProcessData = async () => {
       setLoading(true);
-
       if (!currentUser) {
         setLoading(false);
         return;
@@ -84,8 +83,87 @@ const PlayerPageView = () => {
         ...doc.data(),
       })) as any[];
 
-      const dailyStatsMap = new Map<string, DailyStat>();
+      // --- All-Time Stats Calculation ---
+      const allPlayerIdeas = ideas.filter((i) => i.userId === currentUser.uid);
+      const allPlayerComments = comments.filter(
+        (c) => c.userId === currentUser.uid
+      );
+      const allPlayerEvaluations = evaluations.filter(
+        (e) => e.EvaluatorUserId === currentUser.uid
+      );
+      const ideaAuthorMap = new Map(ideas.map((i) => [i.id, i.userId]));
+      let allPlayerIdeasInspired = 0;
+      ideas.forEach((idea) => {
+        if (idea.inspiredBy) {
+          idea.inspiredBy.forEach((inspiration: { id: string }) => {
+            const inspiringIdeaAuthorId = ideaAuthorMap.get(inspiration.id);
+            if (
+              inspiringIdeaAuthorId === currentUser.uid &&
+              inspiringIdeaAuthorId !== idea.userId
+            ) {
+              allPlayerIdeasInspired++;
+            }
+          });
+        }
+      });
 
+      const ideaTimestamps = allPlayerIdeas.map((a) => a.createdAt);
+      const commentTimestamps = allPlayerComments.map((a) => a.createdAt);
+      const evaluationTimestamps = allPlayerEvaluations.map(
+        (a) => a.EvaluationDate
+      );
+      const allActionTimestamps = [
+        ...ideaTimestamps,
+        ...commentTimestamps,
+        ...evaluationTimestamps,
+      ].filter((ts) => ts && typeof ts.toDate === "function");
+
+      const uniqueDays = new Set(
+        allActionTimestamps.map((ts) =>
+          Math.floor(ts.toDate().getTime() / (1000 * 60 * 60 * 24))
+        )
+      );
+      const sortedDays = Array.from(uniqueDays).sort((a, b) => a - b);
+      let longestStreak = 0;
+      if (sortedDays.length > 0) {
+        longestStreak = 1;
+        let currentStreak = 1;
+        for (let i = 1; i < sortedDays.length; i++) {
+          if (sortedDays[i] === sortedDays[i - 1] + 1) {
+            currentStreak++;
+          } else {
+            currentStreak = 1;
+          }
+          if (currentStreak > longestStreak) {
+            longestStreak = currentStreak;
+          }
+        }
+      }
+
+      let totalXp = 0;
+      allPlayerIdeas
+        .sort((a, b) => a.createdAt.toMillis() - b.createdAt.toMillis())
+        .forEach((_, index) => {
+          if (index === 0) totalXp += 20;
+          else if (index === 1) totalXp += 15;
+          else if (index === 2) totalXp += 10;
+          else totalXp += 5;
+        });
+      totalXp += allPlayerComments.length * 2;
+      totalXp += allPlayerEvaluations.length * 2;
+      totalXp += allPlayerIdeasInspired * 10;
+      totalXp += longestStreak * 5;
+      const allTimeStats: PlayerStats = {
+        ideasCreated: allPlayerIdeas.length,
+        commentsMade: allPlayerComments.length,
+        ideasInspired: allPlayerIdeasInspired,
+        evaluationsMade: allPlayerEvaluations.length,
+        xpCollected: totalXp,
+      };
+      setPlayerStats(allTimeStats);
+
+      // --- Daily Stats Calculation ---
+      const dailyStatsMap = new Map<string, DailyStat>();
       const getDailyStat = (date: string) => {
         if (!dailyStatsMap.has(date)) {
           dailyStatsMap.set(date, {
@@ -100,70 +178,47 @@ const PlayerPageView = () => {
         return dailyStatsMap.get(date)!;
       };
 
-      const ideasToProcess = showAllPlayers
-        ? ideas
-        : ideas.filter((idea) => idea.userId === currentUser.uid);
-      ideasToProcess.forEach((doc) => {
-        if (doc.createdAt && typeof doc.createdAt.toDate === "function") {
-          const date = (doc.createdAt as Timestamp)
-            .toDate()
-            .toISOString()
-            .split("T")[0];
+      ideas.forEach((doc) => {
+        const shouldCount = showAllPlayers || doc.userId === currentUser.uid;
+        if (shouldCount && doc.createdAt?.toDate) {
+          const date = doc.createdAt.toDate().toISOString().split("T")[0];
           const stats = getDailyStat(date);
           stats.ideasCreated += 1;
           stats.xpCollected += 10;
         }
       });
-
-      const commentsToProcess = showAllPlayers
-        ? comments
-        : comments.filter((comment) => comment.userId === currentUser.uid);
-      commentsToProcess.forEach((doc) => {
-        if (doc.createdAt && typeof doc.createdAt.toDate === "function") {
-          const date = (doc.createdAt as Timestamp)
-            .toDate()
-            .toISOString()
-            .split("T")[0];
+      comments.forEach((doc) => {
+        const shouldCount = showAllPlayers || doc.userId === currentUser.uid;
+        if (shouldCount && doc.createdAt?.toDate) {
+          const date = doc.createdAt.toDate().toISOString().split("T")[0];
           const stats = getDailyStat(date);
           stats.commentsMade += 1;
           stats.xpCollected += 2;
         }
       });
-
-      const evaluationsToProcess = showAllPlayers
-        ? evaluations
-        : evaluations.filter(
-            (evaluation) => evaluation.EvaluatorUserId === currentUser.uid
-          );
-      evaluationsToProcess.forEach((doc) => {
-        if (doc.createdAt && typeof doc.createdAt.toDate === "function") {
-          const date = (doc.createdAt as Timestamp)
-            .toDate()
-            .toISOString()
-            .split("T")[0];
+      evaluations.forEach((doc) => {
+        const shouldCount =
+          showAllPlayers || doc.EvaluatorUserId === currentUser.uid;
+        if (shouldCount && doc.EvaluationDate?.toDate) {
+          const date = doc.EvaluationDate.toDate().toISOString().split("T")[0];
           const stats = getDailyStat(date);
           stats.evaluationsMade += 1;
           stats.xpCollected += 2;
         }
       });
-
-      const ideaAuthorMap = new Map(ideas.map((i) => [i.id, i.userId]));
       ideas.forEach((idea) => {
         if (idea.inspiredBy) {
           idea.inspiredBy.forEach((inspiration: { id: string }) => {
             const inspiringIdeaAuthorId = ideaAuthorMap.get(inspiration.id);
             if (
               inspiringIdeaAuthorId &&
-              inspiringIdeaAuthorId !== idea.userId
+              inspiringIdeaAuthorId !== idea.userId &&
+              idea.createdAt?.toDate
             ) {
               const shouldCount =
                 showAllPlayers || inspiringIdeaAuthorId === currentUser.uid;
-              if (
-                shouldCount &&
-                idea.createdAt &&
-                typeof idea.createdAt.toDate === "function"
-              ) {
-                const date = (idea.createdAt as Timestamp)
+              if (shouldCount) {
+                const date = idea.createdAt
                   .toDate()
                   .toISOString()
                   .split("T")[0];
@@ -176,19 +231,13 @@ const PlayerPageView = () => {
         }
       });
 
-      const today = new Date("2025-06-16T12:00:00Z");
-      const yesterday = new Date(today);
-      yesterday.setDate(today.getDate() - 1);
-
+      // --- Date Range and Final Stats Generation ---
       const dateRange = [];
-      for (
-        let d = new Date(yesterday);
-        d <= today;
-        d.setDate(d.getDate() + 1)
-      ) {
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
         dateRange.push(d.toISOString().split("T")[0]);
       }
-
       const finalDailyStats = dateRange.map((date) => {
         return (
           dailyStatsMap.get(date) || {
@@ -201,33 +250,7 @@ const PlayerPageView = () => {
           }
         );
       });
-
       setDailyStats(finalDailyStats);
-
-      const totalStats: PlayerStats = {
-        ideasCreated: finalDailyStats.reduce(
-          (sum, day) => sum + day.ideasCreated,
-          0
-        ),
-        commentsMade: finalDailyStats.reduce(
-          (sum, day) => sum + day.commentsMade,
-          0
-        ),
-        ideasInspired: finalDailyStats.reduce(
-          (sum, day) => sum + day.ideasInspired,
-          0
-        ),
-        evaluationsMade: finalDailyStats.reduce(
-          (sum, day) => sum + day.evaluationsMade,
-          0
-        ),
-        xpCollected: finalDailyStats.reduce(
-          (sum, day) => sum + day.xpCollected,
-          0
-        ),
-      };
-      setPlayerStats(totalStats);
-
       setLoading(false);
     };
 
@@ -239,31 +262,22 @@ const PlayerPageView = () => {
   const handleEditPicture = () => {
     fileInputRef.current?.click();
   };
-
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && currentUser) {
       const file = e.target.files[0];
-
       if (!file.type.startsWith("image/")) {
         console.error("Invalid file type. Please select an image.");
         return;
       }
-
       setUploading(true);
-
       const storage = getStorage();
       const storageRef = ref(storage, `profilePictures/${currentUser.uid}`);
-
       try {
         await uploadBytes(storageRef, file);
         const photoURL = await getDownloadURL(storageRef);
-
         await updateProfile(currentUser, { photoURL });
-
         const playerDocRef = doc(db, "players", currentUser.uid);
         await updateDoc(playerDocRef, { profilePic: photoURL });
-
-        console.log("Profile picture updated successfully!");
       } catch (error) {
         console.error("Error uploading profile picture:", error);
       } finally {
@@ -275,6 +289,8 @@ const PlayerPageView = () => {
     }
   };
 
+  // ***** FIX IS HERE *****
+  // The <> fragment has been removed, and allowDecimals is gone from YAxis
   const renderChart = (
     dataKey: keyof DailyStat,
     color: string,
@@ -295,40 +311,48 @@ const PlayerPageView = () => {
   if (loading) {
     return (
       <div className="w-full py-[11vh] px-8 md:px-20 text-black bg-gray-100 min-h-screen">
+        {" "}
         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase mb-8 text-left">
-          Player Dashboard
-        </h1>
-        <p className="text-center">Loading dashboard...</p>
+          {" "}
+          Player Dashboard{" "}
+        </h1>{" "}
+        <p className="text-center">Loading dashboard...</p>{" "}
       </div>
     );
   }
-
   return (
     <div className="w-full py-[11vh] px-8 md:px-20 text-black bg-gray-100 min-h-screen">
+      {" "}
       <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase mb-8 text-left">
-        Player Dashboard
-      </h1>
+        {" "}
+        Player Dashboard{" "}
+      </h1>{" "}
       <div>
+        {" "}
         <div className="bg-white rounded-lg shadow-md mb-8 pr-12">
+          {" "}
           <div className="flex items-center">
+            {" "}
             <div className="relative">
+              {" "}
               <img
                 className="h-40 w-auto"
                 src={currentUser?.photoURL || "https://via.placeholder.com/150"}
                 alt="Player profile"
-              />
+              />{" "}
               <input
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileChange}
                 style={{ display: "none" }}
                 accept="image/*"
-              />
+              />{" "}
               <button
                 onClick={handleEditPicture}
                 disabled={uploading}
                 className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full p-2 hover:bg-blue-600 disabled:bg-gray-400"
               >
+                {" "}
                 {uploading ? (
                   <svg
                     className="animate-spin h-6 w-6 text-white"
@@ -336,6 +360,7 @@ const PlayerPageView = () => {
                     fill="none"
                     viewBox="0 0 24 24"
                   >
+                    {" "}
                     <circle
                       className="opacity-25"
                       cx="12"
@@ -343,12 +368,12 @@ const PlayerPageView = () => {
                       r="10"
                       stroke="currentColor"
                       strokeWidth="4"
-                    ></circle>
+                    ></circle>{" "}
                     <path
                       className="opacity-75"
                       fill="currentColor"
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
+                    ></path>{" "}
                   </svg>
                 ) : (
                   <svg
@@ -358,114 +383,158 @@ const PlayerPageView = () => {
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
+                    {" "}
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
                       d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 5.232z"
-                    />
+                    />{" "}
                   </svg>
-                )}
-              </button>
-            </div>
+                )}{" "}
+              </button>{" "}
+            </div>{" "}
             <div className="w-full px-24">
+              {" "}
               <h2 className="text-2xl font-bold text-gray-800">
-                {currentUser?.displayName}
-              </h2>
+                {" "}
+                {currentUser?.displayName}{" "}
+              </h2>{" "}
               <div className="mt-4 flex row w-[100%] justify-between">
+                {" "}
                 <div>
-                  <span className="text-sm text-gray-500">Ideas Created</span>
-                  <p className="text-xl font-semibold text-gray-800">
-                    {playerStats?.ideasCreated || 0}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-500">Comments Made</span>
-                  <p className="text-xl font-semibold text-gray-800">
-                    {playerStats?.commentsMade || 0}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-500">Ideas Inspired</span>
-                  <p className="text-xl font-semibold text-gray-800">
-                    {playerStats?.ideasInspired || 0}
-                  </p>
-                </div>
-                <div>
+                  {" "}
                   <span className="text-sm text-gray-500">
-                    Evaluations Made
-                  </span>
+                    Ideas Created
+                  </span>{" "}
                   <p className="text-xl font-semibold text-gray-800">
-                    {playerStats?.evaluationsMade || 0}
-                  </p>
-                </div>
+                    {" "}
+                    {playerStats?.ideasCreated || 0}{" "}
+                  </p>{" "}
+                </div>{" "}
                 <div>
-                  <span className="text-sm text-gray-500">XP Collected</span>
+                  {" "}
+                  <span className="text-sm text-gray-500">
+                    Comments Made
+                  </span>{" "}
                   <p className="text-xl font-semibold text-gray-800">
-                    {playerStats?.xpCollected || 0}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
+                    {" "}
+                    {playerStats?.commentsMade || 0}{" "}
+                  </p>{" "}
+                </div>{" "}
+                <div>
+                  {" "}
+                  <span className="text-sm text-gray-500">
+                    Ideas Inspired
+                  </span>{" "}
+                  <p className="text-xl font-semibold text-gray-800">
+                    {" "}
+                    {playerStats?.ideasInspired || 0}{" "}
+                  </p>{" "}
+                </div>{" "}
+                <div>
+                  {" "}
+                  <span className="text-sm text-gray-500">
+                    {" "}
+                    Evaluations Made{" "}
+                  </span>{" "}
+                  <p className="text-xl font-semibold text-gray-800">
+                    {" "}
+                    {playerStats?.evaluationsMade || 0}{" "}
+                  </p>{" "}
+                </div>{" "}
+                <div>
+                  {" "}
+                  <span className="text-sm text-gray-500">
+                    XP Collected
+                  </span>{" "}
+                  <p className="text-xl font-semibold text-gray-800">
+                    {" "}
+                    {playerStats?.xpCollected || 0}{" "}
+                  </p>{" "}
+                </div>{" "}
+              </div>{" "}
+            </div>{" "}
+          </div>{" "}
+        </div>{" "}
         <div className="bg-white rounded-lg shadow-md p-6">
+          {" "}
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold text-gray-800">Daily Activity</h3>
+            {" "}
+            <h3 className="text-xl font-bold text-gray-800">
+              Daily Activity
+            </h3>{" "}
             <div className="bg-gray-200 rounded-full p-1 flex">
+              {" "}
               <button
                 onClick={() => setShowAllPlayers(false)}
                 className={`px-4 py-1 text-sm font-semibold rounded-full ${
                   !showAllPlayers ? "bg-white shadow" : "text-gray-600"
                 }`}
               >
-                Only Me
-              </button>
+                {" "}
+                Only Me{" "}
+              </button>{" "}
               <button
                 onClick={() => setShowAllPlayers(true)}
                 className={`px-4 py-1 text-sm font-semibold rounded-full ${
                   showAllPlayers ? "bg-white shadow" : "text-gray-600"
                 }`}
               >
-                All Players
-              </button>
-            </div>
-          </div>
+                {" "}
+                All Players{" "}
+              </button>{" "}
+            </div>{" "}
+          </div>{" "}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {" "}
             <div>
+              {" "}
               <h4 className="text-lg font-semibold mb-2 text-center">
-                Ideas Created
-              </h4>
-              {renderChart("ideasCreated", "#8884d8", "Ideas Created")}
-            </div>
+                {" "}
+                Ideas Created{" "}
+              </h4>{" "}
+              {renderChart("ideasCreated", "#8884d8", "Ideas Created")}{" "}
+            </div>{" "}
             <div>
+              {" "}
               <h4 className="text-lg font-semibold mb-2 text-center">
-                Comments Made
-              </h4>
-              {renderChart("commentsMade", "#82ca9d", "Comments Made")}
-            </div>
+                {" "}
+                Comments Made{" "}
+              </h4>{" "}
+              {renderChart("commentsMade", "#82ca9d", "Comments Made")}{" "}
+            </div>{" "}
             <div>
+              {" "}
               <h4 className="text-lg font-semibold mb-2 text-center">
-                Ideas Inspired
-              </h4>
-              {renderChart("ideasInspired", "#ffc658", "Ideas Inspired")}
-            </div>
+                {" "}
+                Ideas Inspired{" "}
+              </h4>{" "}
+              {renderChart("ideasInspired", "#ffc658", "Ideas Inspired")}{" "}
+            </div>{" "}
             <div>
+              {" "}
               <h4 className="text-lg font-semibold mb-2 text-center">
-                Evaluations Made
-              </h4>
-              {renderChart("evaluationsMade", "#ff7300", "Evaluations Made")}
-            </div>
+                {" "}
+                Evaluations Made{" "}
+              </h4>{" "}
+              {renderChart(
+                "evaluationsMade",
+                "#ff7300",
+                "Evaluations Made"
+              )}{" "}
+            </div>{" "}
             <div>
+              {" "}
               <h4 className="text-lg font-semibold mb-2 text-center">
-                XP Collected
-              </h4>
-              {renderChart("xpCollected", "#00C49F", "XP Collected")}
-            </div>
-          </div>
-        </div>
-      </div>
+                {" "}
+                XP Collected{" "}
+              </h4>{" "}
+              {renderChart("xpCollected", "#00C49F", "XP Collected")}{" "}
+            </div>{" "}
+          </div>{" "}
+        </div>{" "}
+      </div>{" "}
     </div>
   );
 };
