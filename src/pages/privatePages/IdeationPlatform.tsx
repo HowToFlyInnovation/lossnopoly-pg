@@ -6,7 +6,8 @@ import PlatformSideMenu from "../../components/PlatformSideMenu";
 import type { Dispatch, SetStateAction } from "react";
 import HomePageView from "./views/HomePageView"; // Import the existing view
 import IdeationSpaceView from "./views/IdeationSpaceView";
-import IdeaAssessmentViewPage from "./views/IdeaAssessmentViewPage"; // Add this line// Import the new view
+import IdeaAssessmentViewPage from "./views/IdeaAssessmentViewPage";
+import PlayerRankingView from "./views/PlayerRankingView"; // Add this line// Import the new view
 
 // --- Type Definitions ---
 interface IdeationPlatformProps {
@@ -84,6 +85,8 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
         return <IdeationSpaceView />;
       case "IdeaAssessments":
         return <IdeaAssessmentViewPage />;
+      case "PlayerRankingView":
+        return <PlayerRankingView />;
       default:
         return (
           <div className="w-full h-screen flex justify-center items-center">

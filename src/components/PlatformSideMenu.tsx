@@ -151,7 +151,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
           customTheme={customTheme}
         />
         <MenuItem
-          id="BlackboxScavengerHuntGuessPage"
+          id="PlayerRankingView"
           onClick={handleMenuClick}
           text="Player Ranking"
           visibleContent={visibleContent}

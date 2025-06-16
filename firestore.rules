@@ -23,46 +23,49 @@ service cloud.firestore {
         allow update, delete: if false;
     }
 
-    // *** UPDATED: Rules for the 'comments' collection ***
+    // Rules for the 'comments' collection
     match /comments/{commentId} {
       // Any authenticated user can read comments.
       allow read: if request.auth != null;
 
       // An authenticated user can create a comment if the data is valid.
       allow create: if request.auth != null
-                    // 1. Author must be the logged-in user.
-                    && request.resource.data.userId == request.auth.uid
-                    // 2. All required fields must exist and have the correct format.
-                    && request.resource.data.ideaId is string
-                    && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() < 2000
-                    && request.resource.data.displayName is string && request.resource.data.displayName.size() > 0
-                    && request.resource.data.createdAt is timestamp
-                    && request.resource.data.likes == []
-                    && (request.resource.data.parentId is string || request.resource.data.parentId == null)
-                    // 3. Ensure no unexpected fields are being added.
-                    && request.resource.data.keys().hasAll(['ideaId', 'userId', 'displayName', 'text', 'createdAt', 'likes', 'parentId']);
+                      // 1. Author must be the logged-in user.
+                      && request.resource.data.userId == request.auth.uid
+                      // 2. All required fields must exist and have the correct format.
+                      && request.resource.data.ideaId is string
+                      && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() < 2000
+                      && request.resource.data.displayName is string && request.resource.data.displayName.size() > 0
+                      && request.resource.data.createdAt is timestamp
+                      && request.resource.data.likes == []
+                      && (request.resource.data.parentId is string || request.resource.data.parentId == null)
+                      // 3. Ensure no unexpected fields are being added.
+                      && request.resource.data.keys().hasAll(['ideaId', 'userId', 'displayName', 'text', 'createdAt', 'likes', 'parentId']);
 
 
       // An authenticated user can update a comment only to like/unlike it.
       allow update: if request.auth != null
-                    // The only field that can change is the 'likes' array.
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
-                    // Ensure the change is either adding or removing the current user's UID from the likes array.
-                    && (
-                      // Liking: The new 'likes' array is the old one plus the user's UID.
-                      request.resource.data.likes == resource.data.likes.concat([request.auth.uid]) ||
-                      // Unliking: The old 'likes' array is the new one plus the user's UID.
-                      resource.data.likes == request.resource.data.likes.concat([request.auth.uid])
-                    );
+                      // The only field that can change is the 'likes' array.
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+                      // Ensure the change is either adding or removing the current user's UID from the likes array.
+                      && (
+                        // Liking: The new 'likes' array is the old one plus the user's UID.
+                        request.resource.data.likes == resource.data.likes.concat([request.auth.uid]) ||
+                        // Unliking: The old 'likes' array is the new one plus the user's UID.
+                        resource.data.likes == request.resource.data.likes.concat([request.auth.uid])
+                      );
 
       // A user can delete their own comment.
       allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
-    // Rules for the 'players' collection
+    // *** UPDATED: Rules for the 'players' collection ***
     match /players/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      // Any authenticated user can read player data for the ranking page.
+      allow read: if request.auth != null;
+      // Users can only create their own player document.
       allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == request.auth.uid;
+      // Users can only update their own player document.
       allow update: if request.auth != null && request.auth.uid == userId;
     }
 
