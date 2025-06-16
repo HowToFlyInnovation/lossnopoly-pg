@@ -144,7 +144,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
 
       <div className="w-full mx-auto mt-0">
         <MenuItem
-          id="BlackboxPlayerPage"
+          id="PlayerPageView"
           onClick={handleMenuClick}
           text="Player Page"
           visibleContent={visibleContent}

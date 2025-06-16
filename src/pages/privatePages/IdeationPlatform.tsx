@@ -8,7 +8,7 @@ import HomePageView from "./views/HomePageView"; // Import the existing view
 import IdeationSpaceView from "./views/IdeationSpaceView";
 import IdeaAssessmentViewPage from "./views/IdeaAssessmentViewPage";
 import PlayerRankingView from "./views/PlayerRankingView"; // Add this line// Import the new view
-
+import PlayerPageView from "./views/PlayerPageView";
 // --- Type Definitions ---
 interface IdeationPlatformProps {
   menuActive: boolean;
@@ -85,6 +85,8 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
         return <IdeationSpaceView />;
       case "IdeaAssessments":
         return <IdeaAssessmentViewPage />;
+      case "PlayerPageView":
+        return <PlayerPageView />;
       case "PlayerRankingView":
         return <PlayerRankingView />;
       default:
