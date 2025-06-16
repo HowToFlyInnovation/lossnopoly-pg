@@ -98,20 +98,20 @@ const costImpactOptions = [
 ];
 
 const feasibilityOptions = [
-  "Very easy to do",
-  "Straightforward to implement",
-  "Moderately easy",
-  "Doable, but requires significant effort",
-  "Challenging to accomplish",
-  "Very difficult to execute",
-  "Borderline impossible",
   "Impossible to pull off",
+  "Borderline impossible",
+  "Very difficult to execute",
+  "Challenging to accomplish",
+  "Doable, but requires significant effort",
+  "Moderately easy",
+  "Straightforward to implement",
+  "Very easy to do",
 ];
 
 const missionColors: { [key: string]: string } = {
-  "Touchless Processes": "bg-amber-600",
-  "Touchless Innovation": "bg-green-600",
-  "Waste Reduction": "bg-blue-600",
+  "E2E Touchless Supply Chain": "bg-amber-600",
+  "E2E Touchless Innovation": "bg-green-600",
+  "Zero Waste": "bg-blue-600",
 };
 
 // --- IDEA TILE COMPONENT ---
@@ -323,7 +323,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     }
 
     const impactScore = impactIndex + 1;
-    const feasibilityScore = 8 - feasibilityIndex;
+    const feasibilityScore = feasibilityIndex + 1;
     const isHighImpact = impactScore > 4;
     const isHighFeasibility = feasibilityScore > 4;
 
@@ -377,7 +377,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
       ));
   };
 
-  const ideaDescription = `${item.shortDescription}<br/><br/><b>Feasibility Reasoning:</b><br/>${item.reasoning}`;
+  // const ideaDescription = `<br/><br/><b>Feasibility Reasoning:</b><br/>${item.reasoning}`;
   const headerColor = missionColors[item.ideationMission] || "bg-gray-600";
 
   return (
@@ -415,23 +415,26 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
           <div className="text-gray-300">
             {readMoreVisible ? (
               <div className="flex flex-col gap-4 mb-4">
-                <div
-                  dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(ideaDescription),
-                  }}
-                />
-                <div>
-                  <b>Cost Estimate: </b>
+                <div>{item.shortDescription}</div>
+                <div className="mb-0">
+                  <b>
+                    Cost Saving Estimate: <br />
+                  </b>
                   {item.costEstimate}
+                </div>
+                <div>
+                  <b>Help Needed / Barriers to overcome: </b>
+                  <br />
+                  {item.reasoning}
                 </div>
                 {item.tags && item.tags.length > 0 && (
                   <div>
-                    <b>Tags:</b>
+                    <b>Teams Involved:</b>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {item.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="bg-gray-700 text-gray-300 text-xs font-semibold px-2.5 py-0.5 rounded-full"
+                          className="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full"
                         >
                           {tag}
                         </span>
@@ -462,7 +465,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   onClick={() => setEvaluationView("user")}
                   className={`px-3 py-1 text-sm font-semibold transition-colors w-1/2 ${
                     evaluationView === "user"
-                      ? "bg-red-600 text-white"
+                      ? "bg-black text-white"
                       : "bg-gray-700 text-gray-300 hover:bg-gray-600"
                   }`}
                 >
@@ -472,7 +475,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   onClick={() => setEvaluationView("average")}
                   className={`px-3 py-1 text-sm font-semibold transition-colors w-1/2 ${
                     evaluationView === "average"
-                      ? "bg-red-600 text-white"
+                      ? "bg-black text-white"
                       : "bg-gray-700 text-gray-300 hover:bg-gray-600"
                   }`}
                 >

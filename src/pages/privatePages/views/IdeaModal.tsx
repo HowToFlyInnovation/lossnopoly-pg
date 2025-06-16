@@ -12,15 +12,15 @@ interface IdeaModalProps {
 }
 
 const missionOptions = [
-  "Touchless Processes",
-  "Touchless Innovation",
-  "Waste Reduction",
+  "E2E Touchless Supply Chain",
+  "E2E Touchless Innovation",
+  "Zero Waste",
 ];
 
 const tagsByMission: { [key: string]: string[] } = {
-  "Touchless Processes": ["DD1", "DD2", "DD3"],
-  "Touchless Innovation": ["PP1", "PP2", "PP3"],
-  "Waste Reduction": ["RR1", "RR2", "RR3", "RR4", "RR5"],
+  "E2E Touchless Supply Chain": ["BU 1", "BU 2", "BU 3"],
+  "E2E Touchless Innovation": ["BU 3", "BU 4", "BU 5", "BU 6"],
+  "Zero Waste": ["Team 1", "Team 2", "Team 3", "Team 4", "Team 5"],
 };
 
 const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
@@ -30,7 +30,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
   const [reasoning, setReasoning] = useState("");
   const [ideationMission, setIdeationMission] = useState(missionOptions[0]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [costEstimate, setCostEstimate] = useState("$1,000 - $10,000");
+  const [costEstimate, setCostEstimate] = useState("$0-$10K");
   const [ideaImage, setIdeaImage] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -156,7 +156,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
               htmlFor="ideationMission"
               className="block mb-2 font-semibold"
             >
-              Ideation Mission
+              Ideation Sub-Challenge
             </label>
             <select
               id="ideationMission"
@@ -170,25 +170,6 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
                 </option>
               ))}
             </select>
-          </div>
-          <div className="mb-4">
-            <label className="block mb-2 font-semibold">Team Involvement</label>
-            <div className="flex flex-wrap gap-2">
-              {tagsByMission[ideationMission].map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => handleTagClick(tag)}
-                  className={`py-1 px-3 rounded-full text-sm transition-colors ${
-                    selectedTags.includes(tag)
-                      ? "bg-red-500 text-white"
-                      : "bg-gray-600 hover:bg-gray-500"
-                  }`}
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
           </div>
           <div className="mb-4">
             <label htmlFor="ideaTitle" className="block mb-2 font-semibold">
@@ -212,6 +193,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
             </label>
             <textarea
               id="shortDescription"
+              placeholder="Shortly descibe in laymen terms how your idea will help to achieve the challenge objective?"
               value={shortDescription}
               onChange={(e) => setShortDescription(e.target.value)}
               className="w-full p-2 bg-gray-700 rounded"
@@ -220,11 +202,32 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
             ></textarea>
           </div>
           <div className="mb-4">
+            <label htmlFor="costEstimate" className="block mb-2 font-semibold">
+              Cost Saving Estimate
+            </label>
+            <select
+              id="costEstimate"
+              value={costEstimate}
+              onChange={(e) => setCostEstimate(e.target.value)}
+              className="w-full p-2 bg-gray-700 rounded"
+            >
+              <option value="Negative">Negative</option>
+              <option value="$0-$10K">$0-$10K</option>
+              <option value="$10K-$30K">$10K-$30K</option>
+              <option value="$30K-$100K">$30K-$100K</option>
+              <option value="$100K-$250K">$100K-$250K</option>
+              <option value="$250K-$500K">$250K-$500K</option>
+              <option value="$500K-$1M">$500K-$1M</option>
+              <option value="$1M+">$1M+</option>
+            </select>
+          </div>
+          <div className="mb-4">
             <label htmlFor="reasoning" className="block mb-2 font-semibold">
-              Feasibility Reasoning
+              Help Needed / Barriers to overcome
             </label>
             <textarea
               id="reasoning"
+              placeholder="What kind of help/resources would be needed to make this happen? What are the main risks/hurdles to overcome to your idea a reality?"
               value={reasoning}
               onChange={(e) => setReasoning(e.target.value)}
               className="w-full p-2 bg-gray-700 rounded"
@@ -233,21 +236,25 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
             ></textarea>
           </div>
           <div className="mb-4">
-            <label htmlFor="costEstimate" className="block mb-2 font-semibold">
-              Cost Estimate (TRL)
-            </label>
-            <select
-              id="costEstimate"
-              value={costEstimate}
-              onChange={(e) => setCostEstimate(e.target.value)}
-              className="w-full p-2 bg-gray-700 rounded"
-            >
-              <option value="$1,000 - $10,000">$1,000 - $10,000</option>
-              <option value="$10,000 - $50,000">$10,000 - $50,000</option>
-              <option value="$50,000+">$50,000+</option>
-            </select>
+            <label className="block mb-2 font-semibold">Team Involvement</label>
+            <div className="flex flex-wrap gap-2">
+              {tagsByMission[ideationMission].map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => handleTagClick(tag)}
+                  className={`py-1 px-3 rounded-full text-sm transition-colors ${
+                    selectedTags.includes(tag)
+                      ? "bg-red-500 text-white"
+                      : "bg-gray-600 hover:bg-gray-500"
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="mb-6">
+          <div className="mb-6 mt-6">
             <label htmlFor="ideaImage" className="block mb-2 font-semibold">
               Upload Image (Optional)
             </label>

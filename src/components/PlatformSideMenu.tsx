@@ -22,14 +22,22 @@ interface PlatformSideMenuProps {
   customTheme?: boolean;
 }
 
-// Menu items data (icons removed)
+// ────────────────────────────────
+// ❶ General-navigation items
+// ────────────────────────────────
 const menuItems = [
   { id: "HomePage", text: "Home Page" },
   { id: "IdeationSpace", text: "Ideation Space" },
   { id: "IdeaAssessments", text: "Idea Assessments" },
-  { id: "Mission1", text: "Mission 1: Touchless Process" },
-  { id: "Mission2", text: "Mission 2: Touchless Innovation" },
-  { id: "Mission3", text: "Mission 3: Waste Reduction" },
+];
+
+// ────────────────────────────────
+// ❷ Sub-challenge deep-dives
+// ────────────────────────────────
+const missionItems = [
+  { id: "Mission1", text: "E2E Touchless Supply Chain" },
+  { id: "Mission2", text: "E2E Touchless Innovation" },
+  { id: "Mission3", text: "Zero Waste" },
 ];
 
 const MenuItem: React.FC<MenuItemProps> = ({
@@ -57,7 +65,6 @@ const MenuItem: React.FC<MenuItemProps> = ({
           isActive ? activeClasses : ""
         } ${hoverClasses}`}
       >
-        {/* Text now takes the full space */}
         <span className="w-full">{text}</span>
       </div>
     </a>
@@ -67,7 +74,6 @@ const MenuItem: React.FC<MenuItemProps> = ({
 const MenuCloseButton: React.FC<{
   setMenuActive: (active: boolean) => void;
 }> = ({ setMenuActive }) => (
-  // Using a simple "X" for the close button as a fallback
   <button
     className="order-2 px-5 py-2.5 text-3xl font-sans text-white bg-transparent border-none cursor-pointer md:mr-2.5"
     onClick={() => setMenuActive(false)}
@@ -85,9 +91,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
   setMenuActive,
   customTheme = false,
 }) => {
-  if (!menuActive) {
-    return null;
-  }
+  if (!menuActive) return null;
 
   const menuBackground = customTheme ? "bg-[#CD2026]" : "bg-black";
 
@@ -95,6 +99,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
     <div
       className={`fixed top-0 left-0 z-10 flex flex-col w-full h-screen shadow-[10px_0_10px_-5px_rgba(0,0,0,0.5)] md:w-[18%] ${menuBackground}`}
     >
+      {/* ── Logo & close button ───────────────────────────────────────── */}
       <header className="flex flex-row items-center justify-between w-full h-16 mt-7 mb-10 z-[2]">
         <img
           className="relative w-2/5 my-10 ml-5 md:w-2/4 md:top-1.5"
@@ -104,22 +109,37 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
         <MenuCloseButton setMenuActive={setMenuActive} />
       </header>
 
+      {/* ── Main menu ─────────────────────────────────────────────────── */}
       <div className="sticky w-full mx-auto">
-        <div className="hover:bg-transparent">
-          <h3 className="text-white text-base font-bold pl-[10%]">Menu</h3>
-        </div>
+        <h3 className="text-white text-base font-bold pl-[10%] mb-1">Menu</h3>
         {menuItems.map((item) => (
           <MenuItem
             key={item.id}
-            id={item.id}
+            {...item}
             visibleContent={visibleContent}
             onClick={handleMenuClick}
-            text={item.text}
             customTheme={customTheme}
           />
         ))}
       </div>
 
+      {/* ── Sub-challenge Deep-Dives ──────────────────────────────────── */}
+      <div className="w-full mx-auto mt-12">
+        <h3 className="text-white text-base font-bold pl-[10%] mb-1">
+          Sub-challenges
+        </h3>
+        {missionItems.map((item) => (
+          <MenuItem
+            key={item.id}
+            {...item}
+            visibleContent={visibleContent}
+            onClick={handleMenuClick}
+            customTheme={customTheme}
+          />
+        ))}
+      </div>
+
+      {/* ── Extra items & footer ──────────────────────────────────────── */}
       <hr className="w-full mt-12 border-white/10" />
 
       <div className="w-full mx-auto mt-0">
@@ -133,7 +153,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
         <MenuItem
           id="BlackboxScavengerHuntGuessPage"
           onClick={handleMenuClick}
-          text="Theme Guess"
+          text="Player Ranking"
           visibleContent={visibleContent}
           customTheme={customTheme}
         />

@@ -40,28 +40,28 @@ const costImpactOptions = [
 ];
 
 const feasibilityOptions = [
-  "Very easy to do",
-  "Straightforward to implement",
-  "Moderately easy",
-  "Doable, but requires significant effort",
-  "Challenging to accomplish",
-  "Very difficult to execute",
-  "Borderline impossible",
   "Impossible to pull off",
+  "Borderline impossible",
+  "Very difficult to execute",
+  "Challenging to accomplish",
+  "Doable, but requires significant effort",
+  "Moderately easy",
+  "Straightforward to implement",
+  "Very easy to do",
 ];
 
 // Colors from IdeaTile for the list on the left
 const missionListColors: { [key: string]: string } = {
-  "Touchless Processes": "bg-amber-600",
-  "Touchless Innovation": "bg-green-600",
-  "Waste Reduction": "bg-blue-600",
+  "E2E Touchless Supply Chain": "bg-amber-600",
+  "E2E Touchless Innovation": "bg-green-600",
+  "Zero Waste": "bg-blue-600",
 };
 
 // Updated mission chart colors to match the list colors
 const missionChartColors: { [key: string]: string } = {
-  "Mission 1: Touchless Process": "#D97706", // amber-600
-  "Mission 2: Touchless Innovation": "#16A34A", // green-600
-  "Mission 3: Waste Reduction": "#2563EB", // blue-600
+  "Sub-Challenge 1: E2E Touchless Supply Chain": "#D97706", // amber-600
+  "Sub-Challenge 2: E2E Touchless Innovation": "#16A34A", // green-600
+  "Sub-Challenge 3: Zero Waste": "#2563EB", // blue-600
 };
 
 // --- SUB-COMPONENTS ---
@@ -302,18 +302,18 @@ const IdeaAssessmentViewPage: React.FC = () => {
   };
 
   const legendItems = {
-    "Mission 1: Touchless Process":
-      missionChartColors["Mission 1: Touchless Process"],
-    "Mission 2: Touchless Innovation":
-      missionChartColors["Mission 2: Touchless Innovation"],
-    "Mission 3: Waste Reduction":
-      missionChartColors["Mission 3: Waste Reduction"],
+    "Sub-Challenge 1: Touchless Process":
+      missionChartColors["Sub-Challenge 1: E2E Touchless Supply Chain"],
+    "Sub-Challenge 2: Touchless Innovation":
+      missionChartColors["Sub-Challenge 2: E2E Touchless Innovation"],
+    "Sub-Challenge 3: Waste Reduction":
+      missionChartColors["Sub-Challenge 3: Zero Waste"],
   };
 
   const listIdeas = selectedIdea ? [selectedIdea] : processedIdeas;
 
   return (
-    <div className="w-full py-[11vh] px-8 md:px-10 bg-gray-100 min-h-screen">
+    <div className="w-full py-[11vh] px-12 md:px-16 bg-gray-100 min-h-screen">
       <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase mb-8">
         Idea Assessments
       </h1>
@@ -322,7 +322,7 @@ const IdeaAssessmentViewPage: React.FC = () => {
       ) : (
         <div className="flex flex-col md:flex-row-reverse gap-8">
           {/* Right Panel (now first on mobile): Chart and Legend */}
-          <div className="w-[80%] mx-auto md:w-[55%] lg:w-[60%]">
+          <div className="w-[80%] mx-auto md:w-[35%] lg:w-[40%]">
             <h2 className="text-xl font-bold text-gray-700 mb-4 text-center">
               Impact VS Feasibility
             </h2>
@@ -338,7 +338,7 @@ const IdeaAssessmentViewPage: React.FC = () => {
                     className="w-4 h-4 rounded-full"
                     style={{ backgroundColor: color }}
                   ></div>
-                  <span className="text-sm font-medium text-gray-600">
+                  <span className="text-xs font-medium text-gray-600">
                     {name}
                   </span>
                 </div>
@@ -346,7 +346,7 @@ const IdeaAssessmentViewPage: React.FC = () => {
             </div>
           </div>
           {/* Left Panel (now second on mobile): Idea List */}
-          <div className="w-full md:w-[35%] lg:w-[30%]">
+          <div className="w-full md:w-[40%] lg:w-[35%]">
             <h2 className="text-xl font-bold text-gray-700 mb-4">
               {selectedIdea ? "Selected Idea" : "All Ideas"}
             </h2>

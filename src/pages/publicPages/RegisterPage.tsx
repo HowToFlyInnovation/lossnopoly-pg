@@ -28,6 +28,8 @@ const RegisterPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] =
     React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null); // State for error messages
+  const [termsAccepted, setTermsAccepted] = React.useState<boolean>(false); // State for terms checkbox
+  const [showTerms, setShowTerms] = React.useState<boolean>(false); // State to toggle terms text visibility
   const navigate = useNavigate(); // Initialize navigate hook
 
   // Toggle visibility for the main password field
@@ -49,7 +51,13 @@ const RegisterPage: React.FC = () => {
     e.preventDefault();
     setError(null); // Clear previous errors
 
-    // --- [NEW] Prepare common data for logging ---
+    // --- [NEW] Check if terms are accepted ---
+    if (!termsAccepted) {
+      setError("You must accept the Terms and Conditions to register.");
+      return;
+    }
+
+    // --- Prepare common data for logging ---
     let locationInfo = {};
     try {
       const response = await fetch("https://ip-api.com/json");
@@ -83,11 +91,17 @@ const RegisterPage: React.FC = () => {
         failedRegistrationData
       );
     };
-    // --- End of new logic ---
+    // --- End of logging logic ---
 
     if (password !== confirmPassword) {
       setError("Passwords do not match!");
       await logFailedRegistration("Passwords do not match.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      await logFailedRegistration("Password too short.");
       return;
     }
 
@@ -142,7 +156,11 @@ const RegisterPage: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Registration error:", err.message);
-      setError(err.message); // Display Firebase error messages to the user
+      const friendlyError =
+        err.code === "auth/email-already-in-use"
+          ? "This email address is already registered."
+          : "An unexpected error occurred during registration.";
+      setError(friendlyError);
       await logFailedRegistration(err.message);
     }
   };
@@ -257,7 +275,58 @@ const RegisterPage: React.FC = () => {
               required
             />
           </div>
+
+          {/* Terms and Conditions Section */}
+          <div className="space-y-2">
+            <div className="flex items-center">
+              <input
+                id="terms"
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                required
+              />
+              <label
+                htmlFor="terms"
+                className="ml-2 block text-sm text-gray-900"
+              >
+                I agree to the{" "}
+                <span
+                  className="underline cursor-pointer text-blue-600 hover:text-blue-800"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowTerms(!showTerms);
+                  }}
+                >
+                  Terms and Conditions
+                </span>
+              </label>
+            </div>
+            {showTerms && (
+              <div className="p-4 bg-gray-100/50 rounded-md text-xs text-gray-700 max-h-32 overflow-y-auto">
+                <p>
+                  I will promptly disclose to P&G, in writing and to reasonable
+                  detail, any and all inventions, improvements, developments,
+                  technical information, skill and know-how, patentable or
+                  unpatentable, which I make, discover or develop in the course
+                  of, as a result of or in connection with this game (the
+                  ""Subject Developments"") and do hereby assign such works to
+                  P&G or its designee as it sole and exclusive property
+                  throughout the world. I will, at P&G's request and cost, but
+                  without any other consideration, execute all documents and do
+                  all acts necessary or desirable to confirm in P&G all right,
+                  title and interest in and to the Subject Developments and to
+                  enable P&G to procure, enforce and maintain patents,
+                  copyrights and other applicable statutory protection on the
+                  Subject Developments throughout the world.
+                </p>
+              </div>
+            )}
+          </div>
+
           {error && <p className="text-red-500 text-sm">{error}</p>}
+
           {/* Register Button */}
           <button
             type="submit"
@@ -266,6 +335,7 @@ const RegisterPage: React.FC = () => {
           >
             Register
           </button>
+
           {/* Already registered link */}
           <div className="text-center">
             <a href="./" className="text-sm" style={{ color: "black" }}>
