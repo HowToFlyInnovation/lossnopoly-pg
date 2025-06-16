@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useContext } from "react";
 import { collection, getDocs, Timestamp } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { AuthContext } from "../../context/AuthContext";
+import { FaInfoCircle } from "react-icons/fa"; // Import the info icon
 
 // --- TYPE DEFINITIONS ---
 
@@ -48,6 +49,98 @@ interface SortConfig {
   direction: SortDirection;
 }
 
+// --- [NEW] INFO MODAL COMPONENT ---
+const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-gray-800 text-white p-8 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">How the Player Ranking Works</h2>
+          <button
+            onClick={onClose}
+            className="text-2xl font-bold text-white hover:text-gray-400"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div className="space-y-6 text-gray-300">
+          <div>
+            <h3 className="text-xl font-semibold mb-2 text-white">
+              1. The Leaderboard
+            </h3>
+            <p>
+              This table ranks all participants based on their contributions to
+              the ideation platform. You can sort the table by clicking on any
+              of the column headers. Your own row is highlighted for easy
+              visibility.
+            </p>
+            <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
+              <p className="font-bold">
+                [IMAGE: Screenshot of the ranking table with a highlighted row]
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold mb-2 text-white">
+              2. XP Scoring System
+            </h3>
+            <p>
+              Experience Points (XP) are awarded for various activities that
+              drive innovation forward. Here’s how you can earn them:
+            </p>
+            <ul className="list-disc list-inside ml-4 my-2 space-y-2 bg-gray-900 p-4 rounded-lg">
+              <li>
+                <strong>Create Your 1st Idea:</strong>{" "}
+                <span className="font-bold text-green-400">+20 XP</span>
+              </li>
+              <li>
+                <strong>Create Your 2nd Idea:</strong>{" "}
+                <span className="font-bold text-green-400">+15 XP</span>
+              </li>
+              <li>
+                <strong>Create Your 3rd Idea:</strong>{" "}
+                <span className="font-bold text-green-400">+10 XP</span>
+              </li>
+              <li>
+                <strong>Create Any Subsequent Idea:</strong>{" "}
+                <span className="font-bold text-green-400">+5 XP</span>
+              </li>
+              <li>
+                <strong>Inspire a New Idea:</strong>{" "}
+                <span className="font-bold text-green-400">+10 XP</span> (when
+                someone builds upon your idea)
+              </li>
+              <li>
+                <strong>Place a Comment:</strong>{" "}
+                <span className="font-bold text-green-400">+2 XP</span> (per
+                comment)
+              </li>
+              <li>
+                <strong>Make an Evaluation:</strong>{" "}
+                <span className="font-bold text-green-400">+2 XP</span> (per
+                evaluation)
+              </li>
+              <li>
+                <strong>Daily Activity Streak:</strong>{" "}
+                <span className="font-bold text-green-400">+5 XP</span> (per day
+                in the streak)
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- HELPER COMPONENT FOR SORT INDICATORS ---
 
 const SortIndicator: React.FC<{
@@ -88,6 +181,7 @@ const PlayerRankingView: React.FC = () => {
   const authContext = useContext(AuthContext); // Get the entire context value
   const [playerStats, setPlayerStats] = useState<PlayerStats[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false); // State for modal
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: "xp",
     direction: "descending",
@@ -307,6 +401,13 @@ const PlayerRankingView: React.FC = () => {
 
   return (
     <div className="w-full py-[11vh] px-8 md:px-20 text-black bg-gray-100 min-h-screen">
+      <button
+        onClick={() => setIsInfoModalOpen(true)}
+        className="p-3 bg-gray-800 text-white rounded-lg shadow-md hover:bg-black focus:outline-none absolute top-5 right-5 cursor-pointer z-20"
+        aria-label="Show info"
+      >
+        <FaInfoCircle size={20} />
+      </button>
       <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase mb-8 text-left">
         Player Rankings
       </h1>
@@ -443,6 +544,9 @@ const PlayerRankingView: React.FC = () => {
           </tfoot>
         </table>
       </div>
+      {isInfoModalOpen && (
+        <InfoModal onClose={() => setIsInfoModalOpen(false)} />
+      )}
     </div>
   );
 };

@@ -21,6 +21,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { FaInfoCircle } from "react-icons/fa"; // Import the info icon
 
 // --- TYPE DEFINITIONS ---
 interface PlayerStats {
@@ -40,6 +41,94 @@ interface DailyStat {
   xpCollected: number;
 }
 
+// --- [NEW] INFO MODAL COMPONENT ---
+const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-gray-800 text-white p-8 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">
+            How to Use the Player Dashboard
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-2xl font-bold text-white hover:text-gray-400"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div className="space-y-6 text-gray-300">
+          <div>
+            <h3 className="text-xl font-semibold mb-2 text-white">
+              1. Your Profile & All-Time Stats
+            </h3>
+            <p>
+              This top section provides a summary of your contributions and
+              allows you to personalize your profile.
+            </p>
+            <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
+              <p className="font-bold">
+                [IMAGE: Screenshot of the Player Profile and Stats section]
+              </p>
+            </div>
+            <ul className="list-disc list-inside ml-4 my-2 space-y-1">
+              <li>
+                <strong>Profile Picture:</strong> Click the edit icon on your
+                picture to upload a new one.
+              </li>
+              <li>
+                <strong>All-Time Stats:</strong> These numbers represent your
+                total activity in the ideation space since the beginning.
+              </li>
+              <li>
+                <strong>XP Collected:</strong> Earn Experience Points (XP) for
+                various actions like creating ideas, commenting, and evaluating.
+                The more you contribute, the more XP you gain!
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold mb-2 text-white">
+              2. Daily Activity Charts
+            </h3>
+            <p>
+              These charts visualize contributions over the last 7 days, giving
+              you insight into recent activity trends.
+            </p>
+            <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
+              <p className="font-bold">
+                [IMAGE: Screenshot of the Daily Activity charts]
+              </p>
+            </div>
+            <ul className="list-disc list-inside ml-4 my-2 space-y-1">
+              <li>
+                <strong>Individual Charts:</strong> Each chart tracks a specific
+                action (e.g., Ideas Created, Comments Made). Hover over the bars
+                to see the exact numbers for a specific day.
+              </li>
+              <li>
+                <strong>"Only Me" vs. "All Players" Toggle:</strong> Use the
+                toggle at the top of this section to switch the view. 'Only Me'
+                shows your personal activity, while 'All Players' shows the
+                combined activity of everyone in the ideation space. This is
+                great for comparing your contributions to the overall trends.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PlayerPageView = () => {
   const authContext = useContext<AuthContextType | null>(AuthContext);
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
@@ -47,6 +136,7 @@ const PlayerPageView = () => {
   const [showAllPlayers, setShowAllPlayers] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false); // State for info modal
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!authContext) {
@@ -289,8 +379,6 @@ const PlayerPageView = () => {
     }
   };
 
-  // ***** FIX IS HERE *****
-  // The <> fragment has been removed, and allowDecimals is gone from YAxis
   const renderChart = (
     dataKey: keyof DailyStat,
     color: string,
@@ -311,48 +399,46 @@ const PlayerPageView = () => {
   if (loading) {
     return (
       <div className="w-full py-[11vh] px-8 md:px-20 text-black bg-gray-100 min-h-screen">
-        {" "}
         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase mb-8 text-left">
-          {" "}
-          Player Dashboard{" "}
-        </h1>{" "}
-        <p className="text-center">Loading dashboard...</p>{" "}
+          Player Dashboard
+        </h1>
+        <p className="text-center">Loading dashboard...</p>
       </div>
     );
   }
   return (
     <div className="w-full py-[11vh] px-8 md:px-20 text-black bg-gray-100 min-h-screen">
-      {" "}
+      <button
+        onClick={() => setIsInfoModalOpen(true)}
+        className="p-3 bg-gray-800 text-white rounded-lg shadow-md hover:bg-black focus:outline-none absolute top-5 right-5 cursor-pointer z-20"
+        aria-label="Show info"
+      >
+        <FaInfoCircle size={20} />
+      </button>
       <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase mb-8 text-left">
-        {" "}
-        Player Dashboard{" "}
-      </h1>{" "}
+        Player Dashboard
+      </h1>
       <div>
-        {" "}
         <div className="bg-white rounded-lg shadow-md mb-8 pr-12">
-          {" "}
           <div className="flex items-center">
-            {" "}
             <div className="relative">
-              {" "}
               <img
                 className="h-40 w-auto"
                 src={currentUser?.photoURL || "https://via.placeholder.com/150"}
                 alt="Player profile"
-              />{" "}
+              />
               <input
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileChange}
                 style={{ display: "none" }}
                 accept="image/*"
-              />{" "}
+              />
               <button
                 onClick={handleEditPicture}
                 disabled={uploading}
                 className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full p-2 hover:bg-blue-600 disabled:bg-gray-400"
               >
-                {" "}
                 {uploading ? (
                   <svg
                     className="animate-spin h-6 w-6 text-white"
@@ -360,7 +446,6 @@ const PlayerPageView = () => {
                     fill="none"
                     viewBox="0 0 24 24"
                   >
-                    {" "}
                     <circle
                       className="opacity-25"
                       cx="12"
@@ -368,12 +453,12 @@ const PlayerPageView = () => {
                       r="10"
                       stroke="currentColor"
                       strokeWidth="4"
-                    ></circle>{" "}
+                    ></circle>
                     <path
                       className="opacity-75"
                       fill="currentColor"
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>{" "}
+                    ></path>
                   </svg>
                 ) : (
                   <svg
@@ -383,158 +468,116 @@ const PlayerPageView = () => {
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
-                    {" "}
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
                       d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 5.232z"
-                    />{" "}
+                    />
                   </svg>
-                )}{" "}
-              </button>{" "}
-            </div>{" "}
+                )}
+              </button>
+            </div>
             <div className="w-full px-24">
-              {" "}
               <h2 className="text-2xl font-bold text-gray-800">
-                {" "}
-                {currentUser?.displayName}{" "}
-              </h2>{" "}
+                {currentUser?.displayName}
+              </h2>
               <div className="mt-4 flex row w-[100%] justify-between">
-                {" "}
                 <div>
-                  {" "}
-                  <span className="text-sm text-gray-500">
-                    Ideas Created
-                  </span>{" "}
+                  <span className="text-sm text-gray-500">Ideas Created</span>
                   <p className="text-xl font-semibold text-gray-800">
-                    {" "}
-                    {playerStats?.ideasCreated || 0}{" "}
-                  </p>{" "}
-                </div>{" "}
+                    {playerStats?.ideasCreated || 0}
+                  </p>
+                </div>
                 <div>
-                  {" "}
-                  <span className="text-sm text-gray-500">
-                    Comments Made
-                  </span>{" "}
+                  <span className="text-sm text-gray-500">Comments Made</span>
                   <p className="text-xl font-semibold text-gray-800">
-                    {" "}
-                    {playerStats?.commentsMade || 0}{" "}
-                  </p>{" "}
-                </div>{" "}
+                    {playerStats?.commentsMade || 0}
+                  </p>
+                </div>
                 <div>
-                  {" "}
-                  <span className="text-sm text-gray-500">
-                    Ideas Inspired
-                  </span>{" "}
+                  <span className="text-sm text-gray-500">Ideas Inspired</span>
                   <p className="text-xl font-semibold text-gray-800">
-                    {" "}
-                    {playerStats?.ideasInspired || 0}{" "}
-                  </p>{" "}
-                </div>{" "}
+                    {playerStats?.ideasInspired || 0}
+                  </p>
+                </div>
                 <div>
-                  {" "}
                   <span className="text-sm text-gray-500">
-                    {" "}
-                    Evaluations Made{" "}
-                  </span>{" "}
+                    Evaluations Made
+                  </span>
                   <p className="text-xl font-semibold text-gray-800">
-                    {" "}
-                    {playerStats?.evaluationsMade || 0}{" "}
-                  </p>{" "}
-                </div>{" "}
+                    {playerStats?.evaluationsMade || 0}
+                  </p>
+                </div>
                 <div>
-                  {" "}
-                  <span className="text-sm text-gray-500">
-                    XP Collected
-                  </span>{" "}
+                  <span className="text-sm text-gray-500">XP Collected</span>
                   <p className="text-xl font-semibold text-gray-800">
-                    {" "}
-                    {playerStats?.xpCollected || 0}{" "}
-                  </p>{" "}
-                </div>{" "}
-              </div>{" "}
-            </div>{" "}
-          </div>{" "}
-        </div>{" "}
+                    {playerStats?.xpCollected || 0}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="bg-white rounded-lg shadow-md p-6">
-          {" "}
           <div className="flex justify-between items-center mb-4">
-            {" "}
-            <h3 className="text-xl font-bold text-gray-800">
-              Daily Activity
-            </h3>{" "}
+            <h3 className="text-xl font-bold text-gray-800">Daily Activity</h3>
             <div className="bg-gray-200 rounded-full p-1 flex">
-              {" "}
               <button
                 onClick={() => setShowAllPlayers(false)}
                 className={`px-4 py-1 text-sm font-semibold rounded-full ${
                   !showAllPlayers ? "bg-white shadow" : "text-gray-600"
                 }`}
               >
-                {" "}
-                Only Me{" "}
-              </button>{" "}
+                Only Me
+              </button>
               <button
                 onClick={() => setShowAllPlayers(true)}
                 className={`px-4 py-1 text-sm font-semibold rounded-full ${
                   showAllPlayers ? "bg-white shadow" : "text-gray-600"
                 }`}
               >
-                {" "}
-                All Players{" "}
-              </button>{" "}
-            </div>{" "}
-          </div>{" "}
+                All Players
+              </button>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {" "}
             <div>
-              {" "}
               <h4 className="text-lg font-semibold mb-2 text-center">
-                {" "}
-                Ideas Created{" "}
-              </h4>{" "}
-              {renderChart("ideasCreated", "#8884d8", "Ideas Created")}{" "}
-            </div>{" "}
+                Ideas Created
+              </h4>
+              {renderChart("ideasCreated", "#8884d8", "Ideas Created")}
+            </div>
             <div>
-              {" "}
               <h4 className="text-lg font-semibold mb-2 text-center">
-                {" "}
-                Comments Made{" "}
-              </h4>{" "}
-              {renderChart("commentsMade", "#82ca9d", "Comments Made")}{" "}
-            </div>{" "}
+                Comments Made
+              </h4>
+              {renderChart("commentsMade", "#82ca9d", "Comments Made")}
+            </div>
             <div>
-              {" "}
               <h4 className="text-lg font-semibold mb-2 text-center">
-                {" "}
-                Ideas Inspired{" "}
-              </h4>{" "}
-              {renderChart("ideasInspired", "#ffc658", "Ideas Inspired")}{" "}
-            </div>{" "}
+                Ideas Inspired
+              </h4>
+              {renderChart("ideasInspired", "#ffc658", "Ideas Inspired")}
+            </div>
             <div>
-              {" "}
               <h4 className="text-lg font-semibold mb-2 text-center">
-                {" "}
-                Evaluations Made{" "}
-              </h4>{" "}
-              {renderChart(
-                "evaluationsMade",
-                "#ff7300",
-                "Evaluations Made"
-              )}{" "}
-            </div>{" "}
+                Evaluations Made
+              </h4>
+              {renderChart("evaluationsMade", "#ff7300", "Evaluations Made")}
+            </div>
             <div>
-              {" "}
               <h4 className="text-lg font-semibold mb-2 text-center">
-                {" "}
-                XP Collected{" "}
-              </h4>{" "}
-              {renderChart("xpCollected", "#00C49F", "XP Collected")}{" "}
-            </div>{" "}
-          </div>{" "}
-        </div>{" "}
-      </div>{" "}
+                XP Collected
+              </h4>
+              {renderChart("xpCollected", "#00C49F", "XP Collected")}
+            </div>
+          </div>
+        </div>
+      </div>
+      {isInfoModalOpen && (
+        <InfoModal onClose={() => setIsInfoModalOpen(false)} />
+      )}
     </div>
   );
 };

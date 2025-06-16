@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import type { Idea, Evaluation } from "./IdeaTile"; // Assuming types are exported from IdeaTile
+import { FaInfoCircle } from "react-icons/fa"; // Import the icon
 
 // --- TYPE DEFINITIONS ---
 
@@ -62,6 +63,97 @@ const missionChartColors: { [key: string]: string } = {
   "Sub-Challenge 1: E2E Touchless Supply Chain": "#D97706", // amber-600
   "Sub-Challenge 2: E2E Touchless Innovation": "#16A34A", // green-600
   "Sub-Challenge 3: Zero Waste": "#2563EB", // blue-600
+};
+
+// --- [NEW] INFO MODAL COMPONENT ---
+const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
+      onClick={onClose} // Close on overlay click
+    >
+      <div
+        className="bg-gray-800 text-white p-8 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">
+            How to Use the Idea Assessment View
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-2xl font-bold text-white hover:text-gray-400"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div className="space-y-6 text-gray-300">
+          <div>
+            <h3 className="text-xl font-semibold mb-2 text-white">
+              1. The Impact vs. Feasibility Chart
+            </h3>
+            <p>
+              This chart provides a visual representation of all evaluated
+              ideas. Each dot on the chart is a unique idea.
+            </p>
+            <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
+              <p className="font-bold">
+                [IMAGE: Screenshot of the Impact vs. Feasibility Chart]
+              </p>
+            </div>
+            <ul className="list-disc list-inside ml-4 my-2 space-y-1">
+              <li>
+                <strong>Vertical Axis (Y):</strong> Represents the 'Feasibility'
+                of an idea, from 'Low' at the bottom to 'High' at the top.
+              </li>
+              <li>
+                <strong>Horizontal Axis (X):</strong> Represents the 'Impact' of
+                an idea, from 'Low' at the left to 'High' at the right.
+              </li>
+              <li>
+                <strong>The Goal:</strong> The most promising ideas are
+                typically found in the top-right quadrant (High Impact, High
+                Feasibility).
+              </li>
+              <li>
+                <strong>Colors:</strong> Each dot is colored according to its
+                Sub-Challenge, as shown in the legend below the chart.
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold mb-2 text-white">
+              2. Interacting with Ideas
+            </h3>
+            <p>
+              You can explore ideas by clicking on them either in the list on
+              the left or on their corresponding dot in the chart.
+            </p>
+            <ul className="list-disc list-inside ml-4 my-2 space-y-1">
+              <li>
+                <strong>Selecting an Idea:</strong> Click on any idea card in
+                the list or its dot on the chart. This will highlight the idea,
+                expand its details in the list, and focus on it in the chart.
+              </li>
+              <li>
+                <strong>Deselecting an Idea:</strong> Simply click the selected
+                idea again (either the card or the dot) to deselect it and
+                return to the view of all ideas.
+              </li>
+            </ul>
+            <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
+              <p className="font-bold">
+                [IMAGE: Screenshot of a selected idea, highlighted on the chart
+                and in the list]
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // --- SUB-COMPONENTS ---
@@ -221,6 +313,7 @@ const IdeaAssessmentViewPage: React.FC = () => {
   const [processedIdeas, setProcessedIdeas] = useState<ProcessedIdea[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIdea, setSelectedIdea] = useState<ProcessedIdea | null>(null);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false); // State for info modal
 
   useEffect(() => {
     let unsubIdeas: () => void;
@@ -314,6 +407,13 @@ const IdeaAssessmentViewPage: React.FC = () => {
 
   return (
     <div className="w-full py-[11vh] px-12 md:px-16 bg-gray-100 min-h-screen">
+      <button
+        onClick={() => setIsInfoModalOpen(true)}
+        className="p-3 bg-gray-800 text-white rounded-lg shadow-md hover:bg-black focus:outline-none absolute top-5 right-5 cursor-pointer z-20"
+        aria-label="Show info"
+      >
+        <FaInfoCircle size={20} />
+      </button>
       <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase mb-8">
         Idea Assessments
       </h1>
@@ -370,6 +470,9 @@ const IdeaAssessmentViewPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+      {isInfoModalOpen && (
+        <InfoModal onClose={() => setIsInfoModalOpen(false)} />
       )}
     </div>
   );
