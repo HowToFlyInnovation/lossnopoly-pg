@@ -17,13 +17,7 @@ import {
   getDocs as firestoreGetDocs, // Renamed to avoid conflict
 } from "firebase/firestore";
 import DOMPurify from "dompurify";
-import {
-  FaThumbsUp,
-  FaRobot,
-  FaComment,
-  FaLightbulb,
-  FaStar,
-} from "react-icons/fa"; // Added FaStar import
+import { FaThumbsUp, FaComment, FaLightbulb, FaStar } from "react-icons/fa"; // Added FaStar import
 import { PiLegoBold } from "react-icons/pi";
 import { AuthContext, type AuthContextType } from "../../context/AuthContext";
 import { db } from "../../firebase/config";
@@ -149,7 +143,6 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
 
   // --- STATE ---
   const [userVote, setUserVote] = useState<"agree" | "disagree" | null>(null);
-  const [hasRead, setHasRead] = useState(false);
   const [readMoreVisible, setReadMoreVisible] = useState(false);
   const [creationDate, setCreationDate] = useState("");
   const [impactScore, setImpactScore] = useState<string>("$0-$10K");
@@ -310,7 +303,6 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   }, [item.id]);
 
   // --- RENDER LOGIC AND HANDLERS ---
-  const handleToggleReadStatus = () => setHasRead(!hasRead);
 
   const handleEvaluationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -590,7 +582,9 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
         <img
           src={item.imageUrl}
           alt={item.ideaTitle}
-          className="w-full h-48 object-cover"
+          className={`w-full ${
+            readMoreVisible ? "h-auto object-contain" : "h-48 object-cover"
+          }`}
         />
 
         {/* --- Card Body --- */}
@@ -732,15 +726,6 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                 disabled={isSelectionLocked && !isSelected}
               >
                 <PiLegoBold />
-              </button>
-              <button
-                onClick={() => handleToggleReadStatus()}
-                className={`rounded-full w-8 h-8 flex items-center justify-center transition-colors ${
-                  hasRead ? "bg-green-500" : "bg-gray-700 hover:bg-gray-800"
-                } text-white`}
-                title="Mark as Read"
-              >
-                <FaRobot />
               </button>
             </div>
           </div>
