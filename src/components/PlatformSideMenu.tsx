@@ -52,11 +52,11 @@ const MenuItem: React.FC<MenuItemProps> = ({
   const isActive = visibleContent === id;
 
   const baseClasses =
-    "flex items-center w-full h-10 text-sm text-black/80 box-border pl-[10%] my-0.5";
+    "flex items-center w-full h-10 text-sm text-black/80 box-border pl-[10%] my-0.5 group"; // Added 'group' class here
   const activeClasses = customTheme
     ? "bg-[#F7A800] text-white"
     : "bg-[#22222A] text-white";
-  const hoverClasses = customTheme
+  const itemHoverClasses = customTheme
     ? "hover:bg-[#F7A800] hover:text-white"
     : "hover:bg-[#22222A] hover:text-white";
 
@@ -65,11 +65,13 @@ const MenuItem: React.FC<MenuItemProps> = ({
       <div
         className={`${baseClasses} ${
           isActive ? activeClasses : ""
-        } ${hoverClasses}`}
+        } ${itemHoverClasses}`}
       >
         <img
           src={RankingIcon}
-          className={`h-6 mr-4 ${isActive ? "filter invert" : ""}`}
+          className={`h-6 mr-4 ${
+            isActive ? "filter invert" : ""
+          } group-hover:filter group-hover:invert`} // Added group-hover classes
         />
         <span className="w-full">{text}</span>
       </div>

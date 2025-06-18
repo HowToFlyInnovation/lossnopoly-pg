@@ -643,20 +643,19 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
 
         {/* --- Evaluation Trigger Section --- */}
         <div
-          className={`p-4 border-y ${
+          className={`p-2 border-y ${
             isDarkMode ? "border-gray-700" : "border-gray-300"
           } ${isDarkMode ? "text-gray-300" : "text-gray-800"}`}
         >
-          {userEvaluation ? null : ( // If already evaluated, this section is empty as the icon moves to the action bar
-            // If not evaluated by the user, show the full "Evaluate Card" button
-            <button
-              onClick={() => setEvaluationVisible(true)} // Show the form to evaluate
-              className="w-full py-3 px-4 bg-gray-700 rounded-lg hover:bg-gray-800 text-white font-bold text-lg"
-              title="Evaluate Card"
-            >
-              Evaluate Card
-            </button>
-          )}
+          <button
+            onClick={() => setEvaluationVisible(true)} // Show the form to evaluate
+            className={`w-full py-2 px-4 bg-gray-700 rounded-lg hover:bg-gray-800 text-white font-bold text-lg ${
+              userEvaluation ? "invisible" : ""
+            }`}
+            title="Evaluate Card"
+          >
+            Evaluate Card
+          </button>
         </div>
 
         {/* --- Action Buttons Section (bottom bar) --- */}
