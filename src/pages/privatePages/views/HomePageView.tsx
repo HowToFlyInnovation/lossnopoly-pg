@@ -149,7 +149,7 @@ const HomePageView: React.FC<HomePageViewProps> = ({
           </div>
           {/* --- HOW IT WORKS --- */}
           <div className="text-center mb-12 bg-white mt-12 p-12">
-            <h2 className="text-3xl font-bold text-gray-800 mb-2">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2 mt-24">
               How to Participate?
             </h2>
             <p className="text-gray-600 max-w-4xl mx-auto mb-8">
