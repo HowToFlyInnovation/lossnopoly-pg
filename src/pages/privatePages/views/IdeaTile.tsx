@@ -17,7 +17,13 @@ import {
   getDocs as firestoreGetDocs, // Renamed to avoid conflict
 } from "firebase/firestore";
 import DOMPurify from "dompurify";
-import { FaThumbsUp, FaRobot, FaComment, FaLightbulb } from "react-icons/fa";
+import {
+  FaThumbsUp,
+  FaRobot,
+  FaComment,
+  FaLightbulb,
+  FaStar,
+} from "react-icons/fa"; // Added FaStar import
 import { PiLegoBold } from "react-icons/pi";
 import { AuthContext, type AuthContextType } from "../../context/AuthContext";
 import { db } from "../../firebase/config";
@@ -149,7 +155,6 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   const [userEvaluation, setUserEvaluation] = useState<Evaluation | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isEvaluating, setIsEvaluating] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -167,6 +172,9 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     "user"
   );
   const [inspiredByVisible, setInspiredByVisible] = useState(false);
+
+  // New state to control visibility of evaluation form/details panel
+  const [evaluationVisible, setEvaluationVisible] = useState(false);
 
   // New states for mention feature in comments
   const [allInvitedPlayers, setAllInvitedPlayers] = useState<InvitedPlayer[]>(
@@ -223,8 +231,6 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
             id: docSnap.id,
             ...docSnap.data(),
           } as Evaluation);
-          setIsEvaluating(false);
-          setEvaluationView("user");
         } else {
           setUserEvaluation(null);
         }
@@ -326,6 +332,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
         FeasibilityScore: feasibilityScore,
       });
     } catch (err) {
+      console.error("Error submitting evaluation:", err);
       setError("Failed to submit evaluation.");
     } finally {
       setIsSubmitting(false);
@@ -595,146 +602,44 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
           </div>
         </div>
 
-        {/* --- Evaluation Section --- */}
+        {/* --- Evaluation Trigger Section --- */}
         <div className="p-4 border-y border-gray-700 text-gray-300">
-          {userEvaluation ? (
-            <div>
-              {/* --- NEW: Evaluation Toggle --- */}
-              <div className="flex justify-start mb-4 rounded-md overflow-hidden border border-gray-600">
-                <button
-                  onClick={() => setEvaluationView("user")}
-                  className={`px-3 py-1 text-sm font-semibold transition-colors w-1/2 ${
-                    evaluationView === "user"
-                      ? "bg-black text-white"
-                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                  }`}
-                >
-                  Your Evaluation
-                </button>
-                <button
-                  onClick={() => setEvaluationView("average")}
-                  className={`px-3 py-1 text-sm font-semibold transition-colors w-1/2 ${
-                    evaluationView === "average"
-                      ? "bg-black text-white"
-                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                  }`}
-                >
-                  Average ({allEvaluations.length})
-                </button>
-              </div>
-
-              {/* --- User Evaluation View --- */}
-              {evaluationView === "user" && (
-                <div>
-                  <h5 className="text-lg font-bold text-center mb-2">
-                    Your Evaluation
-                  </h5>
-                  <div className="flex flex-row items-center gap-2">
-                    <div
-                      className={`${getEvaluationClasses(
-                        userEvaluation.ImpactScore,
-                        userEvaluation.FeasibilityScore
-                      )} h-10 w-10`}
-                    ></div>
-                    <div>
-                      <p>
-                        <strong>Cost Impact:</strong>{" "}
-                        {userEvaluation.ImpactScore}
-                      </p>
-                      <p>
-                        <strong>Feasibility:</strong>{" "}
-                        {userEvaluation.FeasibilityScore}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* --- Average Evaluation View --- */}
-              {evaluationView === "average" &&
-                averageScores &&
-                allEvaluations.length > 0 && (
-                  <div>
-                    <h5 className="text-lg font-bold text-center mb-2">
-                      Average Evaluation
-                    </h5>
-                    <div className="flex flex-row items-center gap-2">
-                      <div
-                        className={`${getEvaluationClasses(
-                          averageScores.impact,
-                          averageScores.feasibility
-                        )} h-10 w-10`}
-                      ></div>
-                      <div>
-                        <p>
-                          <strong>Cost Impact:</strong> {averageScores.impact}
-                        </p>
-                        <p>
-                          <strong>Feasibility:</strong>{" "}
-                          {averageScores.feasibility}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-            </div>
-          ) : isEvaluating ? (
-            <form onSubmit={handleEvaluationSubmit}>
-              <h5 className="text-lg font-bold text-center mb-4">
-                Evaluate This Idea
-              </h5>
-              <div className="mb-4">
-                <label className="block mb-1 font-semibold">Cost Impact</label>
-                <select
-                  value={impactScore}
-                  onChange={(e) => setImpactScore(e.target.value)}
-                  className="w-full p-2 bg-gray-700 text-white rounded"
-                >
-                  {costImpactOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="mb-4">
-                <label className="block mb-1 font-semibold">Feasibility</label>
-                <select
-                  value={feasibilityScore}
-                  onChange={(e) => setFeasibilityScore(e.target.value)}
-                  className="w-full p-2 bg-gray-700 text-white rounded"
-                >
-                  {feasibilityOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button
-                type="submit"
-                className="w-full py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 font-semibold"
-                disabled={isSubmitting}
-              >
-                Submit Evaluation
-              </button>
-            </form>
-          ) : (
+          {userEvaluation ? // If already evaluated, this section is empty as the icon moves to the action bar
+          null : (
+            // If not evaluated by the user, show the full "Evaluate Card" button
             <button
-              onClick={() => setIsEvaluating(true)}
+              onClick={() => setEvaluationVisible(true)} // Show the form to evaluate
               className="w-full py-3 px-4 bg-gray-900 rounded-lg hover:bg-black text-white font-bold text-lg"
+              title="Evaluate Card"
             >
               Evaluate Card
             </button>
           )}
         </div>
 
+        {/* --- Action Buttons Section (bottom bar) --- */}
         <div className="bg-gray-800">
           <div className="p-4 flex justify-between items-center">
             <div className="text-xs italic text-gray-400">
               By {item.displayName} on {creationDate}
             </div>
             <div className="flex items-center gap-2">
+              {userEvaluation && ( // Only show if already rated
+                <button
+                  onClick={() => setEvaluationVisible(!evaluationVisible)}
+                  className={`rounded-full w-8 h-8 flex items-center justify-center transition-colors
+                    ${
+                      getEvaluationClasses(
+                        userEvaluation.ImpactScore,
+                        userEvaluation.FeasibilityScore
+                      ).split(" ")[0]
+                    }
+                    text-white`} // Extract background and ensure white text
+                  title="Toggle Evaluation Details"
+                >
+                  <FaStar />
+                </button>
+              )}
               <button
                 onClick={() => setCommentsVisible(!commentsVisible)}
                 className="bg-gray-700 hover:bg-gray-600 text-white rounded-full w-8 h-8 flex items-center justify-center"
@@ -773,6 +678,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
           </div>
         </div>
 
+        {/* --- Comments Section (opens below) --- */}
         {commentsVisible && (
           <div className="p-4 border-t border-gray-700">
             <h4 className="font-bold text-lg text-white mb-2">
@@ -826,6 +732,136 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
             <div className="max-h-60 overflow-y-auto pr-2">
               {renderComments(null)}
             </div>
+          </div>
+        )}
+
+        {/* --- Evaluation Content Section (opens below, similar to comments) --- */}
+        {evaluationVisible && (
+          <div className="p-4 border-t border-gray-700 text-gray-300">
+            {userEvaluation ? (
+              // Display user/average evaluation
+              <div>
+                <div className="flex justify-start mb-4 rounded-md overflow-hidden border border-gray-600">
+                  <button
+                    onClick={() => setEvaluationView("user")}
+                    className={`px-3 py-1 text-sm font-semibold transition-colors w-1/2 ${
+                      evaluationView === "user"
+                        ? "bg-black text-white"
+                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                    }`}
+                  >
+                    Your Evaluation
+                  </button>
+                  <button
+                    onClick={() => setEvaluationView("average")}
+                    className={`px-3 py-1 text-sm font-semibold transition-colors w-1/2 ${
+                      evaluationView === "average"
+                        ? "bg-black text-white"
+                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                    }`}
+                  >
+                    Average ({allEvaluations.length})
+                  </button>
+                </div>
+                {evaluationView === "user" && userEvaluation && (
+                  <div>
+                    <h5 className="text-lg font-bold text-center mb-2">
+                      Your Evaluation
+                    </h5>
+                    <div className="flex flex-row items-center gap-2">
+                      <div
+                        className={`${getEvaluationClasses(
+                          userEvaluation.ImpactScore,
+                          userEvaluation.FeasibilityScore
+                        )} h-10 w-10`}
+                      ></div>
+                      <div>
+                        <p>
+                          <strong>Cost Impact:</strong>{" "}
+                          {userEvaluation.ImpactScore}
+                        </p>
+                        <p>
+                          <strong>Feasibility:</strong>{" "}
+                          {userEvaluation.FeasibilityScore}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {evaluationView === "average" &&
+                  averageScores &&
+                  allEvaluations.length > 0 && (
+                    <div>
+                      <h5 className="text-lg font-bold text-center mb-2">
+                        Average Evaluation
+                      </h5>
+                      <div className="flex flex-row items-center gap-2">
+                        <div
+                          className={`${getEvaluationClasses(
+                            averageScores.impact,
+                            averageScores.feasibility
+                          )} h-10 w-10`}
+                        ></div>
+                        <div>
+                          <p>
+                            <strong>Cost Impact:</strong> {averageScores.impact}
+                          </p>
+                          <p>
+                            <strong>Feasibility:</strong>{" "}
+                            {averageScores.feasibility}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+              </div>
+            ) : (
+              // Show evaluation form
+              <form onSubmit={handleEvaluationSubmit}>
+                <h5 className="text-lg font-bold text-center mb-4">
+                  Evaluate This Idea
+                </h5>
+                <div className="mb-4">
+                  <label className="block mb-1 font-semibold">
+                    Cost Impact
+                  </label>
+                  <select
+                    value={impactScore}
+                    onChange={(e) => setImpactScore(e.target.value)}
+                    className="w-full p-2 bg-gray-700 text-white rounded"
+                  >
+                    {costImpactOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mb-4">
+                  <label className="block mb-1 font-semibold">
+                    Feasibility
+                  </label>
+                  <select
+                    value={feasibilityScore}
+                    onChange={(e) => setFeasibilityScore(e.target.value)}
+                    className="w-full p-2 bg-gray-700 text-white rounded"
+                  >
+                    {feasibilityOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 font-semibold"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Submitting..." : "Submit Evaluation"}
+                </button>
+              </form>
+            )}
           </div>
         )}
       </div>
