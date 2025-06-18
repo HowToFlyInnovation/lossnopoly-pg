@@ -47,10 +47,11 @@ function App() {
   const context = useContext(AuthContext);
 
   const [menuActive, setMenuActive] = useState(false);
+  // Initialize visibleContent. This state will now control the view.
   const [visibleContent, setVisibleContent] = useState("Default");
   const [customTheme, setCustomTheme] = useState(false);
-  const [playerLoginCount, setPlayerLoginCount] = useState<number | null>(null); // New state for login count
-  const [isLoadingLoginCount, setIsLoadingLoginCount] = useState(true); // New state for loading
+  const [playerLoginCount, setPlayerLoginCount] = useState<number | null>(null);
+  const [isLoadingLoginCount, setIsLoadingLoginCount] = useState(true);
 
   if (!context) {
     return (
@@ -64,41 +65,60 @@ function App() {
   const { user, authIsReady } = context;
 
   useEffect(() => {
-    const fetchLoginCount = async () => {
+    const fetchLoginCountAndSetInitialContent = async () => {
       if (user && authIsReady) {
         try {
           const playerDocRef = doc(db, "players", user.uid);
           const playerDocSnap = await getDoc(playerDocRef);
           if (playerDocSnap.exists()) {
-            setPlayerLoginCount(playerDocSnap.data().loginCount);
+            const loginCount = playerDocSnap.data().loginCount;
+            setPlayerLoginCount(loginCount);
+            // Set initial content based on login count
+            if (loginCount === 1) {
+              setVisibleContent("HomePage");
+            } else if (loginCount && loginCount > 1) {
+              setVisibleContent("IdeationSpace");
+            } else {
+              setVisibleContent("Default"); // Fallback for unexpected count
+            }
           } else {
-            // This case should ideally not happen if login page properly creates the doc
-            setPlayerLoginCount(0); // Treat as 0 or handle error appropriately
+            // New user, potentially first login, set to homepage
+            setPlayerLoginCount(0);
+            setVisibleContent("HomePage");
           }
         } catch (error) {
           console.error("Error fetching login count:", error);
           setPlayerLoginCount(0); // Fallback in case of error
+          setVisibleContent("Default"); // Fallback content on error
         } finally {
           setIsLoadingLoginCount(false);
         }
       } else if (authIsReady && !user) {
-        setIsLoadingLoginCount(false); // No user, so no login count to fetch
+        setIsLoadingLoginCount(false);
+        setVisibleContent("Default"); // No user, reset to public page default
       }
     };
 
-    fetchLoginCount();
+    fetchLoginCountAndSetInitialContent();
   }, [user, authIsReady]);
 
-  let initialRedirectPath = "/";
-
+  // Determine the redirection path after login/auth ready
+  // This logic is for the initial URL navigation, not to hardcode IdeationPlatform's visibleContent prop
+  let redirectPath = "/";
   if (user && user.emailVerified && !isLoadingLoginCount) {
     if (playerLoginCount === 1) {
-      initialRedirectPath = "/homepage";
+      redirectPath = "/homepage";
     } else if (playerLoginCount && playerLoginCount > 1) {
-      initialRedirectPath = "/ideationspace";
+      redirectPath = "/ideationspace";
+    } else {
+      // If visibleContent is already set by useEffect, navigate to it.
+      // Otherwise, default to homepage or a specific default if needed.
+      if (visibleContent !== "Default") {
+        redirectPath = `/${visibleContent.toLowerCase()}`;
+      } else {
+        redirectPath = "/homepage"; // Default redirect if no specific content is set by login count
+      }
     }
-    // If playerLoginCount is null or 0, it means it's not the first successful login yet,
-    // or an error occurred, so we'll let the LoginPage handle the display.
   }
 
   return (
@@ -110,7 +130,7 @@ function App() {
             path="/"
             element={
               user && user.emailVerified && !isLoadingLoginCount ? (
-                <Navigate to={initialRedirectPath} replace />
+                <Navigate to={redirectPath} replace />
               ) : (
                 <LoginPage />
               )
@@ -120,7 +140,7 @@ function App() {
             path="/register"
             element={
               user && user.emailVerified && !isLoadingLoginCount ? (
-                <Navigate to={initialRedirectPath} replace />
+                <Navigate to={redirectPath} replace />
               ) : (
                 <RegisterPage />
               )
@@ -128,6 +148,7 @@ function App() {
           />
 
           {/* --- Private Routes --- */}
+          {/* All private routes should now render IdeationPlatform with the shared visibleContent state */}
           <Route
             path="/homepage"
             element={
@@ -136,8 +157,8 @@ function App() {
                   customTheme={customTheme}
                   menuActive={menuActive}
                   setMenuActive={setMenuActive}
-                  visibleContent="HomePage" // Ensure HomePageView is displayed
-                  setVisibleContent={setVisibleContent}
+                  visibleContent={visibleContent} // Pass the state directly
+                  setVisibleContent={setVisibleContent} // Pass the state setter
                 />
               </ProtectedRoute>
             }
@@ -150,8 +171,8 @@ function App() {
                   customTheme={customTheme}
                   menuActive={menuActive}
                   setMenuActive={setMenuActive}
-                  visibleContent="IdeationSpace" // Ensure IdeationSpaceView is displayed
-                  setVisibleContent={setVisibleContent}
+                  visibleContent={visibleContent} // Pass the state directly
+                  setVisibleContent={setVisibleContent} // Pass the state setter
                 />
               </ProtectedRoute>
             }
@@ -165,8 +186,8 @@ function App() {
                   customTheme={customTheme}
                   menuActive={menuActive}
                   setMenuActive={setMenuActive}
-                  visibleContent={visibleContent}
-                  setVisibleContent={setVisibleContent}
+                  visibleContent={visibleContent} // Pass the state directly
+                  setVisibleContent={setVisibleContent} // Pass the state setter
                 />
               </ProtectedRoute>
             }
