@@ -103,6 +103,7 @@ interface IdeaTileProps {
   onSelect: (item: Idea) => void;
   isSelected: boolean;
   isSelectionLocked: boolean;
+  isDarkMode: boolean; // New prop for dark mode
 }
 
 const costImpactOptions = [
@@ -128,9 +129,9 @@ const feasibilityOptions = [
 ];
 
 const missionColors: { [key: string]: string } = {
-  "E2E Touchless Supply Chain": "bg-amber-600",
-  "E2E Touchless Innovation": "bg-green-600",
-  "Zero Waste": "bg-blue-600",
+  "E2E Touchless Supply Chain": "bg-amber-300",
+  "E2E Touchless Innovation": "bg-amber-600",
+  "Zero Waste": "bg-blue-400",
 };
 
 // --- IDEA TILE COMPONENT ---
@@ -142,6 +143,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   onSelect,
   isSelected,
   isSelectionLocked,
+  isDarkMode, // Destructure new prop
 }) => {
   const { user } = useContext(AuthContext) as AuthContextType;
 
@@ -419,7 +421,9 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     const feasibilityIndex = feasibilityOptions.indexOf(feasibility);
 
     if (impactIndex === -1 || feasibilityIndex === -1) {
-      return "bg-gray-800 text-white";
+      return isDarkMode
+        ? "bg-gray-700 text-white"
+        : "bg-gray-200 text-gray-800";
     }
 
     const impactScore = impactIndex + 1;
@@ -427,11 +431,17 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     const isHighImpact = impactScore > 4;
     const isHighFeasibility = feasibilityScore > 4;
 
-    if (isHighImpact && isHighFeasibility)
-      return "bg-green-200/50 text-gray-800";
-    if (isHighImpact || isHighFeasibility)
-      return "bg-yellow-200/50 text-gray-800";
-    return "bg-red-200/50 text-gray-800";
+    if (isDarkMode) {
+      if (isHighImpact && isHighFeasibility) return "bg-green-700 text-white";
+      if (isHighImpact || isHighFeasibility) return "bg-yellow-700 text-white";
+      return "bg-red-700 text-white";
+    } else {
+      if (isHighImpact && isHighFeasibility)
+        return "bg-green-200 text-gray-800";
+      if (isHighImpact || isHighFeasibility)
+        return "bg-yellow-200 text-gray-800";
+      return "bg-red-200 text-gray-800";
+    }
   };
 
   const highlightMentions = (text: string) => {
@@ -440,7 +450,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     const match = text.match(mentionRegex);
 
     if (match) {
-      const highlightedPart = `<span class="text-blue-400 font-bold">${match[0]}</span>`;
+      const highlightedPart = `<span class="text-blue-500 font-bold">${match[0]}</span>`;
       return text.replace(mentionRegex, highlightedPart);
     }
     return text;
@@ -488,28 +498,48 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
         <div
           key={comment.id}
           className={`py-2 ${
-            parentId ? "ml-6 border-l-2 border-gray-700 pl-4" : ""
+            parentId
+              ? `ml-6 border-l-2 ${
+                  isDarkMode ? "border-gray-600" : "border-gray-400"
+                } pl-4`
+              : ""
           }`}
         >
           <div className="text-sm">
-            <span className="font-bold text-white">{comment.displayName}</span>
-            <span className="text-gray-400 ml-2">
+            <span
+              className={`font-bold ${
+                isDarkMode ? "text-white" : "text-gray-800"
+              }`}
+            >
+              {comment.displayName}
+            </span>
+            <span
+              className={`ml-2 ${
+                isDarkMode ? "text-gray-400" : "text-gray-500"
+              }`}
+            >
               {comment.createdAt.toDate().toLocaleDateString()}
             </span>
           </div>
           <p
-            className="text-gray-300 my-1"
+            className={`${isDarkMode ? "text-gray-300" : "text-gray-700"} my-1`}
             dangerouslySetInnerHTML={{
               __html: DOMPurify.sanitize(highlightMentions(comment.text)),
             }}
           ></p>
-          <div className="flex items-center gap-4 text-xs">
+          <div
+            className={`flex items-center gap-4 text-xs ${
+              isDarkMode ? "text-gray-400" : "text-gray-500"
+            }`}
+          >
             <button
               onClick={() => handleLikeComment(comment.id)}
               className={`flex items-center gap-1 font-semibold ${
                 user && comment.likes.includes(user.uid)
                   ? "text-blue-500"
-                  : "text-gray-400 hover:text-white"
+                  : `hover:text-blue-600 ${
+                      isDarkMode ? "text-gray-400" : "text-gray-500"
+                    }`
               }`}
             >
               <FaThumbsUp /> {comment.likes.length > 0 && comment.likes.length}{" "}
@@ -519,7 +549,9 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
               onClick={() =>
                 setReplyingTo({ id: comment.id, name: comment.displayName })
               }
-              className="font-semibold text-gray-400 hover:text-white"
+              className={`font-semibold hover:text-blue-600 ${
+                isDarkMode ? "text-gray-400" : "text-gray-500"
+              }`}
             >
               Reply
             </button>
@@ -534,9 +566,9 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   return (
     <>
       <div
-        className={`rounded-lg shadow-lg relative overflow-hidden break-words bg-gray-800 border-2 transition-all duration-300 ${
-          isSelected ? "border-green-500" : "border-transparent"
-        }`}
+        className={`rounded-sm shadow-xl relative overflow-hidden break-words border-12  transition-all duration-300 ${
+          isDarkMode ? "bg-gray-800" : "bg-white"
+        } ${isSelected ? "border-green-500" : "border-white"}`}
       >
         {item.inspiredBy && item.inspiredBy.length > 0 && (
           <button
@@ -547,11 +579,11 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
             <FaLightbulb />
           </button>
         )}
-        <div className={`${headerColor} p-4`}>
-          <h4 className="font-bold text-xl text-white text-center uppercase">
-            {`Idea #${item.ideaNumber}: ${item.ideaTitle}`}
+        <div className={`${headerColor} py-5 px-6`}>
+          <h4 className="font-extrabold text-[18px] text-black text-center uppercase">
+            {`#${item.ideaNumber} ${item.ideaTitle}`}
           </h4>
-          <h5 className="text-sm text-center text-white">
+          <h5 className="text-base font-semibold text-center text-black">
             {item.ideationMission}
           </h5>
         </div>
@@ -562,26 +594,25 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
         />
 
         {/* --- Card Body --- */}
-        <div className="p-4">
-          <div className="text-gray-300">
+        <div
+          className={`p-6 ${
+            isDarkMode ? "text-gray-300 " : "text-gray-800 bg-gray-100/20"
+          }`}
+        >
+          <div>
             {readMoreVisible ? (
               <div className="flex flex-col gap-4 mb-4">
                 <div>{item.shortDescription}</div>
                 <div className="mb-0">
-                  <b>
-                    Cost Saving Estimate: <br />
-                  </b>
+                  <b>Cost Saving Estimate: </b>
                   {item.costEstimate}
                 </div>
                 <div className="mb-0">
-                  <b>
-                    Feasibility Estimate: <br />
-                  </b>
+                  <b>Feasibility Estimate: </b>
                   {item.feasibilityEstimate}
                 </div>
                 <div>
                   <b>Barriers to overcome: </b>
-                  <br />
                   {item.reasoning}
                 </div>
                 {item.tags && item.tags.length > 0 && (
@@ -591,7 +622,11 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                       {item.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full"
+                          className={`${
+                            isDarkMode
+                              ? "bg-gray-700 text-gray-300"
+                              : "bg-gray-200 text-gray-700"
+                          } text-sm font-semibold px-3 py-1 rounded-full`}
                         >
                           {tag}
                         </span>
@@ -605,7 +640,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
             )}
             <button
               onClick={() => setReadMoreVisible(!readMoreVisible)}
-              className="text-blue-500 hover:underline mt-2"
+              className="text-blue-600 hover:underline mt-2"
             >
               {readMoreVisible ? "Read Less" : "Read More"}
             </button>
@@ -613,12 +648,16 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
         </div>
 
         {/* --- Evaluation Trigger Section --- */}
-        <div className="p-4 border-y border-gray-700 text-gray-300">
+        <div
+          className={`p-4 border-y ${
+            isDarkMode ? "border-gray-700" : "border-gray-300"
+          } ${isDarkMode ? "text-gray-300" : "text-gray-800"}`}
+        >
           {userEvaluation ? null : ( // If already evaluated, this section is empty as the icon moves to the action bar
             // If not evaluated by the user, show the full "Evaluate Card" button
             <button
               onClick={() => setEvaluationVisible(true)} // Show the form to evaluate
-              className="w-full py-3 px-4 bg-gray-900 rounded-lg hover:bg-black text-white font-bold text-lg"
+              className="w-full py-3 px-4 bg-gray-700 rounded-lg hover:bg-gray-800 text-white font-bold text-lg"
               title="Evaluate Card"
             >
               Evaluate Card
@@ -627,9 +666,13 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
         </div>
 
         {/* --- Action Buttons Section (bottom bar) --- */}
-        <div className="bg-gray-800">
+        <div className={isDarkMode ? "bg-gray-800" : "bg-white"}>
           <div className="p-4 flex justify-between items-center">
-            <div className="text-xs italic text-gray-400">
+            <div
+              className={`text-xs italic ${
+                isDarkMode ? "text-gray-400" : "text-gray-500"
+              }`}
+            >
               By {item.displayName} on {creationDate}
             </div>
             <div className="flex items-center gap-2">
@@ -643,15 +686,27 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                         userEvaluation.FeasibilityScore
                       ).split(" ")[0]
                     }
-                    text-white`} // Extract background and ensure white text
+                    ${
+                      getEvaluationClasses(
+                        userEvaluation.ImpactScore,
+                        userEvaluation.FeasibilityScore
+                      ).split(" ")[1]
+                    }
+                    `}
                   title="Toggle Evaluation Details"
                 >
-                  <FaStar />
+                  <FaStar
+                    className={isDarkMode ? "text-white" : "text-gray-800"}
+                  />
                 </button>
               )}
               <button
                 onClick={() => setCommentsVisible(!commentsVisible)}
-                className="bg-gray-700 hover:bg-gray-600 text-white rounded-full w-8 h-8 flex items-center justify-center"
+                className={`${
+                  isDarkMode
+                    ? "bg-gray-700 hover:bg-gray-600 text-gray-300"
+                    : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                } rounded-full w-8 h-8 flex items-center justify-center`}
                 title="Comments"
               >
                 <FaComment />
@@ -662,8 +717,12 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   isSelected
                     ? "bg-green-500 text-white"
                     : isSelectionLocked
-                    ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                    : "bg-gray-700 hover:bg-gray-600 text-white"
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : `${
+                        isDarkMode
+                          ? "bg-gray-700 hover:bg-gray-600 text-gray-300"
+                          : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                      }`
                 }`}
                 title={
                   isSelectionLocked && !isSelected
@@ -676,9 +735,9 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
               </button>
               <button
                 onClick={() => handleToggleReadStatus()}
-                className={`rounded-full w-8 h-8 flex items-center text-white justify-center transition-colors ${
-                  hasRead ? "bg-green-500" : "bg-gray-700 hover:bg-gray-600"
-                }`}
+                className={`rounded-full w-8 h-8 flex items-center justify-center transition-colors ${
+                  hasRead ? "bg-green-500" : "bg-gray-700 hover:bg-gray-800"
+                } text-white`}
                 title="Mark as Read"
               >
                 <FaRobot />
@@ -689,13 +748,25 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
 
         {/* --- Comments Section (opens below) --- */}
         {commentsVisible && (
-          <div className="p-4 border-t border-gray-700">
-            <h4 className="font-bold text-lg text-white mb-2">
+          <div
+            className={`p-4 border-t ${
+              isDarkMode ? "border-gray-700" : "border-gray-300"
+            } ${isDarkMode ? "bg-gray-900" : "bg-gray-100"}`}
+          >
+            <h4
+              className={`font-bold text-lg mb-2 ${
+                isDarkMode ? "text-white" : "text-gray-800"
+              }`}
+            >
               Comments ({comments.length})
             </h4>
             <form onSubmit={handleCommentSubmit} className="mb-4 relative">
               {replyingTo && (
-                <div className="text-sm text-gray-400 mb-2">
+                <div
+                  className={`text-sm mb-2 ${
+                    isDarkMode ? "text-gray-400" : "text-gray-600"
+                  }`}
+                >
                   Replying to {replyingTo.name}{" "}
                   <button
                     onClick={() => setReplyingTo(null)}
@@ -713,24 +784,36 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   placeholder={
                     user ? "Add a comment..." : "Please log in to comment"
                   }
-                  className="w-full p-2 bg-gray-700 text-white rounded"
+                  className={`w-full p-2 rounded ${
+                    isDarkMode
+                      ? "bg-gray-700 text-white"
+                      : "bg-gray-200 text-gray-800"
+                  }`}
                   disabled={!user || isPostingComment}
                 />
                 <button
                   type="submit"
-                  className="py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 font-semibold disabled:bg-gray-500"
+                  className="py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
                   disabled={!user || isPostingComment || !newComment.trim()}
                 >
                   {isPostingComment ? "..." : "Post"}
                 </button>
               </div>
               {commentSuggestions.length > 0 && (
-                <ul className="absolute z-10 bg-gray-600 text-white w-full rounded-b-md max-h-40 overflow-y-auto mt-1">
+                <ul
+                  className={`absolute z-10 w-full rounded-b-md max-h-40 overflow-y-auto mt-1 ${
+                    isDarkMode
+                      ? "bg-gray-700 text-white"
+                      : "bg-gray-200 text-gray-800"
+                  }`}
+                >
                   {commentSuggestions.map((player) => (
                     <li
                       key={player.email}
                       onMouseDown={() => handleSelectCommentSuggestion(player)}
-                      className="p-2 cursor-pointer hover:bg-gray-500"
+                      className={`p-2 cursor-pointer ${
+                        isDarkMode ? "hover:bg-gray-600" : "hover:bg-gray-300"
+                      }`}
                     >
                       {player.firstName} {player.lastName}
                     </li>
@@ -746,17 +829,35 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
 
         {/* --- Evaluation Content Section (opens below, similar to comments) --- */}
         {evaluationVisible && (
-          <div className="p-4 border-t border-gray-700 text-gray-300">
+          <div
+            className={`p-4 border-t ${
+              isDarkMode ? "border-gray-700" : "border-gray-300"
+            } ${isDarkMode ? "bg-gray-900" : "bg-gray-100"} ${
+              isDarkMode ? "text-gray-300" : "text-gray-800"
+            }`}
+          >
             {userEvaluation ? (
               // Display user/average evaluation
               <div>
-                <div className="flex justify-start mb-4 rounded-md overflow-hidden border border-gray-600">
+                <div
+                  className={`flex justify-start mb-4 rounded-md overflow-hidden border ${
+                    isDarkMode ? "border-gray-700" : "border-gray-300"
+                  }`}
+                >
                   <button
                     onClick={() => setEvaluationView("user")}
                     className={`px-3 py-1 text-sm font-semibold transition-colors w-1/2 ${
                       evaluationView === "user"
-                        ? "bg-black text-white"
-                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                        ? `${
+                            isDarkMode
+                              ? "bg-gray-700 text-white"
+                              : "bg-gray-200 text-gray-800"
+                          }`
+                        : `${
+                            isDarkMode
+                              ? "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                              : "bg-white text-gray-600 hover:bg-gray-50"
+                          }`
                     }`}
                   >
                     Your Evaluation
@@ -765,8 +866,16 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                     onClick={() => setEvaluationView("average")}
                     className={`px-3 py-1 text-sm font-semibold transition-colors w-1/2 ${
                       evaluationView === "average"
-                        ? "bg-black text-white"
-                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                        ? `${
+                            isDarkMode
+                              ? "bg-gray-700 text-white"
+                              : "bg-gray-200 text-gray-800"
+                          }`
+                        : `${
+                            isDarkMode
+                              ? "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                              : "bg-white text-gray-600 hover:bg-gray-50"
+                          }`
                     }`}
                   >
                     Average ({allEvaluations.length})
@@ -774,16 +883,26 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                 </div>
                 {evaluationView === "user" && userEvaluation && (
                   <div>
-                    <h5 className="text-lg font-bold text-center mb-2">
+                    <h5
+                      className={`text-lg font-bold text-center mb-2 ${
+                        isDarkMode ? "text-white" : "text-gray-800"
+                      }`}
+                    >
                       Your Evaluation
                     </h5>
-                    <div className="flex flex-row items-center gap-2">
+                    <div className="flex flex-row items-center gap-2 justify-center">
                       <div
                         className={`${getEvaluationClasses(
                           userEvaluation.ImpactScore,
                           userEvaluation.FeasibilityScore
-                        )} h-10 w-10`}
-                      ></div>
+                        )} h-10 w-10 rounded-full flex items-center justify-center`}
+                      >
+                        <FaStar
+                          className={
+                            isDarkMode ? "text-white" : "text-gray-800"
+                          }
+                        />
+                      </div>
                       <div>
                         <p>
                           <strong>Cost Impact:</strong>{" "}
@@ -801,16 +920,26 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   averageScores &&
                   allEvaluations.length > 0 && (
                     <div>
-                      <h5 className="text-lg font-bold text-center mb-2">
+                      <h5
+                        className={`text-lg font-bold text-center mb-2 ${
+                          isDarkMode ? "text-white" : "text-gray-800"
+                        }`}
+                      >
                         Average Evaluation
                       </h5>
-                      <div className="flex flex-row items-center gap-2">
+                      <div className="flex flex-row items-center gap-2 justify-center">
                         <div
                           className={`${getEvaluationClasses(
                             averageScores.impact,
                             averageScores.feasibility
-                          )} h-10 w-10`}
-                        ></div>
+                          )} h-10 w-10 rounded-full flex items-center justify-center`}
+                        >
+                          <FaStar
+                            className={
+                              isDarkMode ? "text-white" : "text-gray-800"
+                            }
+                          />
+                        </div>
                         <div>
                           <p>
                             <strong>Cost Impact:</strong> {averageScores.impact}
@@ -827,7 +956,11 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
             ) : (
               // Show evaluation form
               <form onSubmit={handleEvaluationSubmit}>
-                <h5 className="text-lg font-bold text-center mb-4">
+                <h5
+                  className={`text-lg font-bold text-center mb-4 ${
+                    isDarkMode ? "text-white" : "text-gray-800"
+                  }`}
+                >
                   Evaluate This Idea
                 </h5>
                 <div className="mb-4">
@@ -837,7 +970,11 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   <select
                     value={impactScore}
                     onChange={(e) => setImpactScore(e.target.value)}
-                    className="w-full p-2 bg-gray-700 text-white rounded"
+                    className={`w-full p-2 rounded ${
+                      isDarkMode
+                        ? "bg-gray-700 text-white"
+                        : "bg-gray-200 text-gray-800"
+                    }`}
                   >
                     {costImpactOptions.map((option) => (
                       <option key={option} value={option}>
@@ -853,7 +990,11 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   <select
                     value={feasibilityScore}
                     onChange={(e) => setFeasibilityScore(e.target.value)}
-                    className="w-full p-2 bg-gray-700 text-white rounded"
+                    className={`w-full p-2 rounded ${
+                      isDarkMode
+                        ? "bg-gray-700 text-white"
+                        : "bg-gray-200 text-gray-800"
+                    }`}
                   >
                     {feasibilityOptions.map((option) => (
                       <option key={option} value={option}>
@@ -864,7 +1005,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                 </div>
                 <button
                   type="submit"
-                  className="w-full py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 font-semibold"
+                  className="w-full py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? "Submitting..." : "Submit Evaluation"}

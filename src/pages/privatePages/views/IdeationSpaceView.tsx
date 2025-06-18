@@ -526,6 +526,7 @@ const IdeationSpaceView: React.FC = () => {
             onSelect={handleSelectIdea}
             isSelected={selectedIdeas.some((i) => i.id === item.id)}
             isSelectionLocked={isSelectionLocked}
+            isDarkMode={false}
           />
         ))}
       </MasonryLayout>
