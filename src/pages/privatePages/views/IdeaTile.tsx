@@ -650,7 +650,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
           <button
             onClick={() => setEvaluationVisible(true)} // Show the form to evaluate
             className={`w-full py-2 px-4 bg-gray-700 rounded-lg hover:bg-gray-800 text-white font-bold text-lg ${
-              userEvaluation ? "invisible" : ""
+              userEvaluation ? "hidden" : ""
             }`}
             title="Evaluate Card"
           >

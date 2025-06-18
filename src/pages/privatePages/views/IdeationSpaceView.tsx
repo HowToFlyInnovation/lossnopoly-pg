@@ -515,7 +515,7 @@ const IdeationSpaceView: React.FC = () => {
         </div>
       </div>
 
-      <MasonryLayout gap={20}>
+      <MasonryLayout gap={40}>
         {filteredIdeas.map((item) => (
           <IdeaTile
             key={item.id}
