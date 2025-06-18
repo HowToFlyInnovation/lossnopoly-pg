@@ -48,6 +48,7 @@ export interface Idea {
   shortDescription: string;
   reasoning: string;
   costEstimate: string;
+  feasibilityEstimate: string; // Added feasibilityEstimate
   createdAt: Timestamp;
   userId: string;
   approved?: boolean;
@@ -434,12 +435,15 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   };
 
   const highlightMentions = (text: string) => {
-    // Regex to highlight @First Name Last Name pattern
-    const mentionRegex = /@([a-zA-Z]+\s[a-zA-Z]+(?:\s[a-zA-Z]+)*)/g;
-    return text.replace(
-      mentionRegex,
-      `<span class="text-blue-400 font-bold">@$1</span>`
-    );
+    // Regex to highlight only the first @ followed by First Name Last Name
+    const mentionRegex = /@([a-zA-Z]+\s[a-zA-Z]+(?:\s[a-zA-Z]+)*)/;
+    const match = text.match(mentionRegex);
+
+    if (match) {
+      const highlightedPart = `<span class="text-blue-400 font-bold">${match[0]}</span>`;
+      return text.replace(mentionRegex, highlightedPart);
+    }
+    return text;
   };
 
   const handleCommentInputChangeWithMention = (
@@ -569,14 +573,20 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   </b>
                   {item.costEstimate}
                 </div>
+                <div className="mb-0">
+                  <b>
+                    Feasibility Estimate: <br />
+                  </b>
+                  {item.feasibilityEstimate}
+                </div>
                 <div>
-                  <b>Help Needed / Barriers to overcome: </b>
+                  <b>Barriers to overcome: </b>
                   <br />
                   {item.reasoning}
                 </div>
                 {item.tags && item.tags.length > 0 && (
                   <div>
-                    <b>Teams Involved:</b>
+                    <b>People to involve:</b>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {item.tags.map((tag) => (
                         <span
@@ -604,8 +614,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
 
         {/* --- Evaluation Trigger Section --- */}
         <div className="p-4 border-y border-gray-700 text-gray-300">
-          {userEvaluation ? // If already evaluated, this section is empty as the icon moves to the action bar
-          null : (
+          {userEvaluation ? null : ( // If already evaluated, this section is empty as the icon moves to the action bar
             // If not evaluated by the user, show the full "Evaluate Card" button
             <button
               onClick={() => setEvaluationVisible(true)} // Show the form to evaluate

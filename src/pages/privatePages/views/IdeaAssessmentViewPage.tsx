@@ -274,6 +274,9 @@ const IdeaListCard: React.FC<IdeaListCardProps> = ({
           <p className="text-sm opacity-90 font-bold">
             Cost: {idea.costEstimate}
           </p>
+          <p className="text-sm opacity-90 font-bold">
+            Feasibility: {idea.feasibilityEstimate}
+          </p>
         </div>
       </div>
     );
