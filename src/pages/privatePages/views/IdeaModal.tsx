@@ -1,10 +1,26 @@
 import React, { useState, useContext, useEffect } from "react";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { collection, addDoc, Timestamp, getDocs } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  Timestamp,
+  getDocs,
+  query, // Added query for fetching inviteList
+} from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { AuthContext } from "../../context/AuthContext";
 import type { AuthContextType } from "../../context/AuthContext";
 import type { Idea } from "./IdeaTile"; // Import Idea type
+
+// Define the structure of a player from inviteList
+interface InvitedPlayer {
+  email: string;
+  firstName: string;
+  lastName: string;
+  team: string;
+  location: string;
+  organization: string;
+}
 
 interface IdeaModalProps {
   onClose: () => void;
@@ -35,6 +51,40 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // New states for mention feature
+  const [allInvitedPlayers, setAllInvitedPlayers] = useState<InvitedPlayer[]>(
+    []
+  );
+  const [titleSuggestions, setTitleSuggestions] = useState<InvitedPlayer[]>([]);
+  const [descSuggestions, setDescSuggestions] = useState<InvitedPlayer[]>([]);
+  const [reasoningSuggestions, setReasoningSuggestions] = useState<
+    InvitedPlayer[]
+  >([]);
+  const [activeInput, setActiveInput] = useState<
+    "title" | "description" | "reasoning" | null
+  >(null);
+
+  // Fetch invited players on component mount
+  useEffect(() => {
+    const fetchInvitedPlayers = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "inviteList"));
+        const players: InvitedPlayer[] = querySnapshot.docs.map((doc) => ({
+          email: doc.data().email,
+          firstName: doc.data().firstName,
+          lastName: doc.data().lastName,
+          team: doc.data().team,
+          location: doc.data().location,
+          organization: doc.data().organization,
+        }));
+        setAllInvitedPlayers(players);
+      } catch (err) {
+        console.error("Error fetching invited players:", err);
+      }
+    };
+    fetchInvitedPlayers();
+  }, []);
+
   useEffect(() => {
     setSelectedTags([]);
   }, [ideationMission]);
@@ -51,6 +101,70 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
         ? prevTags.filter((t) => t !== tag)
         : [...prevTags, tag]
     );
+  };
+
+  const extractMentions = (text: string): InvitedPlayer[] => {
+    const mentions: InvitedPlayer[] = [];
+    // Regex to find @ followed by First Name Last Name (handles multiple words in name)
+    const mentionRegex = /@([a-zA-Z]+\s[a-zA-Z]+(?:\s[a-zA-Z]+)*)/g;
+    let match;
+    while ((match = mentionRegex.exec(text)) !== null) {
+      const mentionedName = match[1].trim();
+      // Try to find a player whose full name matches the mentioned name
+      const foundPlayer = allInvitedPlayers.find(
+        (player) =>
+          `${player.firstName} ${player.lastName}`.toLowerCase() ===
+          mentionedName.toLowerCase()
+      );
+      if (foundPlayer && !mentions.some((m) => m.email === foundPlayer.email)) {
+        mentions.push(foundPlayer);
+      }
+    }
+    return mentions;
+  };
+
+  const handleInputChangeWithMention = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    setter: React.Dispatch<React.SetStateAction<string>>,
+    setSuggestions: React.Dispatch<React.SetStateAction<InvitedPlayer[]>>,
+    inputName: "title" | "description" | "reasoning"
+  ) => {
+    const text = e.target.value;
+    setter(text);
+    setActiveInput(inputName);
+
+    const atIndex = text.lastIndexOf("@");
+    if (atIndex > -1) {
+      const searchTerm = text.substring(atIndex + 1).toLowerCase();
+      const filtered = allInvitedPlayers.filter(
+        (player) =>
+          player.firstName.toLowerCase().includes(searchTerm) ||
+          player.lastName.toLowerCase().includes(searchTerm) ||
+          `${player.firstName} ${player.lastName}`
+            .toLowerCase()
+            .includes(searchTerm) // Also search for combined name
+      );
+      setSuggestions(filtered);
+    } else {
+      setSuggestions([]);
+    }
+  };
+
+  const handleSelectSuggestion = (
+    player: InvitedPlayer,
+    currentText: string,
+    setter: React.Dispatch<React.SetStateAction<string>>,
+    setSuggestions: React.Dispatch<React.SetStateAction<InvitedPlayer[]>>
+  ) => {
+    const atIndex = currentText.lastIndexOf("@");
+    if (atIndex > -1) {
+      // Insert First Name Last Name into the form text
+      const newText =
+        currentText.substring(0, atIndex) +
+        `@${player.firstName} ${player.lastName} `;
+      setter(newText);
+      setSuggestions([]);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -105,7 +219,31 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
           })) || [],
       };
 
-      await addDoc(collection(db, "ideas"), newIdea);
+      const docRef = await addDoc(collection(db, "ideas"), newIdea);
+
+      // Store player taggings for the new idea
+      const taggedPlayers: {
+        email: string;
+        firstName: string;
+        lastName: string;
+      }[] = [];
+
+      const ideaContent = [ideaTitle, shortDescription, reasoning].join(" ");
+      const mentions = extractMentions(ideaContent);
+
+      for (const player of mentions) {
+        if (!taggedPlayers.some((p) => p.email === player.email)) {
+          taggedPlayers.push(player);
+          await addDoc(collection(db, "playerTaggings"), {
+            ideaId: docRef.id,
+            ideaTitle: ideaTitle,
+            taggedPlayerDisplayName: `${player.firstName} ${player.lastName}`,
+            taggedPlayerEmail: player.email,
+            timestamp: Timestamp.now(),
+            type: "idea", // Indicates this tagging is from an idea
+          });
+        }
+      }
 
       onClose();
     } catch (err) {
@@ -179,10 +317,39 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
               id="ideaTitle"
               type="text"
               value={ideaTitle}
-              onChange={(e) => setIdeaTitle(e.target.value)}
+              onChange={(e) =>
+                handleInputChangeWithMention(
+                  e,
+                  setIdeaTitle,
+                  setTitleSuggestions,
+                  "title"
+                )
+              }
+              onFocus={() => setActiveInput("title")}
+              onBlur={() => setTimeout(() => setActiveInput(null), 100)} // Delay hiding suggestions
               className="w-full p-2 bg-gray-700 rounded"
               required
             />
+            {activeInput === "title" && titleSuggestions.length > 0 && (
+              <ul className="absolute z-10 bg-gray-600 text-white w-full rounded-b-md max-h-40 overflow-y-auto mt-1">
+                {titleSuggestions.map((player) => (
+                  <li
+                    key={player.email} // Still use email as key, it's unique
+                    onMouseDown={() =>
+                      handleSelectSuggestion(
+                        player,
+                        ideaTitle,
+                        setIdeaTitle,
+                        setTitleSuggestions
+                      )
+                    } // Use onMouseDown to prevent blur
+                    className="p-2 cursor-pointer hover:bg-gray-500"
+                  >
+                    {player.firstName} {player.lastName}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           <div className="mb-4">
             <label
@@ -195,11 +362,40 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
               id="shortDescription"
               placeholder="Shortly descibe in laymen terms how your idea will help to achieve the challenge objective?"
               value={shortDescription}
-              onChange={(e) => setShortDescription(e.target.value)}
+              onChange={(e) =>
+                handleInputChangeWithMention(
+                  e,
+                  setShortDescription,
+                  setDescSuggestions,
+                  "description"
+                )
+              }
+              onFocus={() => setActiveInput("description")}
+              onBlur={() => setTimeout(() => setActiveInput(null), 100)}
               className="w-full p-2 bg-gray-700 rounded"
               rows={3}
               required
             ></textarea>
+            {activeInput === "description" && descSuggestions.length > 0 && (
+              <ul className="absolute z-10 bg-gray-600 text-white w-full rounded-b-md max-h-40 overflow-y-auto mt-1">
+                {descSuggestions.map((player) => (
+                  <li
+                    key={player.email}
+                    onMouseDown={() =>
+                      handleSelectSuggestion(
+                        player,
+                        shortDescription,
+                        setShortDescription,
+                        setDescSuggestions
+                      )
+                    }
+                    className="p-2 cursor-pointer hover:bg-gray-500"
+                  >
+                    {player.firstName} {player.lastName}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           <div className="mb-4">
             <label htmlFor="costEstimate" className="block mb-2 font-semibold">
@@ -229,11 +425,40 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
               id="reasoning"
               placeholder="What kind of help/resources would be needed to make this happen? What are the main risks/hurdles to overcome to your idea a reality?"
               value={reasoning}
-              onChange={(e) => setReasoning(e.target.value)}
+              onChange={(e) =>
+                handleInputChangeWithMention(
+                  e,
+                  setReasoning,
+                  setReasoningSuggestions,
+                  "reasoning"
+                )
+              }
+              onFocus={() => setActiveInput("reasoning")}
+              onBlur={() => setTimeout(() => setActiveInput(null), 100)}
               className="w-full p-2 bg-gray-700 rounded"
               rows={3}
               required
             ></textarea>
+            {activeInput === "reasoning" && reasoningSuggestions.length > 0 && (
+              <ul className="absolute z-10 bg-gray-600 text-white w-full rounded-b-md max-h-40 overflow-y-auto mt-1">
+                {reasoningSuggestions.map((player) => (
+                  <li
+                    key={player.email}
+                    onMouseDown={() =>
+                      handleSelectSuggestion(
+                        player,
+                        reasoning,
+                        setReasoning,
+                        setReasoningSuggestions
+                      )
+                    }
+                    className="p-2 cursor-pointer hover:bg-gray-500"
+                  >
+                    {player.firstName} {player.lastName}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           <div className="mb-4">
             <label className="block mb-2 font-semibold">Team Involvement</label>

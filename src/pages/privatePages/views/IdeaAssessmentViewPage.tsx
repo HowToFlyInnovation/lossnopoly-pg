@@ -363,7 +363,7 @@ const IdeaAssessmentViewPage: React.FC = () => {
           }, 0);
           const totalFeasibility = relatedEvals.reduce((sum, e) => {
             const score = feasibilityOptions.indexOf(e.FeasibilityScore);
-            return sum + (score !== -1 ? 8 - score : 0);
+            return sum + (score !== -1 ? score + 1 : 0);
           }, 0);
           return {
             ...idea,

@@ -1,3 +1,4 @@
+// src/pages/privatePages/views/IdeaTile.tsx
 import React, { useState, useEffect, useContext } from "react";
 import {
   Timestamp,
@@ -13,12 +14,23 @@ import {
   updateDoc,
   arrayUnion,
   arrayRemove,
+  getDocs as firestoreGetDocs, // Renamed to avoid conflict
 } from "firebase/firestore";
 import DOMPurify from "dompurify";
 import { FaThumbsUp, FaRobot, FaComment, FaLightbulb } from "react-icons/fa";
 import { PiLegoBold } from "react-icons/pi";
 import { AuthContext, type AuthContextType } from "../../context/AuthContext";
 import { db } from "../../firebase/config";
+
+// Define the structure of a player from inviteList
+interface InvitedPlayer {
+  email: string;
+  firstName: string;
+  lastName: string;
+  team: string;
+  location: string;
+  organization: string;
+}
 
 // --- TYPE DEFINITIONS ---
 
@@ -156,6 +168,37 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   );
   const [inspiredByVisible, setInspiredByVisible] = useState(false);
 
+  // New states for mention feature in comments
+  const [allInvitedPlayers, setAllInvitedPlayers] = useState<InvitedPlayer[]>(
+    []
+  );
+  const [commentSuggestions, setCommentSuggestions] = useState<InvitedPlayer[]>(
+    []
+  );
+
+  // Fetch invited players on component mount
+  useEffect(() => {
+    const fetchInvitedPlayers = async () => {
+      try {
+        const querySnapshot = await firestoreGetDocs(
+          collection(db, "inviteList")
+        );
+        const players: InvitedPlayer[] = querySnapshot.docs.map((doc) => ({
+          email: doc.data().email,
+          firstName: doc.data().firstName,
+          lastName: doc.data().lastName,
+          team: doc.data().team,
+          location: doc.data().location,
+          organization: doc.data().organization,
+        }));
+        setAllInvitedPlayers(players);
+      } catch (err) {
+        console.error("Error fetching invited players:", err);
+      }
+    };
+    fetchInvitedPlayers();
+  }, []);
+
   // --- EFFECTS ---
   useEffect(() => {
     if (item.createdAt) {
@@ -219,11 +262,25 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
       );
       return options[averageIndex] || "N/A";
     };
+
     const impactScores = allEvaluations.map((e) => e.ImpactScore);
     const feasibilityScores = allEvaluations.map((e) => e.FeasibilityScore);
+
+    const getAvgFeasibility = (scores: string[]): string => {
+      const numericScores = scores.map((score) =>
+        feasibilityOptions.indexOf(score)
+      );
+      const validScores = numericScores.filter((s) => s !== -1);
+      if (validScores.length === 0) return "N/A";
+      const averageIndex = Math.round(
+        validScores.reduce((a, b) => a + b, 0) / validScores.length
+      );
+      return feasibilityOptions[averageIndex] || "N/A";
+    };
+
     setAverageScores({
       impact: getAverageLabel(impactScores, costImpactOptions),
-      feasibility: getAverageLabel(feasibilityScores, feasibilityOptions),
+      feasibility: getAvgFeasibility(feasibilityScores),
     });
   }, [allEvaluations]);
 
@@ -275,13 +332,33 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     }
   };
 
+  const extractMentions = (text: string): InvitedPlayer[] => {
+    const mentions: InvitedPlayer[] = [];
+    // Regex to find @ followed by First Name Last Name (handles multiple words in name)
+    const mentionRegex = /@([a-zA-Z]+\s[a-zA-Z]+(?:\s[a-zA-Z]+)*)/g;
+    let match;
+    while ((match = mentionRegex.exec(text)) !== null) {
+      const mentionedName = match[1].trim();
+      // Try to find a player whose full name matches the mentioned name
+      const foundPlayer = allInvitedPlayers.find(
+        (player) =>
+          `${player.firstName} ${player.lastName}`.toLowerCase() ===
+          mentionedName.toLowerCase()
+      );
+      if (foundPlayer && !mentions.some((m) => m.email === foundPlayer.email)) {
+        mentions.push(foundPlayer);
+      }
+    }
+    return mentions;
+  };
+
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newComment.trim()) return;
 
     setIsPostingComment(true);
     try {
-      await addDoc(collection(db, "comments"), {
+      const commentDocRef = await addDoc(collection(db, "comments"), {
         ideaId: item.id,
         userId: user.uid,
         displayName: user.displayName || "Anonymous",
@@ -290,6 +367,21 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
         likes: [],
         parentId: replyingTo ? replyingTo.id : null,
       });
+
+      // Store player taggings for the comment
+      const mentionsInComment = extractMentions(newComment);
+      for (const player of mentionsInComment) {
+        await addDoc(collection(db, "playerTaggings"), {
+          commentId: commentDocRef.id,
+          ideaId: item.id,
+          commentText: newComment,
+          taggedPlayerDisplayName: `${player.firstName} ${player.lastName}`,
+          taggedPlayerEmail: player.email,
+          timestamp: Timestamp.now(),
+          type: "comment", // Indicates this tagging is from a comment
+        });
+      }
+
       setNewComment("");
       setReplyingTo(null);
     } catch (error) {
@@ -334,6 +426,50 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     return "bg-red-200/50 text-gray-800";
   };
 
+  const highlightMentions = (text: string) => {
+    // Regex to highlight @First Name Last Name pattern
+    const mentionRegex = /@([a-zA-Z]+\s[a-zA-Z]+(?:\s[a-zA-Z]+)*)/g;
+    return text.replace(
+      mentionRegex,
+      `<span class="text-blue-400 font-bold">@$1</span>`
+    );
+  };
+
+  const handleCommentInputChangeWithMention = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const text = e.target.value;
+    setNewComment(text);
+
+    const atIndex = text.lastIndexOf("@");
+    if (atIndex > -1) {
+      const searchTerm = text.substring(atIndex + 1).toLowerCase();
+      // Filter by first name, last name, or combined name for suggestions
+      const filtered = allInvitedPlayers.filter(
+        (player) =>
+          player.firstName.toLowerCase().includes(searchTerm) ||
+          player.lastName.toLowerCase().includes(searchTerm) ||
+          `${player.firstName} ${player.lastName}`
+            .toLowerCase()
+            .includes(searchTerm)
+      );
+      setCommentSuggestions(filtered);
+    } else {
+      setCommentSuggestions([]);
+    }
+  };
+
+  const handleSelectCommentSuggestion = (player: InvitedPlayer) => {
+    const atIndex = newComment.lastIndexOf("@");
+    if (atIndex > -1) {
+      const newText =
+        newComment.substring(0, atIndex) +
+        `@${player.firstName} ${player.lastName} `;
+      setNewComment(newText);
+      setCommentSuggestions([]);
+    }
+  };
+
   const renderComments = (parentId: string | null = null) => {
     return comments
       .filter((comment) => comment.parentId === parentId)
@@ -350,7 +486,12 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
               {comment.createdAt.toDate().toLocaleDateString()}
             </span>
           </div>
-          <p className="text-gray-300 my-1">{comment.text}</p>
+          <p
+            className="text-gray-300 my-1"
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(highlightMentions(comment.text)),
+            }}
+          ></p>
           <div className="flex items-center gap-4 text-xs">
             <button
               onClick={() => handleLikeComment(comment.id)}
@@ -377,7 +518,6 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
       ));
   };
 
-  // const ideaDescription = `<br/><br/><b>Feasibility Reasoning:</b><br/>${item.reasoning}`;
   const headerColor = missionColors[item.ideationMission] || "bg-gray-600";
 
   return (
@@ -621,7 +761,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                 <PiLegoBold />
               </button>
               <button
-                onClick={handleToggleReadStatus}
+                onClick={() => handleToggleReadStatus()}
                 className={`rounded-full w-8 h-8 flex items-center text-white justify-center transition-colors ${
                   hasRead ? "bg-green-500" : "bg-gray-700 hover:bg-gray-600"
                 }`}
@@ -638,7 +778,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
             <h4 className="font-bold text-lg text-white mb-2">
               Comments ({comments.length})
             </h4>
-            <form onSubmit={handleCommentSubmit} className="mb-4">
+            <form onSubmit={handleCommentSubmit} className="mb-4 relative">
               {replyingTo && (
                 <div className="text-sm text-gray-400 mb-2">
                   Replying to {replyingTo.name}{" "}
@@ -654,7 +794,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                 <input
                   type="text"
                   value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
+                  onChange={handleCommentInputChangeWithMention}
                   placeholder={
                     user ? "Add a comment..." : "Please log in to comment"
                   }
@@ -669,6 +809,19 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   {isPostingComment ? "..." : "Post"}
                 </button>
               </div>
+              {commentSuggestions.length > 0 && (
+                <ul className="absolute z-10 bg-gray-600 text-white w-full rounded-b-md max-h-40 overflow-y-auto mt-1">
+                  {commentSuggestions.map((player) => (
+                    <li
+                      key={player.email}
+                      onMouseDown={() => handleSelectCommentSuggestion(player)}
+                      className="p-2 cursor-pointer hover:bg-gray-500"
+                    >
+                      {player.firstName} {player.lastName}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </form>
             <div className="max-h-60 overflow-y-auto pr-2">
               {renderComments(null)}

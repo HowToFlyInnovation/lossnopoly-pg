@@ -1,3 +1,4 @@
+// src/pages/privatePages/views/IdeationSpaceView.tsx
 import React, { useState, useEffect, useContext } from "react";
 import {
   collection,
@@ -33,14 +34,14 @@ const costImpactOptions = [
 ];
 
 const feasibilityOptions = [
-  "Very easy to do",
-  "Straightforward to implement",
-  "Moderately easy",
-  "Doable, but requires significant effort",
-  "Challenging to accomplish",
-  "Very difficult to execute",
+  "Impossible to pull off", // Standardized order: lowest to highest feasibility
   "Borderline impossible",
-  "Impossible to pull off",
+  "Very difficult to execute",
+  "Challenging to accomplish",
+  "Doable, but requires significant effort",
+  "Moderately easy",
+  "Straightforward to implement",
+  "Very easy to do",
 ];
 
 // --- HELPER FUNCTION FOR EVALUATION CATEGORY ---
@@ -56,8 +57,9 @@ const getEvaluationCategory = (
     return "none";
   }
 
-  const impactScore = impactIndex + 1;
-  const feasibilityScore = 8 - feasibilityIndex;
+  // Assuming indexes go from lowest (0) to highest (7) for both
+  const impactScore = impactIndex + 1; // 1 to 8
+  const feasibilityScore = feasibilityIndex + 1; // 1 to 8
 
   const isHighImpact = impactScore > 4;
   const isHighFeasibility = feasibilityScore > 4;
@@ -492,9 +494,13 @@ const IdeationSpaceView: React.FC = () => {
             className="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none w-full md:w-auto"
           >
             <option value="all">All Missions</option>
-            <option value="Touchless Processes">Touchless Processes</option>
-            <option value="Touchless Innovation">Touchless Innovation</option>
-            <option value="Waste Reduction">Waste Reduction</option>
+            <option value="E2E Touchless Supply Chain">
+              E2E Touchless Supply Chain
+            </option>
+            <option value="E2E Touchless Innovation">
+              E2E Touchless Innovation
+            </option>
+            <option value="Zero Waste">Zero Waste</option>
           </select>
           <button
             onClick={handleOpenModal}

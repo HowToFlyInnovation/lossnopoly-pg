@@ -59,6 +59,24 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
+    // *** NEW: Rules for the 'playerTaggings' collection ***
+    // Only authenticated users can create tagging records.
+    // Read access for all authenticated users to allow displaying tagged players.
+    // No update or delete operations allowed for clients.
+    match /playerTaggings/{taggingId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
+    // *** NEW: Rules for the 'inviteList' collection ***
+    // Authenticated users need to read this for @mention suggestions.
+    // No write access for clients as it's assumed to be managed by an admin.
+    match /inviteList/{documentId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     // *** UPDATED: Rules for the 'players' collection ***
     match /players/{userId} {
       // Any authenticated user can read player data for the ranking page.
