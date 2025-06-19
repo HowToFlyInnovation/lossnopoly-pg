@@ -53,16 +53,16 @@ const feasibilityOptions = [
 
 // Colors from IdeaTile for the list on the left
 const missionListColors: { [key: string]: string } = {
-  "E2E Touchless Supply Chain": "bg-amber-600",
-  "E2E Touchless Innovation": "bg-green-600",
-  "Zero Waste": "bg-blue-600",
+  "E2E Touchless Supply Chain": "bg-amber-300",
+  "E2E Touchless Innovation": "bg-amber-600",
+  "Zero Waste": "bg-blue-400",
 };
 
 // Updated mission chart colors to match the list colors
 const missionChartColors: { [key: string]: string } = {
-  "Sub-Challenge 1: E2E Touchless Supply Chain": "#D97706", // amber-600
-  "Sub-Challenge 2: E2E Touchless Innovation": "#16A34A", // green-600
-  "Sub-Challenge 3: Zero Waste": "#2563EB", // blue-600
+  "Sub-Challenge 1: E2E Touchless Supply Chain": "rgb(252 211 77)", // amber-600
+  "Sub-Challenge 2: E2E Touchless Innovation": "rgb(217 119 6)", // green-600
+  "Sub-Challenge 3: Zero Waste": "#2563eb", // blue-600
 };
 
 // --- [NEW] INFO MODAL COMPONENT ---
@@ -222,9 +222,13 @@ const ImpactFeasibilityChart: React.FC<{
 
       {chartIdeas.map((idea) => {
         const missionName =
-          Object.keys(missionChartColors).find((m) =>
-            idea.ideationMission.includes(m.split(":")[1].trim())
-          ) || "Default";
+          Object.keys(missionChartColors).find((m) => {
+            const parts = m.split(":");
+            // Safely access parts[1] and call trim() only if parts.length is greater than 1
+            return (
+              parts.length > 1 && idea.ideationMission.includes(parts[1].trim())
+            );
+          }) || "Default";
         const color = missionChartColors[missionName] || "#808080";
         return (
           <ChartDot
@@ -397,13 +401,13 @@ const IdeaAssessmentViewPage: React.FC = () => {
     }
   };
 
+  // Updated legendItems for consistency with idea tile and mission options
   const legendItems = {
-    "Sub-Challenge 1: Touchless Process":
+    "E2E Touchless Supply Chain":
       missionChartColors["Sub-Challenge 1: E2E Touchless Supply Chain"],
-    "Sub-Challenge 2: Touchless Innovation":
+    "E2E Touchless Innovation":
       missionChartColors["Sub-Challenge 2: E2E Touchless Innovation"],
-    "Sub-Challenge 3: Waste Reduction":
-      missionChartColors["Sub-Challenge 3: Zero Waste"],
+    "Zero Waste": missionChartColors["Sub-Challenge 3: Zero Waste"],
   };
 
   const listIdeas = selectedIdea ? [selectedIdea] : processedIdeas;
