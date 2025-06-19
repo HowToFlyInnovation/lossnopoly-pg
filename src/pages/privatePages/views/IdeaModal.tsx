@@ -80,6 +80,9 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
     []
   ); // RE-INTRODUCED for suggestions
 
+  const MAX_TITLE_LENGTH = 30; // Max length for idea title
+  const MIN_TITLE_LENGTH = 3; // Min length for idea title
+
   // Fetch invited players on component mount - RE-INTRODUCED
   useEffect(() => {
     const fetchInvitedPlayers = async () => {
@@ -184,12 +187,23 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
       setError("Please fill in all fields.");
       return;
     }
+    // Validate idea title length
+    if (
+      ideaTitle.length < MIN_TITLE_LENGTH ||
+      ideaTitle.length > MAX_TITLE_LENGTH
+    ) {
+      setError(
+        `Idea Title must be between ${MIN_TITLE_LENGTH} and ${MAX_TITLE_LENGTH} characters.`
+      );
+      return;
+    }
 
     setIsSubmitting(true);
     setError("");
 
     try {
-      let imageUrl = "";
+      let imageUrl =
+        "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/istockphoto-1409329028-612x612.jpg?alt=media&token=f9532044-a778-44d1-92d8-16b42c411388"; // Default image placeholder
       if (ideaImage) {
         const storage = getStorage();
         const storageRef = ref(
@@ -353,8 +367,14 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
               value={ideaTitle}
               onChange={(e) => setIdeaTitle(e.target.value)} // No mention feature
               className="w-full p-2 bg-gray-700 rounded"
+              minLength={MIN_TITLE_LENGTH}
+              maxLength={MAX_TITLE_LENGTH}
               required
             />
+            <p className="text-sm text-gray-400 mt-1">
+              {ideaTitle.length}/{MAX_TITLE_LENGTH} characters (min:{" "}
+              {MIN_TITLE_LENGTH})
+            </p>
           </div>
           <div className="mb-4">
             <label
