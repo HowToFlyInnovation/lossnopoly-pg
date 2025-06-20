@@ -105,10 +105,10 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
 
   return (
     <div
-      className={`fixed top-0 left-0 z-10 flex flex-col w-full h-screen shadow-[10px_0_10px_-5px_rgba(0,0,0,0.5)] md:w-[18%] ${menuBackground}`}
+      className={`fixed top-0 left-0 z-10000 flex flex-col w-full h-screen shadow-[10px_0_10px_-5px_rgba(0,0,0,0.5)] md:w-[18%] ${menuBackground}`}
     >
       {/* ── Logo & close button ───────────────────────────────────────── */}
-      <header className="flex flex-row items-center justify-between w-full h-16 mt-7 mb-10 z-[2]">
+      <header className="flex flex-row items-center justify-between w-full h-16 mt-7 mb-10 z-[2] flex-shrink-0">
         <img
           className="relative w-2/5 my-10 ml-5 md:w-2/4 md:top-1.5"
           alt="lossNOpolly Logo"
@@ -117,61 +117,65 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
         <MenuCloseButton setMenuActive={setMenuActive} />
       </header>
 
-      {/* ── Main menu ─────────────────────────────────────────────────── */}
-      <div className="sticky w-full mx-auto">
-        <h3 className="text-black text-base font-bold pl-[10%] mb-1">Menu</h3>
-        {menuItems.map((item) => (
+      {/* Scrollable container for menu items */}
+      <div className="flex-grow overflow-y-auto">
+        {/* ── Main menu ─────────────────────────────────────────────────── */}
+        <div className="w-full mx-auto">
+          <h3 className="text-black text-base font-bold pl-[10%] mb-1">Menu</h3>
+          {menuItems.map((item) => (
+            <MenuItem
+              key={item.id}
+              {...item}
+              visibleContent={visibleContent}
+              onClick={handleMenuClick}
+              customTheme={customTheme}
+              icon={item.icon}
+            />
+          ))}
+        </div>
+
+        {/* ── Sub-challenge Deep-Dives ──────────────────────────────────── */}
+        <div className="w-full mx-auto mt-12">
+          <h3 className="text-black text-base font-bold pl-[10%] mb-1">
+            Sub-challenges
+          </h3>
+          {missionItems.map((item) => (
+            <MenuItem
+              key={item.id}
+              {...item}
+              visibleContent={visibleContent}
+              onClick={handleMenuClick}
+              customTheme={customTheme}
+              icon={item.icon}
+            />
+          ))}
+        </div>
+
+        {/* ── Extra items & footer ──────────────────────────────────────── */}
+        <hr className="w-full mt-12 border-white/10" />
+
+        <div className="w-full mx-auto mt-0">
           <MenuItem
-            key={item.id}
-            {...item}
-            visibleContent={visibleContent}
+            id="PlayerPageView"
             onClick={handleMenuClick}
+            text="Player Page"
+            visibleContent={visibleContent}
             customTheme={customTheme}
-            icon={item.icon}
+            icon={RankingIcon}
           />
-        ))}
-      </div>
-
-      {/* ── Sub-challenge Deep-Dives ──────────────────────────────────── */}
-      <div className="w-full mx-auto mt-12">
-        <h3 className="text-black text-base font-bold pl-[10%] mb-1">
-          Sub-challenges
-        </h3>
-        {missionItems.map((item) => (
           <MenuItem
-            key={item.id}
-            {...item}
-            visibleContent={visibleContent}
+            id="PlayerRankingView"
             onClick={handleMenuClick}
+            text="Player Ranking"
+            visibleContent={visibleContent}
             customTheme={customTheme}
-            icon={item.icon}
+            icon={RankingIcon}
           />
-        ))}
+        </div>
       </div>
 
-      {/* ── Extra items & footer ──────────────────────────────────────── */}
-      <hr className="w-full mt-12 border-white/10" />
-
-      <div className="w-full mx-auto mt-0">
-        <MenuItem
-          id="PlayerPageView"
-          onClick={handleMenuClick}
-          text="Player Page"
-          visibleContent={visibleContent}
-          customTheme={customTheme}
-          icon={RankingIcon}
-        />
-        <MenuItem
-          id="PlayerRankingView"
-          onClick={handleMenuClick}
-          text="Player Ranking"
-          visibleContent={visibleContent}
-          customTheme={customTheme}
-          icon={RankingIcon}
-        />
-      </div>
-
-      <div className="absolute bottom-6 w-full">
+      {/* Sign Out button pushed to the bottom */}
+      <div className="w-full mt-auto pb-6 flex-shrink-0">
         <MenuItem
           id="BlackboxSignOut"
           onClick={handleSignOut}

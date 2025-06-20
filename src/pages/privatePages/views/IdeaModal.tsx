@@ -35,6 +35,8 @@ const missionOptions = [
   "Zero Waste",
 ];
 
+const areaOptions = ["Area 1", "Area 2", "Area 3"];
+
 const costImpactOptions = [
   "Negative",
   "$0-$10K",
@@ -60,6 +62,7 @@ const feasibilityOptions = [
 const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
   const { user } = useContext(AuthContext) as AuthContextType;
   const [ideaTitle, setIdeaTitle] = useState("");
+  const [areas, setAreas] = useState<string[]>([]);
   const [shortDescription, setShortDescription] = useState("");
   const [reasoning, setReasoning] = useState("");
   const [ideationMission, setIdeationMission] = useState(missionOptions[0]);
@@ -108,6 +111,14 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
     // Clear involved people when mission changes if desired, or remove this
     setInvolvedPeople([]);
   }, [ideationMission]);
+
+  const handleAreaToggle = (areaToToggle: string) => {
+    setAreas((prevAreas) =>
+      prevAreas.includes(areaToToggle)
+        ? prevAreas.filter((area) => area !== areaToToggle)
+        : [...prevAreas, areaToToggle]
+    );
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -221,6 +232,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
       const newIdea = {
         ideaNumber,
         ideaTitle,
+        areas,
         shortDescription,
         reasoning,
         costEstimate,
@@ -303,7 +315,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-1000000">
       <div className="bg-gray-800 text-white p-8 rounded-lg shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <h2 className="text-2xl font-bold mb-6">
           {inspiredBy && inspiredBy.length > 0
@@ -381,7 +393,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
               htmlFor="shortDescription"
               className="block mb-2 font-semibold"
             >
-              Short Description
+              Short Idea Description
             </label>
             <textarea
               id="shortDescription"
@@ -392,6 +404,27 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
               rows={3}
               required
             ></textarea>
+          </div>
+          <div className="mb-4">
+            <label className="block mb-2 font-semibold">
+              Areas where cost savings would apply?
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {areaOptions.map((area) => (
+                <button
+                  type="button"
+                  key={area}
+                  onClick={() => handleAreaToggle(area)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
+                    areas.includes(area)
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  }`}
+                >
+                  {area}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="mb-4">
             <label htmlFor="costEstimate" className="block mb-2 font-semibold">
@@ -432,7 +465,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
           </div>
           <div className="mb-4">
             <label htmlFor="reasoning" className="block mb-2 font-semibold">
-              Barriers to overcome
+              Help Needed / Barriers to overcome
             </label>
             <textarea
               id="reasoning"
@@ -492,7 +525,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
           </div>
           <div className="mb-6 mt-6">
             <label htmlFor="ideaImage" className="block mb-2 font-semibold">
-              Upload Image (Optional)
+              Idea Image (Optional)
             </label>
             <input
               id="ideaImage"

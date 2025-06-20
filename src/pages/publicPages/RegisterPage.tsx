@@ -10,10 +10,12 @@ import {
 } from "firebase/auth"; // Import Firebase auth functions
 import {
   doc,
-  getDoc,
+  getDocs,
   collection,
   addDoc,
   serverTimestamp,
+  query,
+  where,
 } from "firebase/firestore"; // Import Firestore functions
 import { useNavigate } from "react-router-dom"; // Import useNavigate hook
 
@@ -28,8 +30,6 @@ const RegisterPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] =
     React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null); // State for error messages
-  const [termsAccepted, setTermsAccepted] = React.useState<boolean>(false); // State for terms checkbox
-  const [showTerms, setShowTerms] = React.useState<boolean>(false); // State to toggle terms text visibility
   const navigate = useNavigate(); // Initialize navigate hook
 
   // Toggle visibility for the main password field
@@ -50,12 +50,6 @@ const RegisterPage: React.FC = () => {
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null); // Clear previous errors
-
-    // --- [NEW] Check if terms are accepted ---
-    if (!termsAccepted) {
-      setError("You must accept the Terms and Conditions to register.");
-      return;
-    }
 
     // --- Prepare common data for logging ---
     let locationInfo = {};
@@ -99,37 +93,52 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long.");
-      await logFailedRegistration("Password too short.");
+    // --- [NEW] Password Validation Logic ---
+    const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
+    const numberRegex = /\d/;
+
+    if (password.length < 8) {
+      const errorMessage = "Password must be at least 8 characters long.";
+      setError(errorMessage);
+      await logFailedRegistration(errorMessage);
       return;
     }
 
-    const emailSuffix = email.substring(email.lastIndexOf("@") + 1);
-    if (!emailSuffix || email.lastIndexOf("@") === -1) {
-      setError("Invalid email format.");
-      await logFailedRegistration("Invalid email format.");
+    if (!numberRegex.test(password)) {
+      const errorMessage = "Password must include at least one number.";
+      setError(errorMessage);
+      await logFailedRegistration(errorMessage);
       return;
     }
 
+    if (!specialCharRegex.test(password)) {
+      const errorMessage =
+        "Password must include at least one special character (e.g., !@#$%).";
+      setError(errorMessage);
+      await logFailedRegistration(errorMessage);
+      return;
+    }
+
+    // --- Check if email is in the inviteList ---
     try {
-      const suffixDocRef = doc(db, "allowedEmailSuffixes", emailSuffix);
-      const suffixDocSnap = await getDoc(suffixDocRef);
+      const inviteListRef = collection(db, "inviteList");
+      const q = query(inviteListRef, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
 
-      if (!suffixDocSnap.exists()) {
-        setError("Your email domain is not authorized for registration.");
+      if (querySnapshot.empty) {
+        setError("Your email address is not on the invitation list.");
         await logFailedRegistration(
-          "Attempted registration with unauthorized email domain."
+          "Attempted registration with a non-invited email: " + email
         );
         return;
       }
     } catch (checkError: any) {
-      console.error("Error checking email suffix:", checkError);
+      console.error("Error checking invitation list:", checkError);
       setError(
         "An error occurred while verifying your email. Please try again."
       );
       await logFailedRegistration(
-        `Server error during email suffix check: ${checkError.message}`
+        `Server error during invitation list check: ${checkError.message}`
       );
       return;
     }
@@ -200,60 +209,67 @@ const RegisterPage: React.FC = () => {
             />
           </div>
           {/* Password Input */}
-          <div className="relative">
+          <div>
             <label
               htmlFor="password"
               className="text-sm font-bold text-gray-800 block"
             >
               Choose Password
             </label>
-            <input
-              type={showPassword ? "text" : "password"}
-              id="password"
-              value={password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setPassword(e.target.value)
-              }
-              className="w-full p-2 mt-1 text-gray-800 bg-transparent border-b-2 border-gray-300 focus:outline-none focus:border-blue-400 rounded-md"
-              placeholder="********"
-              required
-            />
-            <button
-              type="button"
-              onClick={handlePasswordToggle}
-              className="absolute inset-y-0 right-0 top-7 flex items-center px-2 text-gray-600 hover:text-blue-400 h-[50%]"
-              style={{ background: "rgba(0,0,0,0)", border: "none" }}
-            >
-              {showPassword ? <FaEyeSlash /> : <FaEye />}
-            </button>
+            <div className="relative mt-1">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                value={password}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setPassword(e.target.value)
+                }
+                className="w-full p-2 text-gray-800 bg-transparent border-b-2 border-gray-300 focus:outline-none focus:border-blue-400 rounded-md"
+                placeholder="********"
+                required
+              />
+              <button
+                type="button"
+                onClick={handlePasswordToggle}
+                className="absolute inset-y-0 right-0 flex items-center px-2 text-gray-600 hover:text-blue-400"
+                style={{ background: "rgba(0,0,0,0)", border: "none" }}
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
+            <p className="text-[9px] text-gray-700 mt-1">
+              Use 8 or more characters with a mix of letters, numbers & symbols.
+            </p>
           </div>
           {/* Confirm Password Input */}
-          <div className="relative">
+          <div>
             <label
               htmlFor="confirm-password"
               className="text-sm font-bold text-gray-800 block"
             >
               Confirm Password
             </label>
-            <input
-              type={showConfirmPassword ? "text" : "password"}
-              id="confirm-password"
-              value={confirmPassword}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setConfirmPassword(e.target.value)
-              }
-              className="w-full p-2 mt-1 text-gray-800 bg-transparent border-b-2 border-gray-300 focus:outline-none focus:border-blue-400 rounded-md"
-              placeholder="********"
-              required
-            />
-            <button
-              type="button"
-              onClick={handleConfirmPasswordToggle}
-              className="absolute inset-y-0 right-0 top-7 flex items-center px-2 text-gray-600 hover:text-blue-400 h-[50%]"
-              style={{ background: "rgba(0,0,0,0)", border: "none" }}
-            >
-              {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-            </button>
+            <div className="relative mt-1">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                id="confirm-password"
+                value={confirmPassword}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setConfirmPassword(e.target.value)
+                }
+                className="w-full p-2 text-gray-800 bg-transparent border-b-2 border-gray-300 focus:outline-none focus:border-blue-400 rounded-md"
+                placeholder="********"
+                required
+              />
+              <button
+                type="button"
+                onClick={handleConfirmPasswordToggle}
+                className="absolute inset-y-0 right-0 flex items-center px-2 text-gray-600 hover:text-blue-400"
+                style={{ background: "rgba(0,0,0,0)", border: "none" }}
+              >
+                {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
           </div>
           {/* Codename Input */}
           <div>
@@ -276,68 +292,19 @@ const RegisterPage: React.FC = () => {
             />
           </div>
 
-          {/* Terms and Conditions Section */}
-          <div className="space-y-2">
-            <div className="flex items-center">
-              <input
-                id="terms"
-                type="checkbox"
-                checked={termsAccepted}
-                onChange={(e) => setTermsAccepted(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                required
-              />
-              <label
-                htmlFor="terms"
-                className="ml-2 block text-sm text-gray-900"
-              >
-                I agree to the{" "}
-                <span
-                  className="underline cursor-pointer text-blue-600 hover:text-blue-800"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setShowTerms(!showTerms);
-                  }}
-                >
-                  Terms and Conditions
-                </span>
-              </label>
-            </div>
-            {showTerms && (
-              <div className="p-4 bg-gray-100/50 rounded-md text-xs text-gray-700 max-h-32 overflow-y-auto">
-                <p>
-                  I will promptly disclose to P&G, in writing and to reasonable
-                  detail, any and all inventions, improvements, developments,
-                  technical information, skill and know-how, patentable or
-                  unpatentable, which I make, discover or develop in the course
-                  of, as a result of or in connection with this game (the
-                  ""Subject Developments"") and do hereby assign such works to
-                  P&G or its designee as it sole and exclusive property
-                  throughout the world. I will, at P&G's request and cost, but
-                  without any other consideration, execute all documents and do
-                  all acts necessary or desirable to confirm in P&G all right,
-                  title and interest in and to the Subject Developments and to
-                  enable P&G to procure, enforce and maintain patents,
-                  copyrights and other applicable statutory protection on the
-                  Subject Developments throughout the world.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
 
           {/* Register Button */}
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-monopoly-red hover:bg-monopoly-red-darker text-white font-bold rounded-lg transition duration-300 cursor-pointer"
+            className="w-full py-2 px-4 bg-monopoly-red hover:bg-monopoly-red-darker text-white font-bold rounded-lg transition duration-300 cursor-pointer mt-6"
             style={{ background: "#E7262E" }}
           >
             Register
           </button>
 
           {/* Already registered link */}
-          <div className="text-center">
+          <div className="text-center mt-4">
             <a href="./" className="text-sm" style={{ color: "black" }}>
               Already registered? Login
             </a>

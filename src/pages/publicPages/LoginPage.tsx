@@ -14,6 +14,9 @@ import {
   increment,
   collection,
   addDoc,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 import { useLocation } from "react-router-dom";
 
@@ -60,34 +63,29 @@ const LoginPage: React.FC = () => {
       location: locationInfo,
     };
 
-    // Check for allowed email suffix
-    const emailSuffix = email.substring(email.lastIndexOf("@") + 1);
-    if (!emailSuffix || email.lastIndexOf("@") === -1) {
-      setError("Invalid email format.");
-      return;
-    }
-
+    // --- [MODIFIED] Check if email is in the inviteList ---
     try {
-      const suffixDocRef = doc(db, "allowedEmailSuffixes", emailSuffix);
-      const suffixDocSnap = await getDoc(suffixDocRef);
+      const inviteListRef = collection(db, "inviteList");
+      const q = query(inviteListRef, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
 
-      if (!suffixDocSnap.exists()) {
-        setError("Your email domain is not authorized for access.");
+      if (querySnapshot.empty) {
+        setError("Your email address is not authorized for access.");
         const failedLoginData = {
           ...commonLogData,
-          loginError: "Attempted login with unauthorized email domain.",
+          loginError: "Attempted login with a non-invited email: " + email,
         };
         await addDoc(collection(db, "failedLogins"), failedLoginData);
         return;
       }
     } catch (checkError: any) {
-      console.error("Error checking email suffix:", checkError);
+      console.error("Error checking invitation list:", checkError);
       setError(
         "An error occurred while verifying your email. Please try again."
       );
       const failedLoginData = {
         ...commonLogData,
-        loginError: `Server error during email suffix check: ${checkError.message}`,
+        loginError: `Server error during invitation list check: ${checkError.message}`,
       };
       await addDoc(collection(db, "failedLogins"), failedLoginData);
       return;
@@ -101,7 +99,7 @@ const LoginPage: React.FC = () => {
       );
       const user = userCredential.user;
 
-      // --- [NEW] Check if email is verified ---
+      // Check if email is verified
       if (user && !user.emailVerified) {
         setError(
           "Your email has not been verified. Please check your inbox for the verification link."
@@ -118,17 +116,16 @@ const LoginPage: React.FC = () => {
         await signOut(auth);
         return;
       }
-      // --- End of new logic ---
 
       if (user) {
-        // --- Log successful login ---
+        // Log successful login
         const successfulLoginData = {
           ...commonLogData,
           DisplayName: user.displayName || "Anonymous",
         };
         await addDoc(collection(db, "successfulLogins"), successfulLoginData);
 
-        // --- Continue with app logic ---
+        // Continue with app logic
         await user.reload();
         if (auth.currentUser) {
           dispatch({ type: "LOGIN", payload: auth.currentUser });
@@ -146,7 +143,7 @@ const LoginPage: React.FC = () => {
             email: user.email || "",
             displayName: user.displayName || "Anonymous",
             profilePic:
-              "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png",
+              "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/20250620_0625_Missing%20Profile%20Picture_remix_01jy5s96pwf6ys44f43035e1jj.jpg?alt=media&token=5365d680-5f3b-4474-81af-b455271590ae",
             lastLogin: serverTimestamp(),
             loginCount: 1,
             createdAt: serverTimestamp(),
@@ -154,7 +151,7 @@ const LoginPage: React.FC = () => {
         }
       }
     } catch (err: any) {
-      // --- Log general failed login (e.g., wrong password) ---
+      // Log general failed login (e.g., wrong password)
       console.error("Login error:", err.message);
       setError(err.message);
       const failedLoginData = {

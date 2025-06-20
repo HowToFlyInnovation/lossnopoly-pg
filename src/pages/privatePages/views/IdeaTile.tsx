@@ -50,6 +50,7 @@ export interface Idea {
   email?: string;
   ideationMission: string;
   tags: string[];
+  areas?: string[];
   inspiredBy?: {
     id: string;
     ideaTitle: string;
@@ -597,6 +598,25 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
             {readMoreVisible ? (
               <div className="flex flex-col gap-4 mb-4">
                 <div>{item.shortDescription}</div>
+                {item.areas && item.areas.length > 0 && (
+                  <div>
+                    <b>Relevant Areas:</b>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {item.areas.map((area) => (
+                        <span
+                          key={area}
+                          className={`${
+                            isDarkMode
+                              ? "bg-indigo-600 text-indigo-100"
+                              : "bg-indigo-100 text-indigo-800"
+                          } text-xs font-semibold px-2.5 py-0.5 rounded-full`}
+                        >
+                          {area}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="mb-0">
                   <b>Cost Saving Estimate: </b>
                   {item.costEstimate}

@@ -424,7 +424,10 @@ const PlayerPageView = () => {
             <div className="relative">
               <img
                 className="h-40 w-auto"
-                src={currentUser?.photoURL || "https://via.placeholder.com/150"}
+                src={
+                  currentUser?.photoURL ||
+                  "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/20250620_0625_Missing%20Profile%20Picture_remix_01jy5s96pwf6ys44f43035e1jj.jpg?alt=media&token=5365d680-5f3b-4474-81af-b455271590ae"
+                }
                 alt="Player profile"
               />
               <input
