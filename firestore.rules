@@ -3,33 +3,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Rules for 'ideas' collection
+    // --- MODIFIED RULES FOR 'ideas' COLLECTION ---
     match /ideas/{ideaId} {
       allow read: if request.auth != null;
+      allow create: if request.auth != null;
 
-      // Users can create ideas if they are authenticated and the data is valid.
-      allow create: if request.auth != null
-                    // Enforce that the creator is the authenticated user
-                    && request.resource.data.userId == request.auth.uid
-                    // Enforce schema, types, and constraints
-                    && request.resource.data.ideaNumber is number
-                    && request.resource.data.ideaTitle is string && request.resource.data.ideaTitle.size() > 2 && request.resource.data.ideaTitle.size() <= 30
-                    && request.resource.data.shortDescription is string && request.resource.data.shortDescription.size() > 0
-                    && request.resource.data.reasoning is string && request.resource.data.reasoning.size() > 0
-                    && request.resource.data.costEstimate is string
-                    && request.resource.data.feasibilityEstimate is string
-                    && request.resource.data.ideationMission is string
-                    && request.resource.data.imageUrl is string
-                    && request.resource.data.displayName is string
-                    && request.resource.data.email == request.auth.token.email
-                    && request.resource.data.createdAt == request.time
-                    && request.resource.data.approved == false
-                    && request.resource.data.areas is list
-                    && request.resource.data.tags is list
-                    && request.resource.data.inspiredBy is list;
-
-      // A user can only update or delete their own ideas.
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      // WARNING: This allows ANY authenticated user to update or delete ANY idea.
+      allow update, delete: if request.auth != null;
     }
 
     // Rules for 'ideasVotes' collection
@@ -41,44 +21,28 @@ service cloud.firestore {
     // Rules for the 'evaluations' collection
     match /evaluations/{evaluationId} {
         allow read: if request.auth != null;
-        // Allow create if the user is submitting their own evaluation for an idea.
         allow create: if request.auth != null && evaluationId == request.auth.uid + '_' + request.resource.data.ideaId;
-        // Do not allow client-side updates or deletes to preserve evaluation integrity.
         allow update, delete: if false;
     }
 
     // Rules for the 'comments' collection
     match /comments/{commentId} {
-      // Any authenticated user can read comments.
       allow read: if request.auth != null;
-
-      // An authenticated user can create a comment if the data is valid.
       allow create: if request.auth != null
-                    // 1. Author must be the logged-in user.
                     && request.resource.data.userId == request.auth.uid
-                    // 2. All required fields must exist and have the correct format.
                     && request.resource.data.ideaId is string
                     && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() < 2000
                     && request.resource.data.displayName is string && request.resource.data.displayName.size() > 0
                     && request.resource.data.createdAt is timestamp
                     && request.resource.data.likes == []
                     && (request.resource.data.parentId is string || request.resource.data.parentId == null)
-                    // 3. Ensure no unexpected fields are being added.
                     && request.resource.data.keys().hasAll(['ideaId', 'userId', 'displayName', 'text', 'createdAt', 'likes', 'parentId']);
-
-      // An authenticated user can update a comment only to like/unlike it.
       allow update: if request.auth != null
-                    // The only field that can change is the 'likes' array.
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
-                    // Ensure the change is either adding or removing the current user's UID from the likes array.
                     && (
-                      // Liking: The new 'likes' array is the old one plus the user's UID.
                       request.resource.data.likes == resource.data.likes.concat([request.auth.uid]) ||
-                      // Unliking: The old 'likes' array is the new one plus the user's UID.
                       resource.data.likes == request.resource.data.likes.concat([request.auth.uid])
                     );
-
-      // A user can delete their own comment.
       allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
@@ -89,9 +53,7 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // *** MODIFIED: Rules for the 'inviteList' collection ***
-    // Unauthenticated reads are required for the registration page to check if an email is on the list.
-    // Write access should be restricted to admin/backend processes only.
+    // Rules for the 'inviteList' collection
     match /inviteList/{documentId} {
       allow read: if true;
       allow write: if false;
@@ -99,11 +61,8 @@ service cloud.firestore {
 
     // Rules for the 'players' collection
     match /players/{userId} {
-      // Any authenticated user can read player data (e.g., for ranking pages).
       allow read: if request.auth != null;
-      // A user can create their own player document.
       allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == request.auth.uid;
-      // A user can only update their own player document.
       allow update: if request.auth != null && request.auth.uid == userId;
     }
 

@@ -1,5 +1,5 @@
 // src/pages/privatePages/views/IdeaTile.tsx
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import {
   Timestamp,
   doc,
@@ -16,8 +16,15 @@ import {
   arrayRemove,
   getDocs as firestoreGetDocs, // Renamed to avoid conflict
 } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Import storage functions
 import DOMPurify from "dompurify";
-import { FaThumbsUp, FaComment, FaLightbulb, FaStar } from "react-icons/fa"; // Added FaStar import
+import {
+  FaThumbsUp,
+  FaComment,
+  FaLightbulb,
+  FaStar,
+  FaPen,
+} from "react-icons/fa"; // Added FaStar and FaPen
 import { PiLegoBold } from "react-icons/pi";
 import { AuthContext, type AuthContextType } from "../../context/AuthContext";
 import { db } from "../../firebase/config";
@@ -143,6 +150,8 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   const { user } = useContext(AuthContext) as AuthContextType;
 
   // --- STATE ---
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [userVote, setUserVote] = useState<"agree" | "disagree" | null>(null);
   const [readMoreVisible, setReadMoreVisible] = useState(false);
   const [creationDate, setCreationDate] = useState("");
@@ -180,6 +189,9 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   const [commentSuggestions, setCommentSuggestions] = useState<InvitedPlayer[]>(
     []
   );
+
+  // --- Creator Check ---
+  const isCreator = user?.uid === item.userId;
 
   // Fetch invited players on component mount
   useEffect(() => {
@@ -304,6 +316,35 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   }, [item.id]);
 
   // --- RENDER LOGIC AND HANDLERS ---
+
+  const handleEditPictureClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageUpdate = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0] && user) {
+      const file = e.target.files[0];
+      if (!file.type.startsWith("image/")) {
+        alert("Please select an image file (e.g., JPG, PNG, GIF).");
+        return;
+      }
+      setIsUploading(true);
+      const storage = getStorage();
+      const storageRef = ref(storage, `ideas/${item.id}/${file.name}`);
+      try {
+        await uploadBytes(storageRef, file);
+        const newImageUrl = await getDownloadURL(storageRef);
+
+        const ideaDocRef = doc(db, "ideas", item.id);
+        await updateDoc(ideaDocRef, { imageUrl: newImageUrl });
+      } catch (error) {
+        console.error("Error updating image:", error);
+        alert("Failed to update image. Please try again.");
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
 
   const handleEvaluationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -563,15 +604,68 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
           isDarkMode ? "bg-gray-800" : "bg-white"
         } ${isSelected ? "border-green-500" : "border-white"}`}
       >
-        {item.inspiredBy && item.inspiredBy.length > 0 && (
-          <button
-            onClick={() => setInspiredByVisible(true)}
-            className="bg-gray-700/60 absolute top-2 right-2 hover:bg-yellow-600 text-white rounded-full w-8 h-8 flex items-center justify-center"
-            title="Inspired by other ideas"
-          >
-            <FaLightbulb />
-          </button>
-        )}
+        <div className="relative">
+          {" "}
+          {/* Container for image and edit button */}
+          <img
+            src={item.imageUrl}
+            alt={item.ideaTitle}
+            className={`w-full ${
+              readMoreVisible ? "h-auto object-contain" : "h-48 object-cover"
+            }`}
+          />
+          {isCreator && (
+            <>
+              <button
+                onClick={handleEditPictureClick}
+                disabled={isUploading}
+                className="absolute top-2 right-2 bg-black bg-opacity-50 text-white rounded-full p-2 hover:bg-opacity-75 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Update Image"
+              >
+                {isUploading ? (
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                ) : (
+                  <FaPen className="h-4 w-4" />
+                )}
+              </button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageUpdate}
+                accept="image/*,.gif" // Accept all image types and GIFs
+                className="hidden"
+              />
+            </>
+          )}
+          {item.inspiredBy && item.inspiredBy.length > 0 && (
+            <button
+              onClick={() => setInspiredByVisible(true)}
+              className="bg-gray-700/60 absolute top-2 left-2 hover:bg-yellow-600 text-white rounded-full w-8 h-8 flex items-center justify-center"
+              title="Inspired by other ideas"
+            >
+              <FaLightbulb />
+            </button>
+          )}
+        </div>
         <div className={`${headerColor} py-5 px-6`}>
           <h4 className="font-extrabold text-[18px] text-black text-center uppercase">
             {`#${item.ideaNumber} ${item.ideaTitle}`}
@@ -580,13 +674,6 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
             {item.ideationMission}
           </h5>
         </div>
-        <img
-          src={item.imageUrl}
-          alt={item.ideaTitle}
-          className={`w-full ${
-            readMoreVisible ? "h-auto object-contain" : "h-48 object-cover"
-          }`}
-        />
 
         {/* --- Card Body --- */}
         <div
@@ -722,7 +809,14 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                 } rounded-full w-8 h-8 flex items-center justify-center`}
                 title="Comments"
               >
-                <FaComment />
+                <div className="flex items-center relative">
+                  <FaComment />
+                  {comments.length > 0 && (
+                    <span className="text-xs text-amber-400 font-bold absolute left-1">
+                      {comments.length}
+                    </span>
+                  )}
+                </div>
               </button>
               <button
                 onClick={() => onSelect(item)}
