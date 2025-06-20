@@ -1,9 +1,10 @@
 // src/pages/privatePages/views/IdeaAssessmentViewPage.tsx
-import React, { useState, useEffect } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
+import React, { useState, useEffect, useContext } from "react";
+import { collection, onSnapshot, query } from "firebase/firestore";
 import { db } from "../../firebase/config";
-import type { Idea, Evaluation } from "./IdeaTile"; // Assuming types are exported from IdeaTile
-import { FaInfoCircle } from "react-icons/fa"; // Import the icon
+import { AuthContext, type AuthContextType } from "../../context/AuthContext";
+import type { Idea, Evaluation } from "./IdeaTile";
+import { FaInfoCircle } from "react-icons/fa";
 
 // --- TYPE DEFINITIONS ---
 
@@ -51,30 +52,28 @@ const feasibilityOptions = [
   "Very easy to do",
 ];
 
-// Colors from IdeaTile for the list on the left
 const missionListColors: { [key: string]: string } = {
   "E2E Touchless Supply Chain": "bg-amber-300",
   "E2E Touchless Innovation": "bg-amber-600",
   "Zero Waste": "bg-blue-400",
 };
 
-// Updated mission chart colors to match the list colors
 const missionChartColors: { [key: string]: string } = {
-  "Sub-Challenge 1: E2E Touchless Supply Chain": "rgb(252 211 77)", // amber-600
-  "Sub-Challenge 2: E2E Touchless Innovation": "rgb(217 119 6)", // green-600
-  "Sub-Challenge 3: Zero Waste": "#2563eb", // blue-600
+  "Sub-Challenge 1: E2E Touchless Supply Chain": "rgb(252 211 77)",
+  "Sub-Challenge 2: E2E Touchless Innovation": "rgb(217 119 6)",
+  "Sub-Challenge 3: Zero Waste": "#2563eb",
 };
 
-// --- [NEW] INFO MODAL COMPONENT ---
+// --- INFO MODAL COMPONENT ---
 const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
-      onClick={onClose} // Close on overlay click
+      onClick={onClose}
     >
       <div
         className="bg-gray-800 text-white p-8 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">
@@ -87,7 +86,6 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             &times;
           </button>
         </div>
-
         <div className="space-y-6 text-gray-300">
           <div>
             <h3 className="text-xl font-semibold mb-2 text-white">
@@ -122,7 +120,6 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </li>
             </ul>
           </div>
-
           <div>
             <h3 className="text-xl font-semibold mb-2 text-white">
               2. Interacting with Ideas
@@ -157,7 +154,6 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 };
 
 // --- SUB-COMPONENTS ---
-
 const ChartDot: React.FC<ChartDotProps> = ({
   idea,
   color,
@@ -171,7 +167,7 @@ const ChartDot: React.FC<ChartDotProps> = ({
 
   return (
     <div
-      className={`absolute rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg cursor-pointer transform transition-all duration-300 ${size} ${
+      className={`absolute rounded-full flex items-center justify-center text-black text-xs font-bold shadow-lg cursor-pointer transform transition-all duration-300 ${size} ${
         isSelected ? "ring-4 ring-offset-2 ring-yellow-400" : ""
       }`}
       style={{
@@ -197,34 +193,47 @@ const ImpactFeasibilityChart: React.FC<{
   selectedIdea: ProcessedIdea | null;
 }> = ({ ideas, onSelectIdea, selectedIdea }) => {
   const chartIdeas = selectedIdea ? [selectedIdea] : ideas;
+
   return (
     <div className="w-full bg-gray-50 p-6 rounded-lg shadow-inner relative aspect-square">
+      {/* Grid lines and labels */}
       <div className="absolute top-0 left-1/2 w-px h-full bg-gray-300"></div>
       <div className="absolute top-1/2 left-0 h-px w-full bg-gray-300"></div>
-      <span className="absolute bottom-[-2rem] left-1/2 -translate-x-1/2 text-gray-600 font-semibold">
+      <span className="absolute bottom-[-3.5rem] left-1/2 -translate-x-1/2 text-gray-600 font-semibold">
         Impact
       </span>
-      <span className="absolute left-[-3rem] top-1/2 -translate-y-1/2 -rotate-90 text-gray-600 font-semibold">
+      <span className="absolute left-[-3.5rem] top-1/2 -translate-y-1/2 -rotate-90 text-gray-600 font-semibold">
         Feasibility
       </span>
-      <span className="absolute top-[-1rem] left-1/2 -translate-x-1/2 text-gray-500 text-sm">
-        High
-      </span>
-      <span className="absolute bottom-[-1rem] left-0 text-gray-500 text-sm">
-        Low
-      </span>
-      <span className="absolute bottom-0 left-[-2rem] text-gray-500 text-sm">
+      <span className="absolute bottom-0 left-[-2.5rem] text-gray-500 text-sm">
         Low
       </span>
       <span className="absolute top-0 left-[-2.5rem] text-gray-500 text-sm">
         High
       </span>
 
+      {/* X-axis labels */}
+      <span className="absolute bottom-[-1.5rem] left-0 -translate-x-1/2 text-gray-500 text-xs">
+        $0
+      </span>
+      <span className="absolute bottom-[-1.5rem] left-1/4 -translate-x-1/2 text-gray-500 text-xs">
+        $10K
+      </span>
+      <span className="absolute bottom-[-1.5rem] left-1/2 -translate-x-1/2 text-gray-500 text-xs">
+        $100K
+      </span>
+      <span className="absolute bottom-[-1.5rem] left-3/4 -translate-x-1/2 text-gray-500 text-xs">
+        $500K
+      </span>
+      <span className="absolute bottom-[-1.5rem] left-full -translate-x-1/2 text-gray-500 text-xs">
+        $1M+
+      </span>
+
+      {/* Dots representing ideas */}
       {chartIdeas.map((idea) => {
         const missionName =
           Object.keys(missionChartColors).find((m) => {
             const parts = m.split(":");
-            // Safely access parts[1] and call trim() only if parts.length is greater than 1
             return (
               parts.length > 1 && idea.ideationMission.includes(parts[1].trim())
             );
@@ -253,7 +262,7 @@ const IdeaListCard: React.FC<IdeaListCardProps> = ({
   if (isSelected) {
     return (
       <div
-        className={`w-full p-3 rounded-lg shadow-md text-white ${color} flex flex-col cursor-pointer ring-4 ring-offset-2 ring-yellow-400`}
+        className={`w-full p-3 rounded-lg shadow-md text-black ${color} flex flex-col cursor-pointer ring-4 ring-offset-2 ring-yellow-400`}
         onClick={onClick}
       >
         {idea.imageUrl ? (
@@ -288,7 +297,7 @@ const IdeaListCard: React.FC<IdeaListCardProps> = ({
 
   return (
     <div
-      className={`w-full p-3 rounded-lg shadow-md text-white ${color} flex flex-col cursor-pointer`}
+      className={`w-full p-3 rounded-lg shadow-md text-black ${color} flex flex-col cursor-pointer`}
       onClick={onClick}
     >
       <div className="flex items-center">
@@ -317,91 +326,79 @@ const IdeaListCard: React.FC<IdeaListCardProps> = ({
 };
 
 const IdeaAssessmentViewPage: React.FC = () => {
+  const authContext = useContext(AuthContext);
   const [processedIdeas, setProcessedIdeas] = useState<ProcessedIdea[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIdea, setSelectedIdea] = useState<ProcessedIdea | null>(null);
-  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false); // State for info modal
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
   useEffect(() => {
-    let unsubIdeas: () => void;
-    let unsubEvals: () => void;
+    if (!authContext?.user) {
+      setLoading(false);
+      return;
+    }
+    const user = authContext.user;
 
-    const fetchData = () => {
-      let ideasData: Idea[] = [];
-      let evaluationsData: Evaluation[] = [];
+    const ideasQuery = query(collection(db, "ideas"));
+    const evaluationsQuery = query(collection(db, "evaluations"));
 
-      unsubIdeas = onSnapshot(collection(db, "ideas"), (snapshot) => {
-        ideasData = snapshot.docs.map((doc) => ({
-          ...doc.data(),
-          id: doc.id,
-        })) as Idea[];
-        processData(ideasData, evaluationsData);
-      });
+    const unsubIdeas = onSnapshot(ideasQuery, (ideasSnapshot) => {
+      const ideasData = ideasSnapshot.docs.map(
+        (doc) => ({ ...doc.data(), id: doc.id } as Idea)
+      );
 
-      unsubEvals = onSnapshot(collection(db, "evaluations"), (snapshot) => {
-        evaluationsData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Evaluation[];
-        processData(ideasData, evaluationsData);
-      });
-    };
+      const unsubEvals = onSnapshot(evaluationsQuery, (evalsSnapshot) => {
+        const evaluationsData = evalsSnapshot.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() } as Evaluation)
+        );
 
-    const processData = (ideas: Idea[], evaluations: Evaluation[]) => {
-      if (!ideas.length) {
-        setLoading(false);
-        return;
-      }
+        const userEvaluatedIdeaIds = new Set(
+          evaluationsData
+            .filter((e) => e.EvaluatorUserId === user.uid)
+            .map((e) => e.ideaId)
+        );
 
-      const newProcessedIdeas = ideas
-        .map((idea) => {
-          const relatedEvals = evaluations.filter((e) => e.ideaId === idea.id);
-          if (relatedEvals.length === 0) {
+        const newProcessedIdeas = ideasData
+          .filter((idea) => userEvaluatedIdeaIds.has(idea.id))
+          .map((idea) => {
+            const relatedEvals = evaluationsData.filter(
+              (e) => e.ideaId === idea.id
+            );
+            const totalImpact = relatedEvals.reduce((sum, e) => {
+              const score = costImpactOptions.indexOf(e.ImpactScore);
+              return sum + (score !== -1 ? score + 1 : 0);
+            }, 0);
+            const totalFeasibility = relatedEvals.reduce((sum, e) => {
+              const score = feasibilityOptions.indexOf(e.FeasibilityScore);
+              return sum + (score !== -1 ? score + 1 : 0);
+            }, 0);
+
             return {
               ...idea,
-              avgImpact: 0,
-              avgFeasibility: 0,
-              evaluationCount: 0,
+              avgImpact:
+                relatedEvals.length > 0 ? totalImpact / relatedEvals.length : 0,
+              avgFeasibility:
+                relatedEvals.length > 0
+                  ? totalFeasibility / relatedEvals.length
+                  : 0,
+              evaluationCount: relatedEvals.length,
             };
-          }
-          const totalImpact = relatedEvals.reduce((sum, e) => {
-            const score = costImpactOptions.indexOf(e.ImpactScore);
-            return sum + (score !== -1 ? score + 1 : 0);
-          }, 0);
-          const totalFeasibility = relatedEvals.reduce((sum, e) => {
-            const score = feasibilityOptions.indexOf(e.FeasibilityScore);
-            return sum + (score !== -1 ? score + 1 : 0);
-          }, 0);
-          return {
-            ...idea,
-            avgImpact: totalImpact / relatedEvals.length,
-            avgFeasibility: totalFeasibility / relatedEvals.length,
-            evaluationCount: relatedEvals.length,
-          };
-        })
-        .filter((idea) => idea.evaluationCount > 0);
+          });
 
-      setProcessedIdeas(newProcessedIdeas);
-      setLoading(false);
-    };
+        setProcessedIdeas(newProcessedIdeas);
+        setLoading(false);
+      });
 
-    fetchData();
+      return () => unsubEvals();
+    });
 
-    return () => {
-      if (unsubIdeas) unsubIdeas();
-      if (unsubEvals) unsubEvals();
-    };
-  }, []);
+    return () => unsubIdeas();
+  }, [authContext]);
 
   const handleIdeaClick = (idea: ProcessedIdea) => {
-    if (selectedIdea?.id === idea.id) {
-      setSelectedIdea(null);
-    } else {
-      setSelectedIdea(idea);
-    }
+    setSelectedIdea((prev) => (prev?.id === idea.id ? null : idea));
   };
 
-  // Updated legendItems for consistency with idea tile and mission options
   const legendItems = {
     "E2E Touchless Supply Chain":
       missionChartColors["Sub-Challenge 1: E2E Touchless Supply Chain"],
@@ -411,6 +408,10 @@ const IdeaAssessmentViewPage: React.FC = () => {
   };
 
   const listIdeas = selectedIdea ? [selectedIdea] : processedIdeas;
+
+  if (!authContext?.authIsReady) {
+    return <p>Loading authentication...</p>;
+  }
 
   return (
     <div className="w-full py-[11vh] px-12 md:px-16 bg-gray-100 min-h-screen">
@@ -428,7 +429,6 @@ const IdeaAssessmentViewPage: React.FC = () => {
         <p>Loading assessment data...</p>
       ) : (
         <div className="flex flex-col md:flex-row-reverse gap-8">
-          {/* Right Panel (now first on mobile): Chart and Legend */}
           <div className="w-[80%] mx-auto md:w-[35%] lg:w-[40%]">
             <h2 className="text-xl font-bold text-gray-700 mb-4 text-center">
               Impact VS Feasibility
@@ -438,7 +438,7 @@ const IdeaAssessmentViewPage: React.FC = () => {
               onSelectIdea={handleIdeaClick}
               selectedIdea={selectedIdea}
             />
-            <div className="flex justify-center items-center gap-6 mt-12">
+            <div className="flex justify-center items-center gap-6 mt-20">
               {Object.entries(legendItems).map(([name, color]) => (
                 <div key={name} className="flex items-center gap-2">
                   <div
@@ -452,29 +452,45 @@ const IdeaAssessmentViewPage: React.FC = () => {
               ))}
             </div>
           </div>
-          {/* Left Panel (now second on mobile): Idea List */}
+
           <div className="w-full md:w-[40%] lg:w-[35%]">
-            <h2 className="text-xl font-bold text-gray-700 mb-4">
-              {selectedIdea ? "Selected Idea" : "All Ideas"}
+            <h2 className="text-xl font-bold text-gray-700 mb-2">
+              {selectedIdea ? "Selected Idea" : "Your Evaluated Ideas"}
             </h2>
-            <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto pr-2">
-              {listIdeas.map((idea) => {
-                const missionName =
-                  Object.keys(missionListColors).find((m) =>
-                    idea.ideationMission.includes(m.split(":")[0])
-                  ) || "Default";
-                const color = missionListColors[missionName] || "bg-gray-500";
-                return (
-                  <IdeaListCard
-                    key={idea.id}
-                    idea={idea}
-                    color={color}
-                    onClick={() => handleIdeaClick(idea)}
-                    isSelected={selectedIdea?.id === idea.id}
-                  />
-                );
-              })}
-            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              This list shows only the ideas that you have personally evaluated.
+              To see all ideas, please visit the Ideation Space.
+            </p>
+            {listIdeas.length > 0 ? (
+              <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto pr-2">
+                {listIdeas.map((idea) => {
+                  const missionName =
+                    Object.keys(missionListColors).find((m) =>
+                      idea.ideationMission.includes(m.split(":")[0])
+                    ) || "Default";
+                  const color = missionListColors[missionName] || "bg-gray-500";
+                  return (
+                    <IdeaListCard
+                      key={idea.id}
+                      idea={idea}
+                      color={color}
+                      onClick={() => handleIdeaClick(idea)}
+                      isSelected={selectedIdea?.id === idea.id}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center p-8 bg-white rounded-lg shadow">
+                <p className="font-semibold text-gray-700">
+                  No evaluations yet!
+                </p>
+                <p className="text-gray-500 mt-2">
+                  Go to the Ideation Space, find an idea, and submit your
+                  evaluation to see it appear here.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
