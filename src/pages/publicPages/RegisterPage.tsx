@@ -9,7 +9,6 @@ import {
   updateProfile, // Import updateProfile
 } from "firebase/auth"; // Import Firebase auth functions
 import {
-  doc,
   getDocs,
   collection,
   addDoc,

@@ -4,7 +4,6 @@ import {
   Timestamp,
   doc,
   setDoc,
-  getDoc,
   onSnapshot,
   collection,
   addDoc,
@@ -139,9 +138,7 @@ const missionColors: { [key: string]: string } = {
 // --- IDEA TILE COMPONENT ---
 const IdeaTile: React.FC<IdeaTileProps> = ({
   item,
-  handleVote,
   votesData,
-  handleAddToBuildDeck,
   onSelect,
   isSelected,
   isSelectionLocked,
@@ -152,7 +149,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   // --- STATE ---
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [userVote, setUserVote] = useState<"agree" | "disagree" | null>(null);
+  const [, setUserVote] = useState<"agree" | "disagree" | null>(null);
   const [readMoreVisible, setReadMoreVisible] = useState(false);
   const [creationDate, setCreationDate] = useState("");
   const [impactScore, setImpactScore] = useState<string>("$0-$10K");
@@ -160,7 +157,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     useState<string>("Very easy to do");
   const [userEvaluation, setUserEvaluation] = useState<Evaluation | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");

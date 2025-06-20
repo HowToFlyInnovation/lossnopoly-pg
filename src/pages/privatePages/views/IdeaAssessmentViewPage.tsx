@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { db } from "../../firebase/config";
-import { AuthContext, type AuthContextType } from "../../context/AuthContext";
+import { AuthContext } from "../../context/AuthContext";
 import type { Idea, Evaluation } from "./IdeaTile";
 import { FaInfoCircle } from "react-icons/fa";
 

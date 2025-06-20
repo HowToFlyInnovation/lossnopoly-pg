@@ -4,7 +4,6 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { AuthContext } from "./pages/context/AuthContext";
 import { db } from "./pages/firebase/config"; // Import db
 import { doc, getDoc } from "firebase/firestore"; // Import doc and getDoc
-import type { Dispatch, SetStateAction } from "react";
 
 // Import your page components
 import LoginPage from "./pages/publicPages/LoginPage";
@@ -49,7 +48,7 @@ function App() {
   const [menuActive, setMenuActive] = useState(window.innerWidth > 768);
   // Initialize visibleContent. This state will now control the view.
   const [visibleContent, setVisibleContent] = useState("Default");
-  const [customTheme, setCustomTheme] = useState(false);
+  const [customTheme] = useState(false);
   const [playerLoginCount, setPlayerLoginCount] = useState<number | null>(null);
   const [isLoadingLoginCount, setIsLoadingLoginCount] = useState(true);
 

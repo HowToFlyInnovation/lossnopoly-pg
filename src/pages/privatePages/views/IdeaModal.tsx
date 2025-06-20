@@ -132,7 +132,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
     );
   };
 
-  // Helper to extract mentions from a given text (used for playerTaggings)
+  /* Helper to extract mentions from a given text (used for playerTaggings)
   const extractMentions = (text: string): InvitedPlayer[] => {
     const mentions: InvitedPlayer[] = [];
     const mentionRegex = /@([a-zA-Z]+\s[a-zA-Z]+(?:\s[a-zA-Z]+)*)/g;
@@ -149,7 +149,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
       }
     }
     return mentions;
-  };
+  }; */
 
   const handlePeopleToInvolveInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
