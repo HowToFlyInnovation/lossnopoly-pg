@@ -82,7 +82,7 @@ const getEvaluationCategory = (
 const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
+      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50000"
       onClick={onClose} // Close on overlay click
     >
       <div

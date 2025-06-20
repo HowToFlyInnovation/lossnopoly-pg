@@ -413,7 +413,7 @@ const PlayerPageView = () => {
       </h1>
       <div>
         <div className="bg-white rounded-lg shadow-md mb-8 pr-12">
-          <div className="flex items-center">
+          <div className="flex flex-col md:flex-row p-8 items-center">
             <div className="relative">
               <img
                 className="h-40 w-auto"
@@ -474,45 +474,47 @@ const PlayerPageView = () => {
                 )}
               </button>
             </div>
-            <div className="w-full px-24">
+            {/* Start of changed section */}
+            <div className="w-full md:flex-grow md:pl-8">
               <h2 className="text-2xl font-bold text-gray-800">
                 {currentUser?.displayName}
               </h2>
-              <div className="mt-4 flex row w-[100%] justify-between">
-                <div>
-                  <span className="text-sm text-gray-500">Ideas Created</span>
-                  <p className="text-xl font-semibold text-gray-800">
+              <div className="mt-4 flex flex-col md:flex-row md:justify-between md:items-center bg-gray-100 p-4 md:pr-12 rounded-lg">
+                <div className="text-center md:text-left mb-4 md:mb-0">
+                  <span className="text-sm text-gray-800">Ideas Created</span>
+                  <p className="text-xl font-semibold text-black">
                     {playerStats?.ideasCreated || 0}
                   </p>
                 </div>
-                <div>
-                  <span className="text-sm text-gray-500">Comments Made</span>
-                  <p className="text-xl font-semibold text-gray-800">
+                <div className="text-center md:text-left mb-4 md:mb-0">
+                  <span className="text-sm text-gray-800">Comments Made</span>
+                  <p className="text-xl font-semibold text-black">
                     {playerStats?.commentsMade || 0}
                   </p>
                 </div>
-                <div>
-                  <span className="text-sm text-gray-500">Ideas Inspired</span>
-                  <p className="text-xl font-semibold text-gray-800">
+                <div className="text-center md:text-left mb-4 md:mb-0">
+                  <span className="text-sm text-gray-800">Ideas Inspired</span>
+                  <p className="text-xl font-semibold text-black">
                     {playerStats?.ideasInspired || 0}
                   </p>
                 </div>
-                <div>
-                  <span className="text-sm text-gray-500">
+                <div className="text-center md:text-left mb-4 md:mb-0">
+                  <span className="text-sm text-gray-800">
                     Evaluations Made
                   </span>
-                  <p className="text-xl font-semibold text-gray-800">
+                  <p className="text-xl font-semibold text-black">
                     {playerStats?.evaluationsMade || 0}
                   </p>
                 </div>
-                <div>
-                  <span className="text-sm text-gray-500">XP Collected</span>
-                  <p className="text-xl font-semibold text-gray-800">
+                <div className="text-center md:text-left">
+                  <span className="text-sm text-gray-800">XP Collected</span>
+                  <p className="text-xl font-semibold text-black">
                     {playerStats?.xpCollected || 0}
                   </p>
                 </div>
               </div>
             </div>
+            {/* End of changed section */}
           </div>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">

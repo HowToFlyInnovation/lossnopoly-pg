@@ -105,7 +105,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
 
   return (
     <div
-      className={`fixed top-0 left-0 z-10000 flex flex-col w-full h-screen shadow-[10px_0_10px_-5px_rgba(0,0,0,0.5)] md:w-[18%] ${menuBackground}`}
+      className={`fixed top-0 left-0 z-1000 flex flex-col w-full h-screen shadow-[10px_0_10px_-5px_rgba(0,0,0,0.5)] md:w-[18%] ${menuBackground}`}
     >
       {/* ── Logo & close button ───────────────────────────────────────── */}
       <header className="flex flex-row items-center justify-between w-full h-16 mt-7 mb-10 z-[2] flex-shrink-0">

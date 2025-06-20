@@ -601,6 +601,14 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
           isDarkMode ? "bg-gray-800" : "bg-white"
         } ${isSelected ? "border-green-500" : "border-white"}`}
       >
+        <div className={`${headerColor} py-5 px-6`}>
+          <h4 className="font-extrabold text-[18px] text-black text-center uppercase">
+            {`#${item.ideaNumber} ${item.ideaTitle}`}
+          </h4>
+          <h5 className="text-base font-semibold text-center text-black">
+            {item.ideationMission}
+          </h5>
+        </div>
         <div className="relative">
           {" "}
           {/* Container for image and edit button */}
@@ -662,14 +670,6 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
               <FaLightbulb />
             </button>
           )}
-        </div>
-        <div className={`${headerColor} py-5 px-6`}>
-          <h4 className="font-extrabold text-[18px] text-black text-center uppercase">
-            {`#${item.ideaNumber} ${item.ideaTitle}`}
-          </h4>
-          <h5 className="text-base font-semibold text-center text-black">
-            {item.ideationMission}
-          </h5>
         </div>
 
         {/* --- Card Body --- */}
