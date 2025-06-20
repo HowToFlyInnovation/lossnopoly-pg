@@ -61,7 +61,7 @@ const missionListColors: { [key: string]: string } = {
 const missionChartColors: { [key: string]: string } = {
   "Sub-Challenge 1: E2E Touchless Supply Chain": "rgb(252 211 77)",
   "Sub-Challenge 2: E2E Touchless Innovation": "rgb(217 119 6)",
-  "Sub-Challenge 3: Zero Waste": "#2563eb",
+  "Sub-Challenge 3: Zero Waste": "#63b3ed",
 };
 
 // --- INFO MODAL COMPONENT ---

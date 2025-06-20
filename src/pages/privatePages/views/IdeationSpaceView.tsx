@@ -21,6 +21,15 @@ import IdeaTile, {
 import { FaInfoCircle, FaComment, FaLightbulb } from "react-icons/fa"; // Added FaInfoCircle
 import { PiLegoBold } from "react-icons/pi";
 
+// --- TYPE DEFINITIONS ---
+
+interface PlayerTagging {
+  id: string;
+  ideaId: string;
+  taggedPlayerEmail: string;
+  timestamp: Timestamp;
+}
+
 // --- CONSTANTS FOR EVALUATION ---
 const costImpactOptions = [
   "Negative",
@@ -270,6 +279,7 @@ const IdeationSpaceView: React.FC = () => {
   const [votesData, setVotesData] = useState<Vote[]>([]);
   const [commentsData, setCommentsData] = useState<Comment[]>([]);
   const [evaluationsData, setEvaluationsData] = useState<Evaluation[]>([]);
+  const [playerTaggings, setPlayerTaggings] = useState<PlayerTagging[]>([]);
   const [filteredIdeas, setFilteredIdeas] = useState<Idea[]>([]);
   const [filter, setFilter] = useState("all");
   const [missionFilter, setMissionFilter] = useState("all");
@@ -313,85 +323,161 @@ const IdeationSpaceView: React.FC = () => {
       }
     );
 
+    const fetchPlayerTaggings = onSnapshot(
+      collection(db, "playerTaggings"),
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as PlayerTagging[];
+        setPlayerTaggings(data);
+      }
+    );
+
     return () => {
       fetchIdeas();
       fetchVotes();
       fetchComments();
       fetchEvaluations();
+      fetchPlayerTaggings();
     };
   }, []);
 
   useEffect(() => {
+    if (!user) {
+      setFilteredIdeas([]);
+      return;
+    }
+
     let newFilteredData = [...ideasData];
 
-    if (filter === "all") {
-      newFilteredData = [...ideasData];
-    } else if (user) {
-      switch (filter) {
-        case "userCreated":
-          newFilteredData = ideasData.filter((s) => s.userId === user.uid);
-          break;
-        case "userVoted":
-          {
-            const votedIdeaIds = new Set(
-              votesData
-                .filter((v) => v.userId === user.uid)
-                .map((v) => v.ideaId)
+    // Main filter logic
+    switch (filter) {
+      case "userCreated":
+        newFilteredData = ideasData.filter((s) => s.userId === user.uid);
+        break;
+
+      case "userVoted": // "Evaluated By Me"
+        {
+          const evaluatedIdeaIds = new Set(
+            evaluationsData
+              .filter((e) => e.EvaluatorUserId === user.uid)
+              .map((e) => e.ideaId)
+          );
+          newFilteredData = ideasData.filter((idea) =>
+            evaluatedIdeaIds.has(idea.id)
+          );
+        }
+        break;
+
+      case "unvoted": // "Not Evaluated By Me"
+        {
+          const evaluatedIdeaIds = new Set(
+            evaluationsData
+              .filter((e) => e.EvaluatorUserId === user.uid)
+              .map((e) => e.ideaId)
+          );
+          newFilteredData = ideasData.filter(
+            (idea) => !evaluatedIdeaIds.has(idea.id)
+          );
+        }
+        break;
+
+      case "commented":
+        {
+          const commentedIdeaIds = new Set(
+            commentsData
+              .filter((c) => c.userId === user.uid)
+              .map((c) => c.ideaId)
+          );
+          newFilteredData = ideasData.filter((idea) =>
+            commentedIdeaIds.has(idea.id)
+          );
+        }
+        break;
+
+      case "taggedIn":
+        {
+          const taggedIdeaIds = new Set(
+            playerTaggings
+              .filter((tag) => tag.taggedPlayerEmail === user.email)
+              .map((tag) => tag.ideaId)
+          );
+          newFilteredData = ideasData.filter((idea) =>
+            taggedIdeaIds.has(idea.id)
+          );
+        }
+        break;
+
+      case "taggedUncommented":
+        {
+          const userTaggings = playerTaggings.filter(
+            (tag) => tag.taggedPlayerEmail === user.email
+          );
+          const taggedIdeaIds = new Set(userTaggings.map((tag) => tag.ideaId));
+          const ideasToFilter = ideasData.filter((idea) =>
+            taggedIdeaIds.has(idea.id)
+          );
+
+          newFilteredData = ideasToFilter.filter((idea) => {
+            const taggingsForThisIdea = userTaggings.filter(
+              (tag) => tag.ideaId === idea.id
             );
-            newFilteredData = ideasData.filter((s) => votedIdeaIds.has(s.id));
-          }
-          break;
-        case "unvoted":
-          {
-            const votedIdeaIds = new Set(
-              votesData
-                .filter((v) => v.userId === user.uid)
-                .map((v) => v.ideaId)
+            if (taggingsForThisIdea.length === 0) return false;
+
+            const commentsForThisIdeaByUser = commentsData.filter(
+              (comment) =>
+                comment.ideaId === idea.id && comment.userId === user.uid
             );
-            newFilteredData = ideasData.filter((s) => !votedIdeaIds.has(s.id));
-          }
-          break;
-        case "commented":
-          {
-            const commentedIdeaIds = new Set(
-              commentsData
-                .filter((c) => c.userId === user.uid)
-                .map((c) => c.ideaId)
+
+            // Find the latest tag timestamp for this user on this idea
+            const latestTagTimestamp = Math.max(
+              ...taggingsForThisIdea.map((t) => t.timestamp.toMillis())
             );
-            newFilteredData = ideasData.filter((idea) =>
-              commentedIdeaIds.has(idea.id)
+
+            // Check if there is any comment made by the user *after* the latest tag.
+            const hasCommentedAfterTag = commentsForThisIdeaByUser.some(
+              (comment) => {
+                return comment.createdAt.toMillis() > latestTagTimestamp;
+              }
             );
-          }
-          break;
-        case "topVoted":
-        case "mediumVoted":
-        case "lowVoted":
-          {
-            const userEvaluations = evaluationsData.filter(
-              (e) => e.EvaluatorUserId === user.uid
-            );
-            const categorizedIdeaIds = new Set(
-              userEvaluations
-                .filter((e) => {
-                  const category = getEvaluationCategory(e);
-                  if (filter === "topVoted") return category === "green";
-                  if (filter === "mediumVoted") return category === "yellow";
-                  if (filter === "lowVoted") return category === "red";
-                  return false;
-                })
-                .map((e) => e.ideaId)
-            );
-            newFilteredData = ideasData.filter((idea) =>
-              categorizedIdeaIds.has(idea.id)
-            );
-          }
-          break;
-        default:
-          newFilteredData = [...ideasData];
-      }
-    } else {
-      newFilteredData = [];
+            // Include if the user has NOT commented after the latest tag.
+            return !hasCommentedAfterTag;
+          });
+        }
+        break;
+
+      case "topVoted":
+      case "mediumVoted":
+      case "lowVoted":
+        {
+          const userEvaluations = evaluationsData.filter(
+            (e) => e.EvaluatorUserId === user.uid
+          );
+          const categorizedIdeaIds = new Set(
+            userEvaluations
+              .filter((e) => {
+                const category = getEvaluationCategory(e);
+                if (filter === "topVoted") return category === "green";
+                if (filter === "mediumVoted") return category === "yellow";
+                if (filter === "lowVoted") return category === "red";
+                return false;
+              })
+              .map((e) => e.ideaId)
+          );
+          newFilteredData = ideasData.filter((idea) =>
+            categorizedIdeaIds.has(idea.id)
+          );
+        }
+        break;
+
+      case "all":
+      default:
+        newFilteredData = [...ideasData];
+        break;
     }
+
+    // Mission filter
     if (missionFilter !== "all") {
       newFilteredData = newFilteredData.filter(
         (idea) => idea.ideationMission === missionFilter
@@ -403,9 +489,9 @@ const IdeationSpaceView: React.FC = () => {
     filter,
     missionFilter,
     ideasData,
-    votesData,
     commentsData,
     evaluationsData,
+    playerTaggings,
     user,
   ]);
 
@@ -482,8 +568,12 @@ const IdeationSpaceView: React.FC = () => {
             <option value="all">All Ideas</option>
             <option value="userCreated">My Ideas</option>
             <option value="commented">Commented By Me</option>
-            <option value="userVoted">Voted By Me</option>
-            <option value="unvoted">Not Voted By Me</option>
+            <option value="userVoted">Evaluated By Me</option>
+            <option value="unvoted">Not Evaluated By Me</option>
+            <option value="taggedIn">All Ideas I'm tagged in</option>
+            <option value="taggedUncommented">
+              Uncommented Ideas I'm tagged in
+            </option>
             <option value="topVoted">My Top Ideas</option>
             <option value="mediumVoted">My Medium Ideas</option>
             <option value="lowVoted">My Low Ideas</option>

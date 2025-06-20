@@ -46,12 +46,24 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
 function App() {
   const context = useContext(AuthContext);
 
-  const [menuActive, setMenuActive] = useState(false);
+  const [menuActive, setMenuActive] = useState(window.innerWidth > 768);
   // Initialize visibleContent. This state will now control the view.
   const [visibleContent, setVisibleContent] = useState("Default");
   const [customTheme, setCustomTheme] = useState(false);
   const [playerLoginCount, setPlayerLoginCount] = useState<number | null>(null);
   const [isLoadingLoginCount, setIsLoadingLoginCount] = useState(true);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setMenuActive(window.innerWidth > 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   if (!context) {
     return (
