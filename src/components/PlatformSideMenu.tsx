@@ -101,6 +101,13 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
 }) => {
   if (!menuActive) return null;
 
+  const handleItemClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    handleMenuClick(event);
+    if (window.innerWidth <= 768) {
+      setMenuActive(false);
+    }
+  };
+
   const menuBackground = customTheme ? "bg-[#ddf1db]" : "bg-[#ddf1db]";
 
   return (
@@ -127,7 +134,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
               key={item.id}
               {...item}
               visibleContent={visibleContent}
-              onClick={handleMenuClick}
+              onClick={handleItemClick}
               customTheme={customTheme}
               icon={item.icon}
             />
@@ -144,7 +151,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
               key={item.id}
               {...item}
               visibleContent={visibleContent}
-              onClick={handleMenuClick}
+              onClick={handleItemClick}
               customTheme={customTheme}
               icon={item.icon}
             />
@@ -157,7 +164,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
         <div className="w-full mx-auto mt-0">
           <MenuItem
             id="PlayerPageView"
-            onClick={handleMenuClick}
+            onClick={handleItemClick}
             text="Player Page"
             visibleContent={visibleContent}
             customTheme={customTheme}
@@ -165,7 +172,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
           />
           <MenuItem
             id="PlayerRankingView"
-            onClick={handleMenuClick}
+            onClick={handleItemClick}
             text="Player Ranking"
             visibleContent={visibleContent}
             customTheme={customTheme}
@@ -180,6 +187,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
           id="BlackboxSignOut"
           onClick={handleSignOut}
           text="Sign Out"
+          visibleContent={visibleContent}
           customTheme={customTheme}
           icon={RankingIcon}
         />
