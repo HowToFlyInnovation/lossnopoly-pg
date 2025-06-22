@@ -1,3 +1,4 @@
+// src/pages/publicPages/RegisterPage.tsx
 import React from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import LoginLogo from "@/assets/LoginLogo.png";
@@ -6,7 +7,8 @@ import { auth, db } from "../firebase/config"; // Import auth and db instances
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
-  updateProfile, // Import updateProfile
+  updateProfile,
+  type ActionCodeSettings, // Corrected: Use 'type' for type-only imports
 } from "firebase/auth"; // Import Firebase auth functions
 import {
   getDocs,
@@ -156,11 +158,21 @@ const RegisterPage: React.FC = () => {
         // Update the user's profile with the codename as displayName
         await updateProfile(user, { displayName: codename });
 
-        // Send email verification
-        await sendEmailVerification(user);
+        // --- ADDED: actionCodeSettings ---
+        // This tells Firebase where to redirect the user AFTER they click the email link.
+        const actionCodeSettings: ActionCodeSettings = {
+          url: `${window.location.origin}/`, // Redirect to the login page (root)
+          handleCodeInApp: true,
+        };
 
-        // Redirect user to the login page with state to show the verification message
-        navigate("/", { state: { showVerificationMessage: true } });
+        // Send email verification WITH the settings
+        await sendEmailVerification(user, actionCodeSettings);
+
+        // Redirect user to the login page to show the "check your email" message
+        navigate("/", {
+          replace: true,
+          state: { showVerificationMessage: true },
+        });
       }
     } catch (err: any) {
       console.error("Registration error:", err.message);
@@ -304,7 +316,7 @@ const RegisterPage: React.FC = () => {
 
           {/* Already registered link */}
           <div className="text-center mt-4">
-            <a href="./" className="text-sm" style={{ color: "black" }}>
+            <a href="/" className="text-sm" style={{ color: "black" }}>
               Already registered? Login
             </a>
           </div>
