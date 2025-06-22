@@ -1,6 +1,8 @@
-import React, { useContext } from "react";
+// src/pages/publicPages/LoginPage.tsx
+import React, { useContext, useState, useEffect } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import LoginLogo from "@/assets/LoginLogo.png";
+import LoginBackgroundMobile from "@/assets/MobileBackground_Small.jpg";
 import LoginBackground from "@/assets/LoginBackground.png";
 import { auth, db } from "../firebase/config";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
@@ -25,10 +27,20 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = React.useState<string>("");
   const [showPassword, setShowPassword] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const { dispatch } = useContext(AuthContext) as AuthContextType;
   const location = useLocation();
   const showVerificationMessage = location.state?.showVerificationMessage;
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handlePasswordToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -162,10 +174,15 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  const backgroundUrl = isMobile ? LoginBackgroundMobile : LoginBackground;
+
   return (
     <div
       className="flex items-center justify-center min-h-screen w-screen bg-center bg-fixed"
-      style={{ background: `url(${LoginBackground})`, backgroundSize: "cover" }}
+      style={{
+        background: `url(${backgroundUrl})`,
+        backgroundSize: "cover",
+      }}
     >
       <div className="w-full max-w-sm p-8 space-y-6 bg-[#AEDEAA]/80 backdrop-blur-lg rounded-xl shadow-lg">
         <div className="flex justify-center">

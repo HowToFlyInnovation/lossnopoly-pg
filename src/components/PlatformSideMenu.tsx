@@ -1,6 +1,10 @@
 import React from "react";
-import RankingIcon from "@/assets/icons/RankingIcon.png";
-
+import RankingIcon from "@/assets/icons/RankingPageIcon.png";
+import PlayerPageIcon from "@/assets/icons/PlayerPageIcon.png";
+import AssessmentPageIcon from "@/assets/icons/AssessmentPageIcon.png";
+import HomePageIcon from "@/assets/icons/HomePageIcon.png";
+import IdeationSpacePageIcon from "@/assets/icons/IdeationSpacePageIcon.png";
+import DeepDiveIcon from "@/assets/icons/DeepDiveIcon.png";
 // Assuming your logo is in the `public` folder or handled by your build process
 const Logo =
   "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/LoginLogo.png?alt=media&token=e189b962-fd15-4642-9d1f-28cfda595042";
@@ -28,18 +32,18 @@ interface PlatformSideMenuProps {
 // ❶ General-navigation items
 // ────────────────────────────────
 const menuItems = [
-  { id: "HomePage", text: "Home Page", icon: RankingIcon },
-  { id: "IdeationSpace", text: "Ideation Space", icon: RankingIcon },
-  { id: "IdeaAssessments", text: "Idea Assessments", icon: RankingIcon },
+  { id: "HomePage", text: "Home Page", icon: HomePageIcon },
+  { id: "IdeationSpace", text: "Ideation Space", icon: IdeationSpacePageIcon },
+  { id: "IdeaAssessments", text: "Idea Assessments", icon: AssessmentPageIcon },
 ];
 
 // ────────────────────────────────
 // ❷ Sub-challenge deep-dives
 // ────────────────────────────────
 const missionItems = [
-  { id: "Mission1", text: "E2E Touchless Supply Chain", icon: RankingIcon },
-  { id: "Mission2", text: "E2E Touchless Innovation", icon: RankingIcon },
-  { id: "Mission3", text: "Zero Waste", icon: RankingIcon },
+  { id: "Mission1", text: "E2E Touchless Supply Chain", icon: DeepDiveIcon },
+  { id: "Mission2", text: "E2E Touchless Innovation", icon: DeepDiveIcon },
+  { id: "Mission3", text: "Zero Waste", icon: DeepDiveIcon },
 ];
 
 const MenuItem: React.FC<MenuItemProps> = ({
@@ -168,7 +172,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
             text="Player Page"
             visibleContent={visibleContent}
             customTheme={customTheme}
-            icon={RankingIcon}
+            icon={PlayerPageIcon}
           />
           <MenuItem
             id="PlayerRankingView"

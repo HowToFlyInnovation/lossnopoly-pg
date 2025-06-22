@@ -1,8 +1,9 @@
 // src/pages/publicPages/RegisterPage.tsx
-import React from "react";
+import React, { useState, useEffect } from "react"; // Added useState and useEffect
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import LoginLogo from "@/assets/LoginLogo.png";
 import LoginBackground from "@/assets/LoginBackground.png";
+import LoginBackgroundMobile from "@/assets/MobileBackground_Small.jpg"; // Added mobile background
 import { auth, db } from "../firebase/config"; // Import auth and db instances
 import {
   createUserWithEmailAndPassword,
@@ -32,6 +33,18 @@ const RegisterPage: React.FC = () => {
     React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null); // State for error messages
   const navigate = useNavigate(); // Initialize navigate hook
+
+  // --- ADDED: State and Effect for responsive background ---
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  // --- END of added logic ---
 
   // Toggle visibility for the main password field
   const handlePasswordToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -185,11 +198,14 @@ const RegisterPage: React.FC = () => {
     }
   };
 
+  // --- ADDED: Select background based on screen size ---
+  const backgroundUrl = isMobile ? LoginBackgroundMobile : LoginBackground;
+
   return (
     <div
       className="flex items-center justify-center min-h-screen w-screen bg-center bg-fixed"
       style={{
-        background: `url(${LoginBackground})`,
+        background: `url(${backgroundUrl})`, // UPDATED to use dynamic URL
         backgroundSize: "cover",
         fontFamily: "Inter, sans-serif",
       }}
