@@ -1,9 +1,17 @@
 // src/pages/privatePages/views/IdeaAssessmentViewPage.tsx
 import React, { useState, useEffect, useContext } from "react";
-import { collection, onSnapshot, query } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  query,
+  doc,
+  setDoc,
+  deleteDoc,
+  Timestamp,
+} from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { AuthContext } from "../../context/AuthContext";
-import type { Idea, Evaluation } from "./IdeaTile";
+import IdeaTile, { type Idea, type Evaluation, type Vote } from "./IdeaTile";
 import { FaInfoCircle } from "react-icons/fa";
 
 // --- TYPE DEFINITIONS ---
@@ -131,8 +139,9 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <ul className="list-disc list-inside ml-4 my-2 space-y-1">
               <li>
                 <strong>Selecting an Idea:</strong> Click on any idea card in
-                the list or its dot on the chart. This will highlight the idea,
-                expand its details in the list, and focus on it in the chart.
+                the list or its dot on the chart. This will highlight the idea
+                and show a detailed view. The chart will focus only on the
+                selected idea.
               </li>
               <li>
                 <strong>Deselecting an Idea:</strong> Simply click the selected
@@ -143,7 +152,7 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
               <p className="font-bold">
                 [IMAGE: Screenshot of a selected idea, highlighted on the chart
-                and in the list]
+                and shown in detail]
               </p>
             </div>
           </div>
@@ -259,45 +268,11 @@ const IdeaListCard: React.FC<IdeaListCardProps> = ({
   onClick,
   isSelected,
 }) => {
-  if (isSelected) {
-    return (
-      <div
-        className={`w-full p-3 rounded-lg shadow-md text-black ${color} flex flex-col cursor-pointer ring-4 ring-offset-2 ring-yellow-400`}
-        onClick={onClick}
-      >
-        {idea.imageUrl ? (
-          <img
-            src={idea.imageUrl}
-            alt={idea.ideaTitle}
-            className="w-full h-32 object-cover rounded-md mb-3"
-          />
-        ) : (
-          <div className="w-full h-32 bg-white/30 rounded-md mb-3 flex items-center justify-center font-bold text-3xl">
-            #{idea.ideaNumber}
-          </div>
-        )}
-        <div className="flex-grow">
-          <h4 className="font-bold">
-            #{idea.ideaNumber}: {idea.ideaTitle}
-          </h4>
-          <p className="text-sm opacity-90 mt-2">{idea.shortDescription}</p>
-        </div>
-        <div className="mt-4">
-          <p className="text-sm opacity-90 mb-2">{idea.reasoning}</p>
-          <p className="text-sm opacity-90 font-bold">
-            Cost: {idea.costEstimate}
-          </p>
-          <p className="text-sm opacity-90 font-bold">
-            Feasibility: {idea.feasibilityEstimate}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
-      className={`w-full p-3 rounded-lg shadow-md text-black ${color} flex flex-col cursor-pointer`}
+      className={`w-full p-3 rounded-lg shadow-md text-black ${color} flex flex-col cursor-pointer transition-all duration-200 ${
+        isSelected ? "ring-4 ring-offset-2 ring-yellow-400" : ""
+      }`}
       onClick={onClick}
     >
       <div className="flex items-center">
@@ -328,6 +303,7 @@ const IdeaListCard: React.FC<IdeaListCardProps> = ({
 const IdeaAssessmentViewPage: React.FC = () => {
   const authContext = useContext(AuthContext);
   const [processedIdeas, setProcessedIdeas] = useState<ProcessedIdea[]>([]);
+  const [votesData, setVotesData] = useState<Vote[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIdea, setSelectedIdea] = useState<ProcessedIdea | null>(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
@@ -341,6 +317,7 @@ const IdeaAssessmentViewPage: React.FC = () => {
 
     const ideasQuery = query(collection(db, "ideas"));
     const evaluationsQuery = query(collection(db, "evaluations"));
+    const votesQuery = query(collection(db, "ideasVotes"));
 
     const unsubIdeas = onSnapshot(ideasQuery, (ideasSnapshot) => {
       const ideasData = ideasSnapshot.docs.map(
@@ -385,53 +362,64 @@ const IdeaAssessmentViewPage: React.FC = () => {
             };
           });
 
-        // Sort the ideas: high-impact high-feasibility first
         newProcessedIdeas.sort((a, b) => {
-          // Define categories based on thresholds (e.g., > 4 for high, since indices are 0-7)
           const aIsHighImpact = a.avgImpact > 4;
           const aIsHighFeasibility = a.avgFeasibility > 4;
           const bIsHighImpact = b.avgImpact > 4;
           const bIsHighFeasibility = b.avgFeasibility > 4;
-
-          // Priority 1: Both high (Green)
           const aIsGreen = aIsHighImpact && aIsHighFeasibility;
           const bIsGreen = bIsHighImpact && bIsHighFeasibility;
-
           if (aIsGreen && !bIsGreen) return -1;
           if (!aIsGreen && bIsGreen) return 1;
-
-          // Priority 2: One of them is high (Yellow)
           const aIsYellow = (aIsHighImpact || aIsHighFeasibility) && !aIsGreen;
           const bIsYellow = (bIsHighImpact || bIsHighFeasibility) && !bIsGreen;
-
           if (aIsYellow && !bIsYellow) return -1;
           if (!aIsYellow && bIsYellow) return 1;
-
-          // Priority 3: Neither is high (Red) or other cases
-          // Sort by average impact (descending), then by average feasibility (descending)
-          if (b.avgImpact !== a.avgImpact) {
-            return b.avgImpact - a.avgImpact;
-          }
-          if (b.avgFeasibility !== a.avgFeasibility) {
+          if (b.avgImpact !== a.avgImpact) return b.avgImpact - a.avgImpact;
+          if (b.avgFeasibility !== a.avgFeasibility)
             return b.avgFeasibility - a.avgFeasibility;
-          }
-
-          // Fallback: Sort by ideaNumber if all else is equal
-          return a.ideaNumber - b.ideaNumber;
+          return (a.ideaNumber ?? 0) - (b.ideaNumber ?? 0);
         });
 
         setProcessedIdeas(newProcessedIdeas);
         setLoading(false);
       });
-
       return () => unsubEvals();
     });
 
-    return () => unsubIdeas();
+    const unsubVotes = onSnapshot(votesQuery, (snapshot) => {
+      const data = snapshot.docs.map((doc) => doc.data() as Vote);
+      setVotesData(data);
+    });
+
+    return () => {
+      unsubIdeas();
+      unsubVotes();
+    };
   }, [authContext]);
 
   const handleIdeaClick = (idea: ProcessedIdea) => {
     setSelectedIdea((prev) => (prev?.id === idea.id ? null : idea));
+  };
+
+  const handleVote = async (voteType: "agree" | "disagree", item: Idea) => {
+    if (!authContext?.user || !item.id) return;
+    const user = authContext.user;
+    const voteDocRef = doc(db, "ideasVotes", `${user.uid}_${item.id}`);
+    const currentVote = votesData.find(
+      (v) => v.ideaId === item.id && v.userId === user.uid
+    );
+
+    if (currentVote && currentVote.vote === voteType) {
+      await deleteDoc(voteDocRef);
+    } else {
+      await setDoc(voteDocRef, {
+        ideaId: item.id,
+        userId: user.uid,
+        vote: voteType,
+        timestamp: Timestamp.now(),
+      });
+    }
   };
 
   const legendItems = {
@@ -441,8 +429,6 @@ const IdeaAssessmentViewPage: React.FC = () => {
       missionChartColors["Sub-Challenge 2: E2E Touchless Innovation"],
     "Zero Waste": missionChartColors["Sub-Challenge 3: Zero Waste"],
   };
-
-  const listIdeas = selectedIdea ? [selectedIdea] : processedIdeas;
 
   if (!authContext?.authIsReady) {
     return <p>Loading authentication...</p>;
@@ -464,7 +450,7 @@ const IdeaAssessmentViewPage: React.FC = () => {
         <p>Loading assessment data...</p>
       ) : (
         <div className="flex flex-col md:flex-row-reverse gap-8">
-          <div className="w-[80%] mx-auto md:w-[35%] lg:w-[40%]">
+          <div className="w-full md:w-2/3 lg:w-3/5">
             <h2 className="text-xl font-bold text-gray-700 mb-4 text-center">
               Impact VS Feasibility
             </h2>
@@ -488,7 +474,7 @@ const IdeaAssessmentViewPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="w-full md:w-[40%] lg:w-[35%]">
+          <div className="w-full md:w-1/3 lg:w-2/5">
             <h2 className="text-xl font-bold text-gray-700 mb-2">
               {selectedIdea ? "Selected Idea" : "Your Evaluated Ideas"}
             </h2>
@@ -496,9 +482,21 @@ const IdeaAssessmentViewPage: React.FC = () => {
               This list shows only the ideas that you have personally evaluated.
               To see all ideas, please visit the Ideation Space.
             </p>
-            {listIdeas.length > 0 ? (
+            {selectedIdea ? (
+              <IdeaTile
+                key={selectedIdea.id}
+                item={selectedIdea}
+                handleVote={handleVote}
+                votesData={votesData}
+                handleAddToBuildDeck={() => {}}
+                onSelect={() => handleIdeaClick(selectedIdea)}
+                isSelected={true}
+                isSelectionLocked={true}
+                isDarkMode={false}
+              />
+            ) : processedIdeas.length > 0 ? (
               <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto pr-2">
-                {listIdeas.map((idea) => {
+                {processedIdeas.map((idea) => {
                   const missionName =
                     Object.keys(missionListColors).find((m) =>
                       idea.ideationMission.includes(m.split(":")[0])
@@ -510,7 +508,7 @@ const IdeaAssessmentViewPage: React.FC = () => {
                       idea={idea}
                       color={color}
                       onClick={() => handleIdeaClick(idea)}
-                      isSelected={selectedIdea?.id === idea.id}
+                      isSelected={false}
                     />
                   );
                 })}
