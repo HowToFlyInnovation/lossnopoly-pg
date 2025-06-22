@@ -428,7 +428,7 @@ const PlayerPageView = () => {
                 ref={fileInputRef}
                 onChange={handleFileChange}
                 style={{ display: "none" }}
-                accept="image/*"
+                accept="image/*, .gif"
               />
               <button
                 onClick={handleEditPicture}

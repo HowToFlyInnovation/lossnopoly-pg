@@ -656,7 +656,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                 type="file"
                 ref={fileInputRef}
                 onChange={handleImageUpdate}
-                accept="image/*,.gif" // Accept all image types and GIFs
+                accept="image/*, .gif" // Accept all image types and GIFs
                 className="hidden"
               />
             </>
