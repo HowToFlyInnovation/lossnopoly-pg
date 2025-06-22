@@ -428,7 +428,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
           </div>
           <div className="mb-4">
             <label htmlFor="costEstimate" className="block mb-2 font-semibold">
-              Cost Saving Estimate
+              Cost Saving Estimate (YoY)
             </label>
             <select
               id="costEstimate"

@@ -702,7 +702,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   </div>
                 )}
                 <div className="mb-0">
-                  <b>Cost Saving Estimate: </b>
+                  <b>Cost Saving Estimate (YoY): </b>
                   {item.costEstimate}
                 </div>
                 <div className="mb-0">

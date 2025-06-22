@@ -5,6 +5,7 @@ import AssessmentPageIcon from "@/assets/icons/AssessmentPageIcon.png";
 import HomePageIcon from "@/assets/icons/HomePageIcon.png";
 import IdeationSpacePageIcon from "@/assets/icons/IdeationSpacePageIcon.png";
 import DeepDiveIcon from "@/assets/icons/DeepDiveIcon.png";
+import SignOutIcon from "@/assets/icons/SignOutIcon.png";
 // Assuming your logo is in the `public` folder or handled by your build process
 const Logo =
   "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/LoginLogo.png?alt=media&token=e189b962-fd15-4642-9d1f-28cfda595042";
@@ -169,7 +170,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
           <MenuItem
             id="PlayerPageView"
             onClick={handleItemClick}
-            text="Player Page"
+            text="Activity Dashboard"
             visibleContent={visibleContent}
             customTheme={customTheme}
             icon={PlayerPageIcon}
@@ -193,7 +194,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
           text="Sign Out"
           visibleContent={visibleContent}
           customTheme={customTheme}
-          icon={RankingIcon}
+          icon={SignOutIcon}
         />
       </div>
     </div>
