@@ -385,6 +385,41 @@ const IdeaAssessmentViewPage: React.FC = () => {
             };
           });
 
+        // Sort the ideas: high-impact high-feasibility first
+        newProcessedIdeas.sort((a, b) => {
+          // Define categories based on thresholds (e.g., > 4 for high, since indices are 0-7)
+          const aIsHighImpact = a.avgImpact > 4;
+          const aIsHighFeasibility = a.avgFeasibility > 4;
+          const bIsHighImpact = b.avgImpact > 4;
+          const bIsHighFeasibility = b.avgFeasibility > 4;
+
+          // Priority 1: Both high (Green)
+          const aIsGreen = aIsHighImpact && aIsHighFeasibility;
+          const bIsGreen = bIsHighImpact && bIsHighFeasibility;
+
+          if (aIsGreen && !bIsGreen) return -1;
+          if (!aIsGreen && bIsGreen) return 1;
+
+          // Priority 2: One of them is high (Yellow)
+          const aIsYellow = (aIsHighImpact || aIsHighFeasibility) && !aIsGreen;
+          const bIsYellow = (bIsHighImpact || bIsHighFeasibility) && !bIsGreen;
+
+          if (aIsYellow && !bIsYellow) return -1;
+          if (!aIsYellow && bIsYellow) return 1;
+
+          // Priority 3: Neither is high (Red) or other cases
+          // Sort by average impact (descending), then by average feasibility (descending)
+          if (b.avgImpact !== a.avgImpact) {
+            return b.avgImpact - a.avgImpact;
+          }
+          if (b.avgFeasibility !== a.avgFeasibility) {
+            return b.avgFeasibility - a.avgFeasibility;
+          }
+
+          // Fallback: Sort by ideaNumber if all else is equal
+          return a.ideaNumber - b.ideaNumber;
+        });
+
         setProcessedIdeas(newProcessedIdeas);
         setLoading(false);
       });
