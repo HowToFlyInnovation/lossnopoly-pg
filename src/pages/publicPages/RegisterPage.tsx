@@ -1,16 +1,15 @@
 // src/pages/publicPages/RegisterPage.tsx
-import React, { useState, useEffect } from "react"; // Added useState and useEffect
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import React, { useState, useEffect } from "react";
+import { FaEye, FaEyeSlash, FaSpinner } from "react-icons/fa";
 import LoginLogo from "@/assets/LoginLogo.png";
 import LoginBackground from "@/assets/LoginBackground.png";
-import LoginBackgroundMobile from "@/assets/MobileBackground_Small.jpg"; // Added mobile background
-import { auth, db } from "../firebase/config"; // Import auth and db instances
+import { auth, db } from "../firebase/config";
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
   updateProfile,
-  type ActionCodeSettings, // Corrected: Use 'type' for type-only imports
-} from "firebase/auth"; // Import Firebase auth functions
+  type ActionCodeSettings,
+} from "firebase/auth";
 import {
   getDocs,
   collection,
@@ -18,12 +17,10 @@ import {
   serverTimestamp,
   query,
   where,
-} from "firebase/firestore"; // Import Firestore functions
-import { useNavigate } from "react-router-dom"; // Import useNavigate hook
+} from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
-// Define the component as a Functional Component with React.FC
 const RegisterPage: React.FC = () => {
-  // State variables for form fields
   const [email, setEmail] = React.useState<string>("");
   const [password, setPassword] = React.useState<string>("");
   const [confirmPassword, setConfirmPassword] = React.useState<string>("");
@@ -31,10 +28,10 @@ const RegisterPage: React.FC = () => {
   const [showPassword, setShowPassword] = React.useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] =
     React.useState<boolean>(false);
-  const [error, setError] = React.useState<string | null>(null); // State for error messages
-  const navigate = useNavigate(); // Initialize navigate hook
+  const [error, setError] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false); // <-- New state for loading
+  const navigate = useNavigate();
 
-  // --- ADDED: State and Effect for responsive background ---
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -44,28 +41,24 @@ const RegisterPage: React.FC = () => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-  // --- END of added logic ---
 
-  // Toggle visibility for the main password field
   const handlePasswordToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault(); // Prevent form submission on button click
+    e.preventDefault();
     setShowPassword(!showPassword);
   };
 
-  // Toggle visibility for the confirm password field
   const handleConfirmPasswordToggle = (
     e: React.MouseEvent<HTMLButtonElement>
   ) => {
-    e.preventDefault(); // Prevent form submission on button click
+    e.preventDefault();
     setShowConfirmPassword(!showConfirmPassword);
   };
 
-  // Handle registration logic
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null); // Clear previous errors
+    setError(null);
+    setIsLoading(true); // <-- Set loading to true
 
-    // --- Prepare common data for logging ---
     let locationInfo = {};
     try {
       const response = await fetch("https://ip-api.com/json");
@@ -99,15 +92,14 @@ const RegisterPage: React.FC = () => {
         failedRegistrationData
       );
     };
-    // --- End of logging logic ---
 
     if (password !== confirmPassword) {
       setError("Passwords do not match!");
       await logFailedRegistration("Passwords do not match.");
+      setIsLoading(false); // <-- Reset loading state
       return;
     }
 
-    // --- [NEW] Password Validation Logic ---
     const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
     const numberRegex = /\d/;
 
@@ -115,6 +107,7 @@ const RegisterPage: React.FC = () => {
       const errorMessage = "Password must be at least 8 characters long.";
       setError(errorMessage);
       await logFailedRegistration(errorMessage);
+      setIsLoading(false); // <-- Reset loading state
       return;
     }
 
@@ -122,6 +115,7 @@ const RegisterPage: React.FC = () => {
       const errorMessage = "Password must include at least one number.";
       setError(errorMessage);
       await logFailedRegistration(errorMessage);
+      setIsLoading(false); // <-- Reset loading state
       return;
     }
 
@@ -130,10 +124,10 @@ const RegisterPage: React.FC = () => {
         "Password must include at least one special character (e.g., !@#$%).";
       setError(errorMessage);
       await logFailedRegistration(errorMessage);
+      setIsLoading(false); // <-- Reset loading state
       return;
     }
 
-    // --- Check if email is in the inviteList ---
     try {
       const inviteListRef = collection(db, "inviteList");
       const q = query(inviteListRef, where("email", "==", email));
@@ -144,6 +138,7 @@ const RegisterPage: React.FC = () => {
         await logFailedRegistration(
           "Attempted registration with a non-invited email: " + email
         );
+        setIsLoading(false); // <-- Reset loading state
         return;
       }
     } catch (checkError: any) {
@@ -154,11 +149,11 @@ const RegisterPage: React.FC = () => {
       await logFailedRegistration(
         `Server error during invitation list check: ${checkError.message}`
       );
+      setIsLoading(false); // <-- Reset loading state
       return;
     }
 
     try {
-      // Create user with email and password
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -168,20 +163,17 @@ const RegisterPage: React.FC = () => {
       console.log("Registered user:", user);
 
       if (user) {
-        // Update the user's profile with the codename as displayName
         await updateProfile(user, { displayName: codename });
 
-        // --- ADDED: actionCodeSettings ---
-        // This tells Firebase where to redirect the user AFTER they click the email link.
         const actionCodeSettings: ActionCodeSettings = {
-          url: `${window.location.origin}/`, // Redirect to the login page (root)
+          url: `${window.location.origin}/`,
           handleCodeInApp: true,
         };
 
-        // Send email verification WITH the settings
         await sendEmailVerification(user, actionCodeSettings);
 
-        // Redirect user to the login page to show the "check your email" message
+        // Don't reset loading state here, as we are navigating away.
+        // The component will unmount.
         navigate("/", {
           replace: true,
           state: { showVerificationMessage: true },
@@ -195,27 +187,34 @@ const RegisterPage: React.FC = () => {
           : "An unexpected error occurred during registration.";
       setError(friendlyError);
       await logFailedRegistration(err.message);
+      setIsLoading(false); // <-- Reset loading state
     }
   };
 
-  // --- ADDED: Select background based on screen size ---
-  const backgroundUrl = isMobile ? LoginBackgroundMobile : LoginBackground;
+  const backgroundUrl = LoginBackground;
 
   return (
     <div
-      className="flex items-center justify-center min-h-screen w-screen bg-center bg-fixed"
+      className={`flex items-center justify-center min-h-screen w-screen ${
+        isMobile ? "bg-monopoly-green-light" : "bg-center bg-fixed"
+      }`}
       style={{
-        background: `url(${backgroundUrl})`, // UPDATED to use dynamic URL
+        backgroundImage: isMobile ? "none" : `url(${backgroundUrl})`,
         backgroundSize: "cover",
         fontFamily: "Inter, sans-serif",
       }}
     >
-      <div className="w-full max-w-sm p-8 space-y-6 bg-[#AEDEAA]/80 backdrop-blur-lg rounded-xl shadow-lg">
+      <div
+        className={
+          isMobile
+            ? "w-screen h-screen bg-monopoly-green-light flex flex-col justify-center p-8"
+            : "w-full max-w-sm p-8 space-y-6 bg-[#AEDEAA]/80 backdrop-blur-lg rounded-xl shadow-lg"
+        }
+      >
         <div className="flex justify-center">
           <img src={LoginLogo} alt="Logo" className="w-[80%] rounded-lg" />
         </div>
         <form className="space-y-6" onSubmit={handleRegister}>
-          {/* Email Input */}
           <div>
             <label
               htmlFor="email"
@@ -235,7 +234,6 @@ const RegisterPage: React.FC = () => {
               required
             />
           </div>
-          {/* Password Input */}
           <div>
             <label
               htmlFor="password"
@@ -264,11 +262,10 @@ const RegisterPage: React.FC = () => {
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
-            <p className="text-[9px] text-gray-700 mt-1">
+            <p className="text-xs text-gray-700 mt-1">
               Use 8 or more characters with a mix of letters, numbers & symbols.
             </p>
           </div>
-          {/* Confirm Password Input */}
           <div>
             <label
               htmlFor="confirm-password"
@@ -298,7 +295,6 @@ const RegisterPage: React.FC = () => {
               </button>
             </div>
           </div>
-          {/* Codename Input */}
           <div>
             <label
               htmlFor="codename"
@@ -321,16 +317,22 @@ const RegisterPage: React.FC = () => {
 
           {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
 
-          {/* Register Button */}
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-monopoly-red hover:bg-monopoly-red-darker text-white font-bold rounded-lg transition duration-300 cursor-pointer mt-6"
+            disabled={isLoading}
+            className="w-full py-2 px-4 bg-monopoly-red hover:bg-monopoly-red-darker text-white font-bold rounded-lg transition duration-300 cursor-pointer mt-6 disabled:opacity-75 disabled:cursor-not-allowed"
             style={{ background: "#E7262E" }}
           >
-            Register
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <FaSpinner className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                Processing...
+              </div>
+            ) : (
+              "Register"
+            )}
           </button>
 
-          {/* Already registered link */}
           <div className="text-center mt-4">
             <a href="/" className="text-sm" style={{ color: "black" }}>
               Already registered? Login

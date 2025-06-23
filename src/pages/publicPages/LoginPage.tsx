@@ -2,7 +2,6 @@
 import React, { useContext, useState, useEffect } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import LoginLogo from "@/assets/LoginLogo.png";
-import LoginBackgroundMobile from "@/assets/MobileBackground_Small.jpg";
 import LoginBackground from "@/assets/LoginBackground.png";
 import { auth, db } from "../firebase/config";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
@@ -174,17 +173,25 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  const backgroundUrl = isMobile ? LoginBackgroundMobile : LoginBackground;
+  const backgroundUrl = LoginBackground;
 
   return (
     <div
-      className="flex items-center justify-center min-h-screen w-screen bg-center bg-fixed"
+      className={`flex items-center justify-center min-h-screen w-screen ${
+        isMobile ? "bg-monopoly-green-light" : "bg-center bg-fixed"
+      }`}
       style={{
-        background: `url(${backgroundUrl})`,
+        backgroundImage: isMobile ? "none" : `url(${backgroundUrl})`,
         backgroundSize: "cover",
       }}
     >
-      <div className="w-full max-w-sm p-8 space-y-6 bg-[#AEDEAA]/80 backdrop-blur-lg rounded-xl shadow-lg">
+      <div
+        className={
+          isMobile
+            ? "w-screen h-screen bg-monopoly-green-light flex flex-col justify-center p-8"
+            : "w-full max-w-sm p-8 space-y-6 bg-[#AEDEAA]/80 backdrop-blur-lg rounded-xl shadow-lg"
+        }
+      >
         <div className="flex justify-center">
           <img src={LoginLogo} alt="Logo" className="w-[80%]" />
         </div>
@@ -201,7 +208,7 @@ const LoginPage: React.FC = () => {
           <div>
             <label
               htmlFor="email"
-              className="text-sm font-bold text-gray-200 block"
+              className="text-sm font-bold text-gray-800 block"
             >
               Email
             </label>
@@ -210,7 +217,7 @@ const LoginPage: React.FC = () => {
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 mt-1 text-gray-100 bg-transparent border-b-2 border-gray-300 focus:outline-none focus:border-blue-400"
+              className="w-full p-2 mt-1 text-gray-800 bg-transparent border-b-2 border-gray-300 focus:outline-none focus:border-blue-400"
               placeholder="you@example.com"
               required
             />
@@ -219,7 +226,7 @@ const LoginPage: React.FC = () => {
           <div className="relative">
             <label
               htmlFor="password"
-              className="text-sm font-bold text-gray-200 block"
+              className="text-sm font-bold text-gray-800 block"
             >
               Password
             </label>
@@ -228,14 +235,14 @@ const LoginPage: React.FC = () => {
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 mt-1 text-gray-100 bg-transparent border-b-2 border-gray-300 focus:outline-none focus:border-blue-400"
+              className="w-full p-2 mt-1 text-gray-800 bg-transparent border-b-2 border-gray-300 focus:outline-none focus:border-blue-400"
               placeholder="********"
               required
             />
             <button
               type="button"
               onClick={handlePasswordToggle}
-              className="absolute inset-y-0 right-0 top-7 flex items-center px-2 text-gray-300 hover:text-blue-400 h-[50%]"
+              className="absolute inset-y-0 right-0 top-7 flex items-center px-2 text-gray-600 hover:text-blue-400 h-[50%]"
               style={{ background: "rgba(0,0,0,0)", border: "none" }}
             >
               {showPassword ? <FaEyeSlash /> : <FaEye />}
@@ -256,7 +263,7 @@ const LoginPage: React.FC = () => {
             </a>
           </div>
           <div className="text-center">
-            <a href="./register" className="text-sm">
+            <a href="./register" className="text-sm" style={{ color: "black" }}>
               Not yet registered? Register
             </a>
           </div>
