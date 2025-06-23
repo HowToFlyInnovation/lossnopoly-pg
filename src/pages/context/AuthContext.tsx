@@ -1,8 +1,15 @@
 // src/pages/context/AuthContext.tsx
 
-import { createContext, useReducer, useEffect, type Dispatch } from "react"; // 👈 FIX: Added 'type' keyword
+import {
+  createContext,
+  useReducer,
+  useEffect,
+  type Dispatch,
+  useCallback,
+  useRef,
+} from "react"; // 👈 FIX: Added 'type' keyword and other imports
 import { auth } from "../firebase/config";
-import { onAuthStateChanged, type User } from "firebase/auth"; // 👈 FIX: Added 'type' keyword
+import { onAuthStateChanged, type User, signOut } from "firebase/auth"; // 👈 FIX: Added 'type' keyword and signOut
 
 // Define the shape of the state
 export interface AuthState {
@@ -39,6 +46,8 @@ export const authReducer = (
   }
 };
 
+const INACTIVITY_TIMEOUT = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
+
 export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -46,6 +55,41 @@ export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
     user: null,
     authIsReady: false,
   });
+
+  const inactivityTimer = useRef<number | null>(null);
+
+  const logoutUser = useCallback(() => {
+    signOut(auth).then(() => {
+      dispatch({ type: "LOGOUT" });
+    });
+  }, []);
+
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimer.current) {
+      clearTimeout(inactivityTimer.current);
+    }
+    inactivityTimer.current = window.setTimeout(logoutUser, INACTIVITY_TIMEOUT);
+  }, [logoutUser]);
+
+  useEffect(() => {
+    const events = ["mousemove", "keydown", "scroll", "touchstart"];
+
+    if (state.user) {
+      resetInactivityTimer();
+      events.forEach((event) => {
+        window.addEventListener(event, resetInactivityTimer);
+      });
+    }
+
+    return () => {
+      if (inactivityTimer.current) {
+        clearTimeout(inactivityTimer.current);
+      }
+      events.forEach((event) => {
+        window.removeEventListener(event, resetInactivityTimer);
+      });
+    };
+  }, [state.user, resetInactivityTimer]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
