@@ -38,6 +38,7 @@ interface IdeaListCardProps {
 
 // --- CONSTANTS ---
 
+// Verified to match the options in IdeaModal.tsx and IdeaTile.tsx
 const costImpactOptions = [
   "Negative",
   "$0-$10K",
@@ -50,14 +51,11 @@ const costImpactOptions = [
 ];
 
 const feasibilityOptions = [
-  "Impossible to pull off",
-  "Borderline impossible",
-  "Very difficult to execute",
-  "Challenging to accomplish",
-  "Doable, but requires significant effort",
-  "Moderately easy",
-  "Straightforward to implement",
-  "Very easy to do",
+  "Very Easy To do",
+  "Manageable",
+  "Achievable with Effort",
+  "Challenging",
+  "Very Challenging",
 ];
 
 const missionListColors: { [key: string]: string } = {

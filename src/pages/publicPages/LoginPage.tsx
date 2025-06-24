@@ -113,7 +113,7 @@ const LoginPage: React.FC = () => {
       // Check if email is verified
       if (user && !user.emailVerified) {
         setError(
-          "Your email has not been verified. Please check your inbox for the verification link."
+          "Your email has not been verified. Please check your inbox for the verification link. If no link in your inbox, check spam/junk."
         );
 
         // Log the unverified login attempt
@@ -200,7 +200,8 @@ const LoginPage: React.FC = () => {
             Thanks for registering. We've sent an email to the provided address.{" "}
             <b>Before login</b>, please{" "}
             <b>click on the verification link in your email</b> to verify it's
-            really your email address.
+            really your email address. If no link in your inbox,{" "}
+            <b>check spam/junk</b>.
           </p>
         )}
         <form className="space-y-6" onSubmit={handleLogin}>

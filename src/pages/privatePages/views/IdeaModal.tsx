@@ -36,16 +36,43 @@ const missionOptions = [
   "Zero Waste",
 ];
 
-const areaOptions = ["Area 1", "Area 2", "Area 3"];
+// New dynamic mapping for areas based on the selected challenge
+const challengeAreaMapping: { [key: string]: string[] } = {
+  "E2E Touchless Supply Chain": [
+    "Making",
+    "Packing",
+    "Inbound",
+    "Outbound",
+    "Quality",
+    "IMPD",
+    "Custo",
+    "Others",
+  ],
+  "E2E Touchless Innovation": [
+    "HW",
+    "IGMC - PrepProd",
+    "IGMC - Printing Plates",
+    "IGMC-SMC Others",
+    "Masterdata",
+    "Others",
+  ],
+  "Zero Waste": [
+    "Bulk",
+    "RM",
+    "PM-Bottles",
+    "PM-Labels",
+    "PM - Caps",
+    "Others",
+  ],
+};
 
 // New options for the "What is needed" field
 const neededOptions = ["Capital", "Digital", "Automation"];
 
 const costImpactOptions = [
   "Negative",
-  "$0-$10K",
-  "$10K-$30K",
-  "$30K-$100K",
+  "$0-$50K",
+  "$50K-$100K",
   "$100K-$250K",
   "$250K-$500K",
   "$500K-$1M",
@@ -53,14 +80,11 @@ const costImpactOptions = [
 ];
 
 const feasibilityOptions = [
-  "Impossible to pull off",
-  "Borderline impossible",
-  "Very difficult to execute",
-  "Challenging to accomplish",
-  "Doable, but requires significant effort",
-  "Moderately easy",
-  "Straightforward to implement",
-  "Very easy to do",
+  "Very Easy To do",
+  "Manageable",
+  "Achievable with Effort",
+  "Challenging",
+  "Very Challenging",
 ];
 
 const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
@@ -70,10 +94,10 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
   const [whatIsNeeded, setWhatIsNeeded] = useState<string[]>([]); // State for the new field
   const [shortDescription, setShortDescription] = useState("");
   const [reasoning, setReasoning] = useState("");
-  const [ideationMission, setIdeationMission] = useState(missionOptions[0]);
-  const [costEstimate, setCostEstimate] = useState("$0-$10K");
+  const [ideationMission, setIdeationMission] = useState("");
+  const [costEstimate, setCostEstimate] = useState("$0-$50K");
   const [feasibilityEstimate, setFeasibilityEstimate] =
-    useState("Very easy to do");
+    useState("Very Easy To do");
   const [ideaImage, setIdeaImage] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -113,6 +137,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
 
   useEffect(() => {
     setInvolvedPeople([]);
+    setAreas([]); // Also reset selected areas when challenge changes
   }, [ideationMission]);
 
   const handleAreaToggle = (areaToToggle: string) => {
@@ -185,8 +210,10 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
       setError("You must be logged in to submit an idea.");
       return;
     }
-    if (!ideaTitle || !shortDescription || !reasoning) {
-      setError("Please fill in all fields.");
+    if (!ideaTitle || !shortDescription || !reasoning || !ideationMission) {
+      setError(
+        "Please fill in all required fields, including the sub-challenge."
+      );
       return;
     }
     if (
@@ -345,14 +372,18 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
                   htmlFor="ideationMission"
                   className="block mb-2 font-semibold"
                 >
-                  Ideation Sub-Challenge
+                  Select a sub-challenge
                 </label>
                 <select
                   id="ideationMission"
                   value={ideationMission}
                   onChange={(e) => setIdeationMission(e.target.value)}
                   className="w-full p-2 bg-gray-700 rounded"
+                  required
                 >
+                  <option value="" disabled>
+                    Select a sub-challenge
+                  </option>
                   {missionOptions.map((mission) => (
                     <option key={mission} value={mission}>
                       {mission}
@@ -399,27 +430,29 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
                 ></textarea>
               </div>
 
-              <div>
-                <label className="block mb-2 font-semibold">
-                  Areas where cost savings would apply?
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {areaOptions.map((area) => (
-                    <button
-                      type="button"
-                      key={area}
-                      onClick={() => handleAreaToggle(area)}
-                      className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
-                        areas.includes(area)
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                      }`}
-                    >
-                      {area}
-                    </button>
-                  ))}
+              {ideationMission && challengeAreaMapping[ideationMission] && (
+                <div>
+                  <label className="block mb-2 font-semibold">
+                    Areas where cost savings would apply?
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {challengeAreaMapping[ideationMission].map((area) => (
+                      <button
+                        type="button"
+                        key={area}
+                        onClick={() => handleAreaToggle(area)}
+                        className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
+                          areas.includes(area)
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                        }`}
+                      >
+                        {area}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
                 <label className="block mb-2 font-semibold">
@@ -451,7 +484,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
                   htmlFor="costEstimate"
                   className="block mb-2 font-semibold"
                 >
-                  Cost Saving Estimate (YoY)
+                  Annual Cost Saving Opportunity
                 </label>
                 <select
                   id="costEstimate"
@@ -494,7 +527,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
                 </label>
                 <textarea
                   id="reasoning"
-                  placeholder="What kind of help/resources would be needed to make this happen? What are the main risks/hurdles to overcome to your idea a reality?"
+                  placeholder="What kind of help, resources & capabilities would be needed to make this happen?  What are the main risks & challenges to overcome to make your idea a reality?"
                   value={reasoning}
                   onChange={(e) => setReasoning(e.target.value)}
                   className="w-full p-2 bg-gray-700 rounded"

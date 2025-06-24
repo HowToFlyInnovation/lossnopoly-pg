@@ -48,7 +48,7 @@ export interface Idea {
   shortDescription: string;
   reasoning: string;
   costEstimate: string;
-  feasibilityEstimate: string; // Added feasibilityEstimate
+  feasibilityEstimate: string;
   createdAt: Timestamp;
   userId: string;
   approved?: boolean;
@@ -57,6 +57,7 @@ export interface Idea {
   ideationMission: string;
   tags: string[];
   areas?: string[];
+  whatIsNeeded?: string[]; // Added this field
   inspiredBy?: {
     id: string;
     ideaTitle: string;
@@ -109,9 +110,8 @@ interface IdeaTileProps {
 
 const costImpactOptions = [
   "Negative",
-  "$0-$10K",
-  "$10K-$30K",
-  "$30K-$100K",
+  "$0-$50K",
+  "$50K-$100K",
   "$100K-$250K",
   "$250K-$500K",
   "$500K-$1M",
@@ -119,14 +119,11 @@ const costImpactOptions = [
 ];
 
 const feasibilityOptions = [
-  "Impossible to pull off",
-  "Borderline impossible",
-  "Very difficult to execute",
-  "Challenging to accomplish",
-  "Doable, but requires significant effort",
-  "Moderately easy",
-  "Straightforward to implement",
-  "Very easy to do",
+  "Very Easy To do",
+  "Manageable",
+  "Achievable with Effort",
+  "Challenging",
+  "Very Challenging",
 ];
 
 const missionColors: { [key: string]: string } = {
@@ -152,9 +149,9 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   const [, setUserVote] = useState<"agree" | "disagree" | null>(null);
   const [readMoreVisible, setReadMoreVisible] = useState(false);
   const [creationDate, setCreationDate] = useState("");
-  const [impactScore, setImpactScore] = useState<string>("$0-$10K");
+  const [impactScore, setImpactScore] = useState<string>("$0-$50K");
   const [feasibilityScore, setFeasibilityScore] =
-    useState<string>("Very easy to do");
+    useState<string>("Very Easy To do");
   const [userEvaluation, setUserEvaluation] = useState<Evaluation | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [, setError] = useState<string | null>(null);
@@ -701,14 +698,25 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                     </div>
                   </div>
                 )}
-                <div className="mb-0">
-                  <b>Cost Saving Estimate (YoY): </b>
-                  {item.costEstimate}
-                </div>
-                <div className="mb-0">
-                  <b>Feasibility Estimate: </b>
-                  {item.feasibilityEstimate}
-                </div>
+                {item.whatIsNeeded && item.whatIsNeeded.length > 0 && (
+                  <div>
+                    <b>What is needed:</b>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {item.whatIsNeeded.map((needed) => (
+                        <span
+                          key={needed}
+                          className={`${
+                            isDarkMode
+                              ? "bg-purple-600 text-purple-100"
+                              : "bg-purple-100 text-purple-800"
+                          } text-xs font-semibold px-2.5 py-0.5 rounded-full`}
+                        >
+                          {needed}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div>
                   <b>Barriers to overcome: </b>
                   {item.reasoning}
