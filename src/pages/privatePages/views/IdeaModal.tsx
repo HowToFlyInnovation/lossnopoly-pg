@@ -13,6 +13,7 @@ import { db } from "../../firebase/config";
 import { AuthContext } from "../../context/AuthContext";
 import type { AuthContextType } from "../../context/AuthContext";
 import type { Idea } from "./IdeaTile"; // Import Idea type
+import { costImpactOptions, feasibilityOptions } from "../../../lib/constants"; // IMPORTED
 
 // Define the structure of a player from inviteList - RE-INTRODUCED
 interface InvitedPlayer {
@@ -69,24 +70,6 @@ const challengeAreaMapping: { [key: string]: string[] } = {
 // New options for the "What is needed" field
 const neededOptions = ["Capital", "Digital", "Automation"];
 
-const costImpactOptions = [
-  "Negative",
-  "$0-$50K",
-  "$50K-$100K",
-  "$100K-$250K",
-  "$250K-$500K",
-  "$500K-$1M",
-  "$1M+",
-];
-
-const feasibilityOptions = [
-  "Very Easy To do",
-  "Manageable",
-  "Achievable with Effort",
-  "Challenging",
-  "Very Challenging",
-];
-
 const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
   const { user } = useContext(AuthContext) as AuthContextType;
   const [ideaTitle, setIdeaTitle] = useState("");
@@ -95,9 +78,10 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
   const [shortDescription, setShortDescription] = useState("");
   const [reasoning, setReasoning] = useState("");
   const [ideationMission, setIdeationMission] = useState("");
-  const [costEstimate, setCostEstimate] = useState("$0-$50K");
-  const [feasibilityEstimate, setFeasibilityEstimate] =
-    useState("Very Easy To do");
+  const [costEstimate, setCostEstimate] = useState(costImpactOptions[1]); // Default to second option
+  const [feasibilityEstimate, setFeasibilityEstimate] = useState(
+    feasibilityOptions[0]
+  ); // Default to first option
   const [ideaImage, setIdeaImage] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);

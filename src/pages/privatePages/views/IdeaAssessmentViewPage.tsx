@@ -13,6 +13,11 @@ import { db } from "../../firebase/config";
 import { AuthContext } from "../../context/AuthContext";
 import IdeaTile, { type Idea, type Evaluation, type Vote } from "./IdeaTile";
 import { FaInfoCircle } from "react-icons/fa";
+import {
+  costImpactOptions,
+  feasibilityOptions,
+  getEvaluationCategory,
+} from "../../../lib/constants"; // IMPORTED
 
 // --- TYPE DEFINITIONS ---
 
@@ -38,26 +43,6 @@ interface IdeaListCardProps {
 
 // --- CONSTANTS ---
 
-// Verified to match the options in IdeaModal.tsx and IdeaTile.tsx
-const costImpactOptions = [
-  "Negative",
-  "$0-$10K",
-  "$10K-$30K",
-  "$30K-$100K",
-  "$100K-$250K",
-  "$250K-$500K",
-  "$500K-$1M",
-  "$1M+",
-];
-
-const feasibilityOptions = [
-  "Very Easy To do",
-  "Manageable",
-  "Achievable with Effort",
-  "Challenging",
-  "Very Challenging",
-];
-
 const missionListColors: { [key: string]: string } = {
   "E2E Touchless Supply Chain": "bg-amber-300",
   "E2E Touchless Innovation": "bg-amber-600",
@@ -65,9 +50,9 @@ const missionListColors: { [key: string]: string } = {
 };
 
 const missionChartColors: { [key: string]: string } = {
-  "Sub-Challenge 1: E2E Touchless Supply Chain": "rgb(252 211 77)",
-  "Sub-Challenge 2: E2E Touchless Innovation": "rgb(217 119 6)",
-  "Sub-Challenge 3: Zero Waste": "#63b3ed",
+  "E2E Touchless Supply Chain": "rgb(252 211 77)",
+  "E2E Touchless Innovation": "rgb(217 119 6)",
+  "Zero Waste": "#63b3ed",
 };
 
 // --- INFO MODAL COMPONENT ---
@@ -167,8 +152,13 @@ const ChartDot: React.FC<ChartDotProps> = ({
   onClick,
   isSelected,
 }) => {
-  const bottom = `calc(${(idea.avgFeasibility / 8) * 100}% - 10px)`;
-  const left = `calc(${(idea.avgImpact / 8) * 100}% - 10px)`;
+  // Dynamic positioning based on array lengths
+  const bottom = `calc(${
+    (idea.avgFeasibility / (feasibilityOptions.length - 1)) * 100
+  }% - 10px)`;
+  const left = `calc(${
+    (idea.avgImpact / (costImpactOptions.length - 1)) * 100
+  }% - 10px)`;
   const size = isSelected ? "w-8 h-8" : "w-5 h-5";
   const zIndex = isSelected ? 10 : 1;
 
@@ -219,20 +209,11 @@ const ImpactFeasibilityChart: React.FC<{
         High
       </span>
 
-      {/* X-axis labels */}
+      {/* X-axis labels for Cost Impact */}
       <span className="absolute bottom-[-1.5rem] left-0 -translate-x-1/2 text-gray-500 text-xs">
-        $0
+        Negative
       </span>
-      <span className="absolute bottom-[-1.5rem] left-1/4 -translate-x-1/2 text-gray-500 text-xs">
-        $10K
-      </span>
-      <span className="absolute bottom-[-1.5rem] left-1/2 -translate-x-1/2 text-gray-500 text-xs">
-        $100K
-      </span>
-      <span className="absolute bottom-[-1.5rem] left-3/4 -translate-x-1/2 text-gray-500 text-xs">
-        $500K
-      </span>
-      <span className="absolute bottom-[-1.5rem] left-full -translate-x-1/2 text-gray-500 text-xs">
+      <span className="absolute bottom-[-1.5rem] right-0 translate-x-1/2 text-gray-500 text-xs">
         $1M+
       </span>
 
@@ -244,7 +225,7 @@ const ImpactFeasibilityChart: React.FC<{
             return (
               parts.length > 1 && idea.ideationMission.includes(parts[1].trim())
             );
-          }) || "Default";
+          }) || idea.ideationMission;
         const color = missionChartColors[missionName] || "#808080";
         return (
           <ChartDot
@@ -339,13 +320,18 @@ const IdeaAssessmentViewPage: React.FC = () => {
             const relatedEvals = evaluationsData.filter(
               (e) => e.ideaId === idea.id
             );
+
             const totalImpact = relatedEvals.reduce((sum, e) => {
               const score = costImpactOptions.indexOf(e.ImpactScore);
-              return sum + (score !== -1 ? score + 1 : 0);
+              return sum + (score !== -1 ? score : 0); // Use 0-based index
             }, 0);
+
             const totalFeasibility = relatedEvals.reduce((sum, e) => {
               const score = feasibilityOptions.indexOf(e.FeasibilityScore);
-              return sum + (score !== -1 ? score + 1 : 0);
+              // Invert score so higher is better for feasibility
+              const invertedScore =
+                score !== -1 ? feasibilityOptions.length - 1 - score : 0;
+              return sum + invertedScore;
             }, 0);
 
             return {
@@ -361,18 +347,21 @@ const IdeaAssessmentViewPage: React.FC = () => {
           });
 
         newProcessedIdeas.sort((a, b) => {
-          const aIsHighImpact = a.avgImpact > 4;
-          const aIsHighFeasibility = a.avgFeasibility > 4;
-          const bIsHighImpact = b.avgImpact > 4;
-          const bIsHighFeasibility = b.avgFeasibility > 4;
-          const aIsGreen = aIsHighImpact && aIsHighFeasibility;
-          const bIsGreen = bIsHighImpact && bIsHighFeasibility;
-          if (aIsGreen && !bIsGreen) return -1;
-          if (!aIsGreen && bIsGreen) return 1;
-          const aIsYellow = (aIsHighImpact || aIsHighFeasibility) && !aIsGreen;
-          const bIsYellow = (bIsHighImpact || bIsHighFeasibility) && !bIsGreen;
-          if (aIsYellow && !bIsYellow) return -1;
-          if (!aIsYellow && bIsYellow) return 1;
+          const categoryA = getEvaluationCategory(
+            a.costEstimate,
+            a.feasibilityEstimate
+          );
+          const categoryB = getEvaluationCategory(
+            b.costEstimate,
+            b.feasibilityEstimate
+          );
+
+          const categoryOrder = { green: 0, yellow: 1, red: 2, none: 3 };
+
+          if (categoryOrder[categoryA] !== categoryOrder[categoryB]) {
+            return categoryOrder[categoryA] - categoryOrder[categoryB];
+          }
+
           if (b.avgImpact !== a.avgImpact) return b.avgImpact - a.avgImpact;
           if (b.avgFeasibility !== a.avgFeasibility)
             return b.avgFeasibility - a.avgFeasibility;
@@ -422,10 +411,9 @@ const IdeaAssessmentViewPage: React.FC = () => {
 
   const legendItems = {
     "E2E Touchless Supply Chain":
-      missionChartColors["Sub-Challenge 1: E2E Touchless Supply Chain"],
-    "E2E Touchless Innovation":
-      missionChartColors["Sub-Challenge 2: E2E Touchless Innovation"],
-    "Zero Waste": missionChartColors["Sub-Challenge 3: Zero Waste"],
+      missionChartColors["E2E Touchless Supply Chain"],
+    "E2E Touchless Innovation": missionChartColors["E2E Touchless Innovation"],
+    "Zero Waste": missionChartColors["Zero Waste"],
   };
 
   if (!authContext?.authIsReady) {

@@ -20,6 +20,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { costImpactToMonetaryValue } from "../../../lib/constants"; // IMPORTED
 
 // --- TYPE DEFINITIONS ---
 interface HomePageViewProps {
@@ -45,28 +46,6 @@ interface Evaluation {
   ideaId: string;
   ImpactScore: string;
 }
-
-const costImpactNumericalMapping: { [key: string]: number } = {
-  Negative: 1,
-  "$0-$10K": 2,
-  "$10K-$30K": 3,
-  "$30K-$100K": 4,
-  "$100K-$250K": 5,
-  "$250K-$500K": 6,
-  "$500K-$1M": 7,
-  "$1M+": 8,
-};
-
-const numericalToMonetaryValueMapping: { [key: number]: number } = {
-  1: 0,
-  2: 5_000,
-  3: 20_000,
-  4: 65_000,
-  5: 175_000,
-  6: 375_000,
-  7: 750_000,
-  8: 1_500_000,
-};
 
 const TARGET_SAVINGS_MILLIONS = 25; // Target in millions
 const TARGET_SAVINGS_VALUE = TARGET_SAVINGS_MILLIONS * 1_000_000;
@@ -172,23 +151,18 @@ const HomePageView: React.FC<HomePageViewProps> = ({
         ideas.forEach((idea) => {
           const ideaEvaluations = evaluationsByIdea[idea.id] || [];
           if (ideaEvaluations.length > 0) {
-            let sumImpactScores = 0;
+            let sumMonetaryValue = 0;
             ideaEvaluations.forEach((evalItem) => {
-              const numericalScore =
-                costImpactNumericalMapping[evalItem.ImpactScore];
-              if (numericalScore !== undefined) {
-                sumImpactScores += numericalScore;
+              const monetaryValue =
+                costImpactToMonetaryValue[evalItem.ImpactScore];
+              if (monetaryValue !== undefined) {
+                sumMonetaryValue += monetaryValue;
               }
             });
-            const averageNumericalImpact =
-              sumImpactScores / ideaEvaluations.length;
-            const roundedAverageIndex = Math.round(averageNumericalImpact);
-            const estimatedMonetaryValue =
-              numericalToMonetaryValueMapping[roundedAverageIndex];
-            if (estimatedMonetaryValue !== undefined) {
-              totalSavings += estimatedMonetaryValue;
-              ideasContributing++;
-            }
+            const averageMonetaryValue =
+              sumMonetaryValue / ideaEvaluations.length;
+            totalSavings += averageMonetaryValue;
+            ideasContributing++;
           }
         });
         setTotalIdentifiedSavings(totalSavings);

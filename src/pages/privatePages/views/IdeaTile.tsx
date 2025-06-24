@@ -27,6 +27,7 @@ import {
 import { PiLegoBold } from "react-icons/pi";
 import { AuthContext, type AuthContextType } from "../../context/AuthContext";
 import { db } from "../../firebase/config";
+import { costImpactOptions, feasibilityOptions } from "../../../lib/constants"; // IMPORTED
 
 // Define the structure of a player from inviteList
 interface InvitedPlayer {
@@ -108,24 +109,6 @@ interface IdeaTileProps {
   isDarkMode: boolean; // New prop for dark mode
 }
 
-const costImpactOptions = [
-  "Negative",
-  "$0-$50K",
-  "$50K-$100K",
-  "$100K-$250K",
-  "$250K-$500K",
-  "$500K-$1M",
-  "$1M+",
-];
-
-const feasibilityOptions = [
-  "Very Easy To do",
-  "Manageable",
-  "Achievable with Effort",
-  "Challenging",
-  "Very Challenging",
-];
-
 const missionColors: { [key: string]: string } = {
   "E2E Touchless Supply Chain": "bg-amber-300",
   "E2E Touchless Innovation": "bg-amber-600",
@@ -149,9 +132,10 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   const [, setUserVote] = useState<"agree" | "disagree" | null>(null);
   const [readMoreVisible, setReadMoreVisible] = useState(false);
   const [creationDate, setCreationDate] = useState("");
-  const [impactScore, setImpactScore] = useState<string>("$0-$50K");
-  const [feasibilityScore, setFeasibilityScore] =
-    useState<string>("Very Easy To do");
+  const [impactScore, setImpactScore] = useState<string>(costImpactOptions[1]);
+  const [feasibilityScore, setFeasibilityScore] = useState<string>(
+    feasibilityOptions[0]
+  );
   const [userEvaluation, setUserEvaluation] = useState<Evaluation | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [, setError] = useState<string | null>(null);
@@ -275,21 +259,9 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     const impactScores = allEvaluations.map((e) => e.ImpactScore);
     const feasibilityScores = allEvaluations.map((e) => e.FeasibilityScore);
 
-    const getAvgFeasibility = (scores: string[]): string => {
-      const numericScores = scores.map((score) =>
-        feasibilityOptions.indexOf(score)
-      );
-      const validScores = numericScores.filter((s) => s !== -1);
-      if (validScores.length === 0) return "N/A";
-      const averageIndex = Math.round(
-        validScores.reduce((a, b) => a + b, 0) / validScores.length
-      );
-      return feasibilityOptions[averageIndex] || "N/A";
-    };
-
     setAverageScores({
       impact: getAverageLabel(impactScores, costImpactOptions),
-      feasibility: getAvgFeasibility(feasibilityScores),
+      feasibility: getAverageLabel(feasibilityScores, feasibilityOptions),
     });
   }, [allEvaluations]);
 
@@ -446,6 +418,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     feasibility: string
   ): string => {
     const impactIndex = costImpactOptions.indexOf(impact);
+    // For feasibility, a lower index is better.
     const feasibilityIndex = feasibilityOptions.indexOf(feasibility);
 
     if (impactIndex === -1 || feasibilityIndex === -1) {
@@ -454,10 +427,11 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
         : "bg-gray-200 text-gray-800";
     }
 
-    const impactScore = impactIndex + 1;
-    const feasibilityScore = feasibilityIndex + 1;
-    const isHighImpact = impactScore > 4;
-    const isHighFeasibility = feasibilityScore > 4;
+    // A score is considered "high" if it's in the better half of the scale.
+    const isHighImpact =
+      impactIndex >= Math.floor(costImpactOptions.length / 2);
+    const isHighFeasibility =
+      feasibilityIndex < Math.ceil(feasibilityOptions.length / 2);
 
     if (isDarkMode) {
       if (isHighImpact && isHighFeasibility) return "bg-green-700 text-white";
@@ -465,10 +439,10 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
       return "bg-red-700 text-white";
     } else {
       if (isHighImpact && isHighFeasibility)
-        return "bg-green-200 text-gray-800";
+        return "bg-green-200 text-green-800";
       if (isHighImpact || isHighFeasibility)
-        return "bg-yellow-200 text-gray-800";
-      return "bg-red-200 text-gray-800";
+        return "bg-yellow-200 text-yellow-800";
+      return "bg-red-200 text-red-800";
     }
   };
 
