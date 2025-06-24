@@ -14,12 +14,12 @@ import { AuthContext } from "../../context/AuthContext";
 import type { AuthContextType } from "../../context/AuthContext";
 import type { Idea } from "./IdeaTile"; // Import Idea type
 import { costImpactOptions, feasibilityOptions } from "../../../lib/constants"; // IMPORTED
+import { FaQuestionCircle } from "react-icons/fa"; // Import the icon
 
 // Define the structure of a player from inviteList - RE-INTRODUCED
 interface InvitedPlayer {
   email: string;
   firstName: string;
-
   lastName: string;
   team: string;
   location: string;
@@ -30,6 +30,69 @@ interface IdeaModalProps {
   onClose: () => void;
   inspiredBy?: Idea[];
 }
+
+// Help Modal for Feasibility Definitions
+const FeasibilityHelpModal: React.FC<{ onClose: () => void }> = ({
+  onClose,
+}) => {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-[50001]">
+      <div className="bg-gray-700 text-white p-8 rounded-lg shadow-2xl max-w-2xl w-full relative">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold">
+            Feasibility Assessment Definitions
+          </h3>
+          <button onClick={onClose} className="text-2xl font-bold">
+            &times;
+          </button>
+        </div>
+        <div className="space-y-4 text-sm">
+          <div>
+            <h4 className="font-bold text-blue-300">Very Simple</h4>
+            <p className="text-gray-300">
+              Suggests that the idea can be executed effortlessly with little
+              planning or resources required, making it a quick and
+              straightforward task.
+            </p>
+          </div>
+          <div>
+            <h4 className="font-bold text-green-300">Manageable</h4>
+            <p className="text-gray-300">
+              Indicates that the idea can be implemented fairly easily, needing
+              only basic resources and minimal complications.
+            </p>
+          </div>
+          <div>
+            <h4 className="font-bold text-yellow-300">
+              Achievable with Effort
+            </h4>
+            <p className="text-gray-300">
+              Implies that while the idea is possible, it demands a good amount
+              of planning and collaboration to successfully implement.
+            </p>
+          </div>
+          <div>
+            <h4 className="font-bold text-orange-300">Challenging</h4>
+            <p className="text-gray-300">
+              Suggests that the idea is achievable but presents significant
+              difficulties that will require considerable effort and resources.
+            </p>
+          </div>
+          <div>
+            <h4 className="font-bold text-red-400">Very Challenging</h4>
+            <p className="text-gray-300">
+              Indicates that the idea is achievable, but it involves
+              considerable complexities and significant barriers that will
+              require extensive effort, substantial resources, and possibly
+              innovative approaches or specialized knowledge to successfully
+              implement.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const missionOptions = [
   "E2E Touchless Supply Chain",
@@ -85,6 +148,8 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
   const [ideaImage, setIdeaImage] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFeasibilityHelpVisible, setIsFeasibilityHelpVisible] =
+    useState(false); // New state for help modal
 
   // States for "People to involve" with @ feature
   const [peopleToInvolveInput, setPeopleToInvolveInput] = useState("");
@@ -315,6 +380,11 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-5000">
+      {isFeasibilityHelpVisible && (
+        <FeasibilityHelpModal
+          onClose={() => setIsFeasibilityHelpVisible(false)}
+        />
+      )}
       <div className="bg-gray-800 text-white p-8 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <h2 className="text-2xl font-bold mb-6">
           {inspiredBy && inspiredBy.length > 0
@@ -485,12 +555,22 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
               </div>
 
               <div>
-                <label
-                  htmlFor="feasibilityEstimate"
-                  className="block mb-2 font-semibold"
-                >
-                  Feasibility Assessment
-                </label>
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="feasibilityEstimate"
+                    className="block mb-2 font-semibold"
+                  >
+                    Feasibility Assessment
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsFeasibilityHelpVisible(true)}
+                    className="mb-2 text-gray-400 hover:text-white"
+                    aria-label="Help with Feasibility Assessment"
+                  >
+                    <FaQuestionCircle />
+                  </button>
+                </div>
                 <select
                   id="feasibilityEstimate"
                   value={feasibilityEstimate}
