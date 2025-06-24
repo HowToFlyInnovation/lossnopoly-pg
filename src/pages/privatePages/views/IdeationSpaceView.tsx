@@ -20,6 +20,7 @@ import IdeaTile, {
 } from "./IdeaTile"; // Import the new IdeaTile component and its types
 import { FaInfoCircle, FaComment, FaLightbulb } from "react-icons/fa"; // Added FaInfoCircle
 import { PiLegoBold } from "react-icons/pi";
+import { getEvaluationCategory } from "../../../lib/constants.ts";
 
 // --- TYPE DEFINITIONS ---
 
@@ -29,54 +30,6 @@ interface PlayerTagging {
   taggedPlayerEmail: string;
   timestamp: Timestamp;
 }
-
-// --- CONSTANTS FOR EVALUATION ---
-const costImpactOptions = [
-  "Negative",
-  "$0-$10K",
-  "$10K-$30K",
-  "$30K-$100K",
-  "$100K-$250K",
-  "$250K-$500K",
-  "$500K-$1M",
-  "$1M+",
-];
-
-const feasibilityOptions = [
-  "Impossible to pull off", // Standardized order: lowest to highest feasibility
-  "Borderline impossible",
-  "Very difficult to execute",
-  "Challenging to accomplish",
-  "Doable, but requires significant effort",
-  "Moderately easy",
-  "Straightforward to implement",
-  "Very easy to do",
-];
-
-// --- HELPER FUNCTION FOR EVALUATION CATEGORY ---
-const getEvaluationCategory = (
-  evaluation: Evaluation
-): "green" | "yellow" | "red" | "none" => {
-  const impactIndex = costImpactOptions.indexOf(evaluation.ImpactScore);
-  const feasibilityIndex = feasibilityOptions.indexOf(
-    evaluation.FeasibilityScore
-  );
-
-  if (impactIndex === -1 || feasibilityIndex === -1) {
-    return "none";
-  }
-
-  // Assuming indexes go from lowest (0) to highest (7) for both
-  const impactScore = impactIndex + 1; // 1 to 8
-  const feasibilityScore = feasibilityIndex + 1; // 1 to 8
-
-  const isHighImpact = impactScore > 4;
-  const isHighFeasibility = feasibilityScore > 4;
-
-  if (isHighImpact && isHighFeasibility) return "green";
-  if (isHighImpact || isHighFeasibility) return "yellow";
-  return "red";
-};
 
 // --- [NEW] INFO MODAL COMPONENT ---
 const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -457,7 +410,10 @@ const IdeationSpaceView: React.FC = () => {
           const categorizedIdeaIds = new Set(
             userEvaluations
               .filter((e) => {
-                const category = getEvaluationCategory(e);
+                const category = getEvaluationCategory(
+                  e.ImpactScore,
+                  e.FeasibilityScore
+                );
                 if (filter === "topVoted") return category === "green";
                 if (filter === "mediumVoted") return category === "yellow";
                 if (filter === "lowVoted") return category === "red";
@@ -583,7 +539,7 @@ const IdeationSpaceView: React.FC = () => {
             onChange={(e) => setMissionFilter(e.target.value)}
             className="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none w-full md:w-auto"
           >
-            <option value="all">All Missions</option>
+            <option value="all">All Sub-Challenges</option>
             <option value="E2E Touchless Supply Chain">
               E2E Touchless Supply Chain
             </option>
