@@ -29,7 +29,7 @@ const RegisterPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] =
     React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false); // <-- New state for loading
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const navigate = useNavigate();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -57,7 +57,7 @@ const RegisterPage: React.FC = () => {
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    setIsLoading(true); // <-- Set loading to true
+    setIsLoading(true);
 
     let locationInfo = {};
     try {
@@ -96,7 +96,7 @@ const RegisterPage: React.FC = () => {
     if (password !== confirmPassword) {
       setError("Passwords do not match!");
       await logFailedRegistration("Passwords do not match.");
-      setIsLoading(false); // <-- Reset loading state
+      setIsLoading(false);
       return;
     }
 
@@ -107,7 +107,7 @@ const RegisterPage: React.FC = () => {
       const errorMessage = "Password must be at least 8 characters long.";
       setError(errorMessage);
       await logFailedRegistration(errorMessage);
-      setIsLoading(false); // <-- Reset loading state
+      setIsLoading(false);
       return;
     }
 
@@ -115,7 +115,7 @@ const RegisterPage: React.FC = () => {
       const errorMessage = "Password must include at least one number.";
       setError(errorMessage);
       await logFailedRegistration(errorMessage);
-      setIsLoading(false); // <-- Reset loading state
+      setIsLoading(false);
       return;
     }
 
@@ -124,7 +124,7 @@ const RegisterPage: React.FC = () => {
         "Password must include at least one special character (e.g., !@#$%).";
       setError(errorMessage);
       await logFailedRegistration(errorMessage);
-      setIsLoading(false); // <-- Reset loading state
+      setIsLoading(false);
       return;
     }
 
@@ -138,7 +138,7 @@ const RegisterPage: React.FC = () => {
         await logFailedRegistration(
           "Attempted registration with a non-invited email: " + email
         );
-        setIsLoading(false); // <-- Reset loading state
+        setIsLoading(false);
         return;
       }
     } catch (checkError: any) {
@@ -149,7 +149,7 @@ const RegisterPage: React.FC = () => {
       await logFailedRegistration(
         `Server error during invitation list check: ${checkError.message}`
       );
-      setIsLoading(false); // <-- Reset loading state
+      setIsLoading(false);
       return;
     }
 
@@ -165,6 +165,7 @@ const RegisterPage: React.FC = () => {
       if (user) {
         await updateProfile(user, { displayName: codename });
 
+        // **FIXED**: The URL is now dynamic and will work on localhost and your live domains.
         const actionCodeSettings: ActionCodeSettings = {
           url: `${window.location.origin}/`,
           handleCodeInApp: true,
@@ -172,8 +173,6 @@ const RegisterPage: React.FC = () => {
 
         await sendEmailVerification(user, actionCodeSettings);
 
-        // Don't reset loading state here, as we are navigating away.
-        // The component will unmount.
         navigate("/", {
           replace: true,
           state: { showVerificationMessage: true },
@@ -187,7 +186,7 @@ const RegisterPage: React.FC = () => {
           : "An unexpected error occurred during registration.";
       setError(friendlyError);
       await logFailedRegistration(err.message);
-      setIsLoading(false); // <-- Reset loading state
+      setIsLoading(false);
     }
   };
 
