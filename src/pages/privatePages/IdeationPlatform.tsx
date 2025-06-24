@@ -20,8 +20,6 @@ interface IdeationPlatformProps {
   visibleContent: string;
   setVisibleContent: Dispatch<SetStateAction<string>>;
   customTheme: boolean;
-  // FIX: Update the signature to accept a more general HTMLElement event
-  handleMenuClick: (event: React.MouseEvent<HTMLElement>) => void;
 }
 
 // --- Reusable SVG Icon for the Menu Button ---
@@ -62,9 +60,12 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
     }
   };
 
-  // FIX: Update the event type to be more general
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setVisibleContent(event.currentTarget.id);
+    // On mobile, also close the menu when a navigation item is clicked
+    if (window.innerWidth <= 768) {
+      setMenuActive(false);
+    }
   };
 
   const handleMissionClick = (contentId: string) => {
@@ -113,6 +114,7 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
         isOpen={isTourOpen}
         onClose={() => setIsTourOpen(false)}
         onNavigate={handleTourNavigate}
+        setMenuActive={setMenuActive}
       />
       <PlatformSideMenu
         menuActive={menuActive}

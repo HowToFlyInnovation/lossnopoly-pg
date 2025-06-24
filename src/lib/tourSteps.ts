@@ -4,6 +4,7 @@ export interface TourStep {
   title: string;
   content: string;
   path: string;
+  menuState?: "open" | "closed"; // New property
 }
 
 export const tourSteps: TourStep[] = [
@@ -11,8 +12,9 @@ export const tourSteps: TourStep[] = [
     selector: '[data-tour-id="home-welcome"]',
     title: "Welcome to the Platform!",
     content:
-      "This is your homepage. Here you can see an overview of the challenges and your progress. Let's start by exploring the main navigation menu.",
+      "This is your homepage. Let's start by exploring the main navigation menu.",
     path: "HomePage",
+    menuState: "closed",
   },
   {
     selector: '[data-tour-id="menu-ideation-space"]',
@@ -20,6 +22,7 @@ export const tourSteps: TourStep[] = [
     content:
       "This is the heart of the platform. Click here to view, create, and collaborate on ideas.",
     path: "HomePage",
+    menuState: "open", // Open the menu to show this item
   },
   {
     selector: '[data-tour-id="ideation-space-share-idea"]',
@@ -27,6 +30,7 @@ export const tourSteps: TourStep[] = [
     content:
       "Click this button to share a new idea or build upon existing ones you've selected.",
     path: "IdeationSpace",
+    menuState: "closed", // Close the menu to show the page
   },
   {
     selector: '[data-tour-id="ideation-space-filters"]',
@@ -34,6 +38,7 @@ export const tourSteps: TourStep[] = [
     content:
       "Use these dropdowns to filter ideas based on your activity or by the specific sub-challenge.",
     path: "IdeationSpace",
+    menuState: "closed",
   },
   {
     selector: '[data-tour-id="idea-tile-example"]',
@@ -41,6 +46,7 @@ export const tourSteps: TourStep[] = [
     content:
       "Each card represents an idea. You can expand it to read more, evaluate it, comment, and select it to build upon.",
     path: "IdeationSpace",
+    menuState: "closed",
   },
   {
     selector: '[data-tour-id="menu-idea-assessments"]',
@@ -48,40 +54,46 @@ export const tourSteps: TourStep[] = [
     content:
       "Next, let's check out the assessment view. This page gives you a portfolio view of all evaluated ideas.",
     path: "IdeationSpace",
+    menuState: "open",
   },
   {
     selector: '[data-tour-id="assessment-chart"]',
     title: "Impact vs. Feasibility Chart",
     content:
-      "This chart plots all evaluated ideas based on their average impact and feasibility scores. The most promising ideas appear in the top-right.",
+      "This chart plots all evaluated ideas based on their average impact and feasibility scores.",
     path: "IdeaAssessments",
+    menuState: "closed",
   },
   {
     selector: '[data-tour-id="menu-player-ranking"]',
     title: "Player Rankings",
     content:
-      "See how you stack up against your colleagues! This page shows the leaderboard based on contributions.",
+      "See how you stack up against your colleagues! This page shows the leaderboard.",
     path: "IdeaAssessments",
+    menuState: "open",
   },
   {
     selector: '[data-tour-id="ranking-table"]',
     title: "The Leaderboard",
     content:
-      "This table ranks all participants by their Experience Points (XP). You can sort by any column to see who is leading in different categories.",
+      "This table ranks all participants by their Experience Points (XP).",
     path: "PlayerRankingView",
+    menuState: "closed",
   },
   {
     selector: '[data-tour-id="menu-player-dashboard"]',
     title: "Your Dashboard",
     content: "Finally, let's look at your personal activity dashboard.",
     path: "PlayerRankingView",
+    menuState: "open",
   },
   {
     selector: '[data-tour-id="player-dashboard-stats"]',
     title: "Your Personal Stats",
     content:
-      "Here you can see a summary of all your contributions and track your daily activity over the past week. You can also change your profile picture here.",
+      "Here you can see a summary of all your contributions and track your daily activity.",
     path: "PlayerPageView",
+    menuState: "closed",
   },
   {
     selector: "body",
@@ -89,5 +101,6 @@ export const tourSteps: TourStep[] = [
     content:
       "You're now ready to explore the platform. Jump in, share your ideas, and let's innovate together!",
     path: "PlayerPageView",
+    menuState: "closed",
   },
 ];

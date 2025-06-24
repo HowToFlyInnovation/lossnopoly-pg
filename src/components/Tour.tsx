@@ -7,9 +7,16 @@ interface TourProps {
   isOpen: boolean;
   onClose: () => void;
   onNavigate: (path: string) => void;
+  setMenuActive: (active: boolean) => void;
 }
 
-const Tour: React.FC<TourProps> = ({ steps, isOpen, onClose, onNavigate }) => {
+const Tour: React.FC<TourProps> = ({
+  steps,
+  isOpen,
+  onClose,
+  onNavigate,
+  setMenuActive,
+}) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [position, setPosition] = useState({
     top: 0,
@@ -36,6 +43,13 @@ const Tour: React.FC<TourProps> = ({ steps, isOpen, onClose, onNavigate }) => {
   useEffect(() => {
     if (!isOpen) return;
 
+    // The Tour component now directs the menu state
+    if (step.menuState === "open") {
+      setMenuActive(true);
+    } else if (step.menuState === "closed") {
+      setMenuActive(false);
+    }
+
     const targetElement = document.querySelector(step.selector);
     if (targetElement) {
       targetElement.scrollIntoView({
@@ -45,7 +59,8 @@ const Tour: React.FC<TourProps> = ({ steps, isOpen, onClose, onNavigate }) => {
       });
     }
 
-    const timer = setTimeout(updatePosition, 150);
+    // Delay positioning to allow for menu animation
+    const timer = setTimeout(updatePosition, 300);
 
     window.addEventListener("resize", updatePosition);
     document.addEventListener("scroll", updatePosition, true);
@@ -55,7 +70,7 @@ const Tour: React.FC<TourProps> = ({ steps, isOpen, onClose, onNavigate }) => {
       window.removeEventListener("resize", updatePosition);
       document.removeEventListener("scroll", updatePosition, true);
     };
-  }, [currentStepIndex, isOpen, updatePosition]);
+  }, [currentStepIndex, isOpen, updatePosition, step.menuState, setMenuActive]);
 
   if (!isOpen) {
     return null;
@@ -83,7 +98,6 @@ const Tour: React.FC<TourProps> = ({ steps, isOpen, onClose, onNavigate }) => {
     }
   };
 
-  // New handler to restart the tour
   const handleRestart = () => {
     const firstStep = steps[0];
     if (firstStep.path && firstStep.path !== step.path) {
@@ -122,9 +136,8 @@ const Tour: React.FC<TourProps> = ({ steps, isOpen, onClose, onNavigate }) => {
             onClick={onClose}
             className="text-sm text-gray-400 hover:text-white"
           >
-            Stop
+            Skip
           </button>
-          {/* Show Restart button only after the first step */}
           {currentStepIndex > 0 && (
             <button
               onClick={handleRestart}
