@@ -204,7 +204,10 @@ const HomePageView: React.FC<HomePageViewProps> = ({ handleMissionClick }) => {
   return (
     <div className="bg-gray-100 min-h-screen">
       {/* --- HEADER --- */}
-      <header className="text-center relative px-5 pt-20 pb-12 bg-white shadow-md">
+      <header
+        data-tour-id="home-welcome"
+        className="text-center relative px-5 pt-20 pb-12 bg-white shadow-md"
+      >
         <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800">
           Welcome, {playerName || "TopHat"}!
         </h1>

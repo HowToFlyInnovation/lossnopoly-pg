@@ -412,7 +412,10 @@ const PlayerPageView = () => {
         Player Dashboard
       </h1>
       <div>
-        <div className="bg-white rounded-lg shadow-md mb-8 pr-12">
+        <div
+          data-tour-id="player-dashboard-stats"
+          className="bg-white rounded-lg shadow-md mb-8 pr-12"
+        >
           <div className="flex flex-col md:flex-row p-8 items-center">
             <div className="relative">
               <img

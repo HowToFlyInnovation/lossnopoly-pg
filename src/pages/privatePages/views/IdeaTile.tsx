@@ -107,6 +107,7 @@ interface IdeaTileProps {
   isSelected: boolean;
   isSelectionLocked: boolean;
   isDarkMode: boolean; // New prop for dark mode
+  "data-tour-id"?: string;
 }
 
 const missionColors: { [key: string]: string } = {
@@ -122,7 +123,8 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   onSelect,
   isSelected,
   isSelectionLocked,
-  isDarkMode, // Destructure new prop
+  isDarkMode,
+  "data-tour-id": dataTourId, // Destructure new prop
 }) => {
   const { user } = useContext(AuthContext) as AuthContextType;
 
@@ -568,6 +570,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   return (
     <>
       <div
+        data-tour-id={dataTourId}
         className={`rounded-sm shadow-xl relative overflow-hidden break-words border-12  transition-all duration-300 ${
           isDarkMode ? "bg-gray-800" : "bg-white"
         } ${isSelected ? "border-green-500" : "border-white"}`}

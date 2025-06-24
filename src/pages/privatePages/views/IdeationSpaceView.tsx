@@ -508,7 +508,10 @@ const IdeationSpaceView: React.FC = () => {
         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase">
           Ideation Space
         </h1>
-        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+        <div
+          data-tour-id="ideation-space-filters"
+          className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto"
+        >
           <button
             onClick={() => setIsInfoModalOpen(true)}
             className="p-3 bg-gray-800 text-white rounded-lg shadow-md hover:bg-black focus:outline-none absolute top-5 right-5 cursor-pointer"
@@ -550,6 +553,7 @@ const IdeationSpaceView: React.FC = () => {
           </select>
           <button
             onClick={handleOpenModal}
+            data-tour-id="ideation-space-share-idea"
             className={`font-semibold py-2 px-4 rounded-lg shadow-md w-full md:w-auto transition-colors duration-300 ${
               hasSelection
                 ? "bg-green-500 hover:bg-green-600 text-white"
@@ -562,8 +566,9 @@ const IdeationSpaceView: React.FC = () => {
       </div>
 
       <MasonryLayout gap={40}>
-        {filteredIdeas.map((item) => (
+        {filteredIdeas.map((item, index) => (
           <IdeaTile
+            data-tour-id={index === 0 ? "idea-tile-example" : undefined}
             key={item.id}
             item={item}
             handleVote={handleVote}

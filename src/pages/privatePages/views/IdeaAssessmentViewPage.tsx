@@ -437,7 +437,10 @@ const IdeaAssessmentViewPage: React.FC = () => {
       ) : (
         <div className="flex flex-col md:flex-row-reverse gap-8">
           <div className="w-full md:w-2/3 lg:w-3/5">
-            <h2 className="text-xl font-bold text-gray-700 mb-4 text-center">
+            <h2
+              data-tour-id="assessment-chart"
+              className="text-xl font-bold text-gray-700 mb-4 text-center"
+            >
               Impact VS Feasibility
             </h2>
             <ImpactFeasibilityChart

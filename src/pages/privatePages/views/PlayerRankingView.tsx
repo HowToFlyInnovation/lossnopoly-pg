@@ -411,7 +411,10 @@ const PlayerRankingView: React.FC = () => {
       <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase mb-8 text-left">
         Player Rankings
       </h1>
-      <div className="overflow-x-auto bg-white rounded-lg shadow">
+      <div
+        data-tour-id="ranking-table"
+        className="overflow-x-auto bg-white rounded-lg shadow"
+      >
         <table className="min-w-full table-auto">
           <thead className="bg-gray-800 text-white">
             <tr>

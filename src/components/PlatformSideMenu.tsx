@@ -1,51 +1,79 @@
+// src/components/PlatformSideMenu.tsx
 import React from "react";
 import RankingIcon from "@/assets/icons/RankingPageIcon.png";
 import PlayerPageIcon from "@/assets/icons/PlayerPageIcon.png";
 import AssessmentPageIcon from "@/assets/icons/AssessmentPageIcon.png";
 import HomePageIcon from "@/assets/icons/HomePageIcon.png";
 import IdeationSpacePageIcon from "@/assets/icons/IdeationSpacePageIcon.png";
-/* import DeepDiveIcon from "@/assets/icons/DeepDiveIcon.png";*/
 import SignOutIcon from "@/assets/icons/SignOutIcon.png";
-// Assuming your logo is in the `public` folder or handled by your build process
+
 const Logo =
   "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/LoginLogo.png?alt=media&token=e189b962-fd15-4642-9d1f-28cfda595042";
 
-// Interfaces for props
+const TourIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-6 w-6"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={2}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M17 8l4 4m0 0l-4 4m4-4H3"
+    />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 20.25c4.97 0 9-4.03 9-9s-4.03-9-9-9-9 4.03-9 9c0 2.18.78 4.17 2.07 5.62"
+    />
+  </svg>
+);
+
 interface MenuItemProps {
   id: string;
   text: string;
   visibleContent?: string;
-  icon: string;
-  onClick: (event: React.MouseEvent<HTMLAnchorElement>) => void;
+  icon: React.ReactNode;
+  // FIX: Make onClick handler's event type more specific and consistent
+  onClick: (event: React.MouseEvent<HTMLDivElement>) => void;
   customTheme?: boolean;
+  "data-tour-id"?: string;
 }
 
 interface PlatformSideMenuProps {
-  handleMenuClick: (event: React.MouseEvent<HTMLAnchorElement>) => void;
-  handleSignOut: (event: React.MouseEvent<HTMLAnchorElement>) => void;
+  // FIX: Ensure this matches the type in IdeationPlatform
+  handleMenuClick: (event: React.MouseEvent<HTMLElement>) => void;
+  handleSignOut: (event: React.MouseEvent) => void;
   visibleContent: string;
   menuActive: boolean;
   setMenuActive: (active: boolean) => void;
   customTheme?: boolean;
+  onStartTour: () => void;
 }
 
-// ────────────────────────────────
-// ❶ General-navigation items
-// ────────────────────────────────
 const menuItems = [
-  { id: "HomePage", text: "Home Page", icon: HomePageIcon },
-  { id: "IdeationSpace", text: "Ideation Space", icon: IdeationSpacePageIcon },
-  { id: "IdeaAssessments", text: "Idea Assessments", icon: AssessmentPageIcon },
+  {
+    id: "HomePage",
+    text: "Home Page",
+    icon: HomePageIcon,
+    tourId: "menu-home",
+  },
+  {
+    id: "IdeationSpace",
+    text: "Ideation Space",
+    icon: IdeationSpacePageIcon,
+    tourId: "menu-ideation-space",
+  },
+  {
+    id: "IdeaAssessments",
+    text: "Idea Assessments",
+    icon: AssessmentPageIcon,
+    tourId: "menu-idea-assessments",
+  },
 ];
-
-// ────────────────────────────────
-// ❷ Sub-challenge deep-dives
-// ────────────────────────────────
-/*const missionItems = [
-  { id: "Mission1", text: "E2E Touchless Supply Chain", icon: DeepDiveIcon },
-  { id: "Mission2", text: "E2E Touchless Innovation", icon: DeepDiveIcon },
-  { id: "Mission3", text: "Zero Waste", icon: DeepDiveIcon },
-];*/
 
 const MenuItem: React.FC<MenuItemProps> = ({
   id,
@@ -53,11 +81,13 @@ const MenuItem: React.FC<MenuItemProps> = ({
   onClick,
   text,
   customTheme,
+  icon,
+  "data-tour-id": dataTourId,
 }) => {
   const isActive = visibleContent === id;
 
   const baseClasses =
-    "flex items-center w-full h-10 text-sm text-black/80 box-border pl-[10%] my-0.5 group"; // Added 'group' class here
+    "flex items-center w-full h-10 text-sm text-black/80 box-border pl-[10%] my-0.5 group cursor-pointer no-underline";
   const activeClasses = customTheme
     ? "bg-[#F7A800] text-white"
     : "bg-[#22222A] text-white";
@@ -66,21 +96,33 @@ const MenuItem: React.FC<MenuItemProps> = ({
     : "hover:bg-[#22222A] hover:text-white";
 
   return (
-    <a id={id} onClick={onClick} className="cursor-pointer no-underline">
-      <div
-        className={`${baseClasses} ${
-          isActive ? activeClasses : ""
-        } ${itemHoverClasses}`}
-      >
+    <div
+      id={id}
+      onClick={onClick}
+      className={`${baseClasses} ${
+        isActive ? activeClasses : ""
+      } ${itemHoverClasses}`}
+      data-tour-id={dataTourId}
+    >
+      {typeof icon === "string" ? (
         <img
-          src={RankingIcon}
+          src={icon}
+          alt=""
           className={`h-6 mr-4 ${
             isActive ? "filter invert" : ""
-          } group-hover:filter group-hover:invert`} // Added group-hover classes
+          } group-hover:filter group-hover:invert`}
         />
-        <span className="w-full">{text}</span>
-      </div>
-    </a>
+      ) : (
+        <div
+          className={`mr-4 ${
+            isActive ? "text-white" : "text-black/80"
+          } group-hover:text-white`}
+        >
+          {icon}
+        </div>
+      )}
+      <span className="w-full">{text}</span>
+    </div>
   );
 };
 
@@ -102,11 +144,12 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
   visibleContent,
   menuActive,
   setMenuActive,
+  onStartTour,
   customTheme = true,
 }) => {
   if (!menuActive) return null;
 
-  const handleItemClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleItemClick = (event: React.MouseEvent<HTMLElement>) => {
     handleMenuClick(event);
     if (window.innerWidth <= 768) {
       setMenuActive(false);
@@ -119,7 +162,6 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
     <div
       className={`fixed top-0 left-0 z-1000 flex flex-col w-full h-screen shadow-[10px_0_10px_-5px_rgba(0,0,0,0.5)] md:w-[18%] ${menuBackground}`}
     >
-      {/* ── Logo & close button ───────────────────────────────────────── */}
       <header className="flex flex-row items-center justify-between w-full h-16 mt-7 mb-10 z-[2] flex-shrink-0">
         <img
           className="relative w-2/5 my-10 ml-5 md:w-2/4 md:top-1.5"
@@ -129,9 +171,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
         <MenuCloseButton setMenuActive={setMenuActive} />
       </header>
 
-      {/* Scrollable container for menu items */}
       <div className="flex-grow overflow-y-auto flex flex-col justify-between">
-        {/* ── Main menu ─────────────────────────────────────────────────── */}
         <div className="w-full mx-auto mt-8">
           <h3 className="text-black text-base font-bold pl-[10%] mb-1">Menu</h3>
           {menuItems.map((item) => (
@@ -139,57 +179,53 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
               key={item.id}
               {...item}
               visibleContent={visibleContent}
-              onClick={handleItemClick}
+              onClick={handleItemClick as any}
               customTheme={customTheme}
-              icon={item.icon}
+              data-tour-id={item.tourId}
             />
           ))}
         </div>
 
-        {/* ── Sub-challenge Deep-Dives ──────────────────────────────────── 
-        <div className="w-full mx-auto mt-12">
-          <h3 className="text-black text-base font-bold pl-[10%] mb-1">
-            Sub-challenges
-          </h3>
-          {missionItems.map((item) => (
-            <MenuItem
-              key={item.id}
-              {...item}
-              visibleContent={visibleContent}
-              onClick={handleItemClick}
-              customTheme={customTheme}
-              icon={item.icon}
-            />
-          ))}
-        </div>*/}
-
-        {/* ── Extra items & footer ──────────────────────────────────────── */}
         <hr className="w-full mt-12 border-white/10" />
 
-        <div className="w-full mx-auto mb-20">
+        <div className="w-full mx-auto mb-4">
           <h3 className="text-black text-base font-bold pl-[10%] mb-1">
             Game Stats
           </h3>
           <MenuItem
             id="PlayerPageView"
-            onClick={handleItemClick}
+            onClick={handleItemClick as any}
             text="Activity Dashboard"
             visibleContent={visibleContent}
             customTheme={customTheme}
             icon={PlayerPageIcon}
+            data-tour-id="menu-player-dashboard"
           />
           <MenuItem
             id="PlayerRankingView"
-            onClick={handleItemClick}
+            onClick={handleItemClick as any}
             text="Player Ranking"
             visibleContent={visibleContent}
             customTheme={customTheme}
             icon={RankingIcon}
+            data-tour-id="menu-player-ranking"
+          />
+        </div>
+
+        <div className="w-full mx-auto mb-20">
+          <h3 className="text-black text-base font-bold pl-[10%] mb-1">Help</h3>
+          <MenuItem
+            id="start-tour"
+            onClick={onStartTour as any}
+            text="Start Tour"
+            icon={<TourIcon />}
+            customTheme={customTheme}
+            visibleContent={visibleContent}
+            data-tour-id="start-tour-button"
           />
         </div>
       </div>
 
-      {/* Sign Out button pushed to the bottom */}
       <div className="w-full mt-auto pb-6 flex-shrink-0">
         <MenuItem
           id="BlackboxSignOut"

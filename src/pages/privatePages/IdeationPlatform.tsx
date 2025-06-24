@@ -1,14 +1,18 @@
-import React, { useContext } from "react";
+// src/pages/privatePages/IdeationPlatform.tsx
+import React, { useContext, useState } from "react";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase/config";
 import { AuthContext, type AuthContextType } from "../context/AuthContext";
 import PlatformSideMenu from "../../components/PlatformSideMenu";
 import type { Dispatch, SetStateAction } from "react";
-import HomePageView from "./views/HomePageView"; // Import the existing view
+import HomePageView from "./views/HomePageView";
 import IdeationSpaceView from "./views/IdeationSpaceView";
 import IdeaAssessmentViewPage from "./views/IdeaAssessmentViewPage";
-import PlayerRankingView from "./views/PlayerRankingView"; // Add this line// Import the new view
+import PlayerRankingView from "./views/PlayerRankingView";
 import PlayerPageView from "./views/PlayerPageView";
+import Tour from "../../components/Tour";
+import { tourSteps } from "../../lib/tourSteps";
+
 // --- Type Definitions ---
 interface IdeationPlatformProps {
   menuActive: boolean;
@@ -16,6 +20,8 @@ interface IdeationPlatformProps {
   visibleContent: string;
   setVisibleContent: Dispatch<SetStateAction<string>>;
   customTheme: boolean;
+  // FIX: Update the signature to accept a more general HTMLElement event
+  handleMenuClick: (event: React.MouseEvent<HTMLElement>) => void;
 }
 
 // --- Reusable SVG Icon for the Menu Button ---
@@ -44,10 +50,9 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
   setVisibleContent,
   customTheme,
 }) => {
-  // --- State Management ---
   const { dispatch } = useContext(AuthContext) as AuthContextType;
+  const [isTourOpen, setIsTourOpen] = useState(false);
 
-  // --- Handlers ---
   const handleSignOut = async () => {
     try {
       await signOut(auth);
@@ -57,7 +62,8 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
     }
   };
 
-  const handleMenuClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+  // FIX: Update the event type to be more general
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setVisibleContent(event.currentTarget.id);
   };
 
@@ -66,12 +72,14 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
     setMenuActive(false);
   };
 
-  // --- Conditional classes for the main content area ---
+  const handleTourNavigate = (path: string) => {
+    setVisibleContent(path);
+  };
+
   const mainContentClasses = `transition-all duration-300 ease-in-out ${
     menuActive ? "md:ml-[18%]" : "ml-0 w-full"
   }`;
 
-  // --- Render Content Function ---
   const renderContent = () => {
     switch (visibleContent) {
       case "HomePage":
@@ -98,9 +106,14 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
     }
   };
 
-  // --- Render ---
   return (
     <div className="font-sans bg-gray-50 min-h-screen w-screen">
+      <Tour
+        steps={tourSteps}
+        isOpen={isTourOpen}
+        onClose={() => setIsTourOpen(false)}
+        onNavigate={handleTourNavigate}
+      />
       <PlatformSideMenu
         menuActive={menuActive}
         setMenuActive={setMenuActive}
@@ -108,6 +121,7 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
         handleMenuClick={handleMenuClick}
         handleSignOut={handleSignOut}
         customTheme={customTheme}
+        onStartTour={() => setIsTourOpen(true)}
       />
 
       {!menuActive && (
