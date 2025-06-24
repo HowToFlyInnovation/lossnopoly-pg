@@ -7,9 +7,9 @@ import {
   type Dispatch,
   useCallback,
   useRef,
-} from "react"; // 👈 FIX: Added 'type' keyword and other imports
+} from "react";
 import { auth } from "../firebase/config";
-import { onAuthStateChanged, type User, signOut } from "firebase/auth"; // 👈 FIX: Added 'type' keyword and signOut
+import { onAuthStateChanged, type User, signOut } from "firebase/auth";
 
 // Define the shape of the state
 export interface AuthState {
@@ -28,8 +28,10 @@ export interface AuthContextType extends AuthState {
   dispatch: Dispatch<AuthAction>;
 }
 
+// FIX: Define AuthContext before it is used.
 export const AuthContext = createContext<AuthContextType | null>(null);
 
+// FIX: Define authReducer before it is used.
 export const authReducer = (
   state: AuthState,
   action: AuthAction
@@ -62,7 +64,7 @@ export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({
     signOut(auth).then(() => {
       dispatch({ type: "LOGOUT" });
     });
-  }, []);
+  }, [dispatch]); // FIX: Added 'dispatch' to dependency array.
 
   const resetInactivityTimer = useCallback(() => {
     if (inactivityTimer.current) {

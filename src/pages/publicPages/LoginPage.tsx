@@ -74,7 +74,7 @@ const LoginPage: React.FC = () => {
       location: locationInfo,
     };
 
-    // --- [MODIFIED] Check if email is in the inviteList ---
+    // --- Check if email is in the inviteList ---
     try {
       const inviteListRef = collection(db, "inviteList");
       const q = query(inviteListRef, where("email", "==", email));
