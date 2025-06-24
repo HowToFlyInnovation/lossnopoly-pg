@@ -10,48 +10,23 @@ import SignOutIcon from "@/assets/icons/SignOutIcon.png";
 const Logo =
   "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/LoginLogo.png?alt=media&token=e189b962-fd15-4642-9d1f-28cfda595042";
 
-const TourIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-6 w-6"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={2}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M17 8l4 4m0 0l-4 4m4-4H3"
-    />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M12 20.25c4.97 0 9-4.03 9-9s-4.03-9-9-9-9 4.03-9 9c0 2.18.78 4.17 2.07 5.62"
-    />
-  </svg>
-);
-
 interface MenuItemProps {
   id: string;
   text: string;
   visibleContent?: string;
   icon: React.ReactNode;
-  // FIX: Make onClick handler's event type more specific and consistent
   onClick: (event: React.MouseEvent<HTMLDivElement>) => void;
   customTheme?: boolean;
   "data-tour-id"?: string;
 }
 
 interface PlatformSideMenuProps {
-  // FIX: Ensure this matches the type in IdeationPlatform
   handleMenuClick: (event: React.MouseEvent<HTMLElement>) => void;
   handleSignOut: (event: React.MouseEvent) => void;
   visibleContent: string;
   menuActive: boolean;
   setMenuActive: (active: boolean) => void;
   customTheme?: boolean;
-  onStartTour: () => void;
 }
 
 const menuItems = [
@@ -144,7 +119,6 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
   visibleContent,
   menuActive,
   setMenuActive,
-  onStartTour,
   customTheme = true,
 }) => {
   if (!menuActive) return null;
@@ -209,19 +183,6 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
             customTheme={customTheme}
             icon={RankingIcon}
             data-tour-id="menu-player-ranking"
-          />
-        </div>
-
-        <div className="w-full mx-auto mb-20">
-          <h3 className="text-black text-base font-bold pl-[10%] mb-1">Help</h3>
-          <MenuItem
-            id="start-tour"
-            onClick={onStartTour as any}
-            text="Start Tour"
-            icon={<TourIcon />}
-            customTheme={customTheme}
-            visibleContent={visibleContent}
-            data-tour-id="start-tour-button"
           />
         </div>
       </div>

@@ -15,6 +15,7 @@ import { costImpactToMonetaryValue } from "../../../lib/constants";
 interface HomePageViewProps {
   handleMissionClick: (contentId: string) => void;
   handleSignOut: () => void;
+  onStartTour: () => void;
 }
 
 interface ChallengeCardProps {
@@ -40,8 +41,6 @@ const TARGET_SAVINGS_MILLIONS = 25;
 const TARGET_SAVINGS_VALUE = TARGET_SAVINGS_MILLIONS * 1_000_000;
 
 // --- ASSET URLS ---
-const videoPlaceholderUrl =
-  "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/Video_Placeholder.png?alt=media&token=ac8ca86c-d067-4de9-9f7a-b1bdf59bff59";
 const supplyChainIconUrl =
   "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/SupplyChainIcon.png?alt=media&token=f159705a-e5bc-4845-b1b5-956d737e50b8";
 const innovationIconUrl =
@@ -86,7 +85,10 @@ const HowItWorksCard: React.FC<{
 );
 
 // --- HOME PAGE VIEW COMPONENT ---
-const HomePageView: React.FC<HomePageViewProps> = ({ handleMissionClick }) => {
+const HomePageView: React.FC<HomePageViewProps> = ({
+  handleMissionClick,
+  onStartTour,
+}) => {
   const [playerName, setPlayerName] = useState<string | null>(null);
   const [totalIdentifiedSavings, setTotalIdentifiedSavings] =
     useState<number>(0);
@@ -228,14 +230,12 @@ const HomePageView: React.FC<HomePageViewProps> = ({ handleMissionClick }) => {
                 that fuel growth and ensure sufficient savings over the next 3
                 years.
               </p>
-              <a
-                href={videoPlaceholderUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={onStartTour}
                 className="text-monopoly-red font-bold flex items-center gap-2 mb-4 hover:underline"
               >
-                <FaArrowRight /> Watch the short video to get started
-              </a>
+                <FaArrowRight /> Take the guide tour to explore the platform
+              </button>
               <div className="border-t border-gray-200 pt-4 mt-4">
                 <a
                   href="#"

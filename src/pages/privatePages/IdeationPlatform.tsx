@@ -50,6 +50,7 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
 }) => {
   const { dispatch } = useContext(AuthContext) as AuthContextType;
   const [isTourOpen, setIsTourOpen] = useState(false);
+  const onStartTour = () => setIsTourOpen(true);
 
   const handleSignOut = async () => {
     try {
@@ -77,6 +78,16 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
     setVisibleContent(path);
   };
 
+  const handleTourClose = () => {
+    setVisibleContent("IdeationSpace");
+    setIsTourOpen(false);
+    if (window.innerWidth > 768) {
+      setMenuActive(true);
+    } else {
+      setMenuActive(false);
+    }
+  };
+
   const mainContentClasses = `transition-all duration-300 ease-in-out ${
     menuActive ? "md:ml-[18%]" : "ml-0 w-full"
   }`;
@@ -88,6 +99,7 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
           <HomePageView
             handleMissionClick={handleMissionClick}
             handleSignOut={handleSignOut}
+            onStartTour={onStartTour}
           />
         );
       case "IdeationSpace":
@@ -112,7 +124,7 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
       <Tour
         steps={tourSteps}
         isOpen={isTourOpen}
-        onClose={() => setIsTourOpen(false)}
+        onClose={handleTourClose}
         onNavigate={handleTourNavigate}
         setMenuActive={setMenuActive}
       />
@@ -123,7 +135,6 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
         handleMenuClick={handleMenuClick}
         handleSignOut={handleSignOut}
         customTheme={customTheme}
-        onStartTour={() => setIsTourOpen(true)}
       />
 
       {!menuActive && (

@@ -2,7 +2,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import LoginLogo from "@/assets/LoginLogo.png";
-import LoginBackground from "@/assets/LoginBackground.png";
+import LoginBackground from "@/assets/LoginBackground.jpg";
 import { auth, db } from "../firebase/config";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { AuthContext, type AuthContextType } from "../context/AuthContext";
