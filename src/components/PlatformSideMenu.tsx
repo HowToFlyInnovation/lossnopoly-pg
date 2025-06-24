@@ -4,7 +4,7 @@ import PlayerPageIcon from "@/assets/icons/PlayerPageIcon.png";
 import AssessmentPageIcon from "@/assets/icons/AssessmentPageIcon.png";
 import HomePageIcon from "@/assets/icons/HomePageIcon.png";
 import IdeationSpacePageIcon from "@/assets/icons/IdeationSpacePageIcon.png";
-import DeepDiveIcon from "@/assets/icons/DeepDiveIcon.png";
+/* import DeepDiveIcon from "@/assets/icons/DeepDiveIcon.png";*/
 import SignOutIcon from "@/assets/icons/SignOutIcon.png";
 // Assuming your logo is in the `public` folder or handled by your build process
 const Logo =
@@ -41,11 +41,11 @@ const menuItems = [
 // ────────────────────────────────
 // ❷ Sub-challenge deep-dives
 // ────────────────────────────────
-const missionItems = [
+/*const missionItems = [
   { id: "Mission1", text: "E2E Touchless Supply Chain", icon: DeepDiveIcon },
   { id: "Mission2", text: "E2E Touchless Innovation", icon: DeepDiveIcon },
   { id: "Mission3", text: "Zero Waste", icon: DeepDiveIcon },
-];
+];*/
 
 const MenuItem: React.FC<MenuItemProps> = ({
   id,
@@ -130,9 +130,9 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
       </header>
 
       {/* Scrollable container for menu items */}
-      <div className="flex-grow overflow-y-auto">
+      <div className="flex-grow overflow-y-auto flex flex-col justify-between">
         {/* ── Main menu ─────────────────────────────────────────────────── */}
-        <div className="w-full mx-auto">
+        <div className="w-full mx-auto mt-8">
           <h3 className="text-black text-base font-bold pl-[10%] mb-1">Menu</h3>
           {menuItems.map((item) => (
             <MenuItem
@@ -146,7 +146,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
           ))}
         </div>
 
-        {/* ── Sub-challenge Deep-Dives ──────────────────────────────────── */}
+        {/* ── Sub-challenge Deep-Dives ──────────────────────────────────── 
         <div className="w-full mx-auto mt-12">
           <h3 className="text-black text-base font-bold pl-[10%] mb-1">
             Sub-challenges
@@ -161,12 +161,15 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
               icon={item.icon}
             />
           ))}
-        </div>
+        </div>*/}
 
         {/* ── Extra items & footer ──────────────────────────────────────── */}
         <hr className="w-full mt-12 border-white/10" />
 
-        <div className="w-full mx-auto mt-0">
+        <div className="w-full mx-auto mb-20">
+          <h3 className="text-black text-base font-bold pl-[10%] mb-1">
+            Game Stats
+          </h3>
           <MenuItem
             id="PlayerPageView"
             onClick={handleItemClick}
