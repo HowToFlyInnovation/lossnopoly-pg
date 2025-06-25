@@ -241,6 +241,9 @@ const IdeationSpaceView: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedIdeas, setSelectedIdeas] = useState<Idea[]>([]);
+  const [newlyCreatedIdeaId, setNewlyCreatedIdeaId] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     const fetchIdeas = onSnapshot(collection(db, "ideas"), (snapshot) => {
@@ -468,9 +471,12 @@ const IdeationSpaceView: React.FC = () => {
   };
 
   const handleOpenModal = () => setIsModalOpen(true);
-  const handleCloseModal = () => {
+  const handleCloseModal = (newIdeaId?: string) => {
     setIsModalOpen(false);
     setSelectedIdeas([]); // Clear selection after modal closes
+    if (newIdeaId) {
+      setNewlyCreatedIdeaId(newIdeaId);
+    }
   };
 
   const handleVote = async (voteType: "agree" | "disagree", item: Idea) => {
@@ -580,6 +586,7 @@ const IdeationSpaceView: React.FC = () => {
             isSelected={selectedIdeas.some((i) => i.id === item.id)}
             isSelectionLocked={isSelectionLocked}
             isDarkMode={false}
+            startWithEvaluationOpen={item.id === newlyCreatedIdeaId}
           />
         ))}
       </MasonryLayout>

@@ -108,6 +108,7 @@ interface IdeaTileProps {
   isSelectionLocked: boolean;
   isDarkMode: boolean; // New prop for dark mode
   "data-tour-id"?: string;
+  startWithEvaluationOpen?: boolean;
 }
 
 const missionColors: { [key: string]: string } = {
@@ -125,6 +126,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   isSelectionLocked,
   isDarkMode,
   "data-tour-id": dataTourId, // Destructure new prop
+  startWithEvaluationOpen = false,
 }) => {
   const { user } = useContext(AuthContext) as AuthContextType;
 
@@ -172,6 +174,12 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
 
   // --- Creator Check ---
   const isCreator = user?.uid === item.userId;
+
+  useEffect(() => {
+    if (startWithEvaluationOpen) {
+      setEvaluationVisible(true);
+    }
+  }, [startWithEvaluationOpen]);
 
   // Fetch invited players on component mount
   useEffect(() => {

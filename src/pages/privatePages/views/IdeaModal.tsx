@@ -27,7 +27,7 @@ interface InvitedPlayer {
 }
 
 interface IdeaModalProps {
-  onClose: () => void;
+  onClose: (newIdeaId?: string) => void;
   inspiredBy?: Idea[];
 }
 
@@ -418,7 +418,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
         FeasibilityScore: feasibilityEstimate,
       });
 
-      onClose();
+      onClose(docRef.id);
     } catch (err) {
       console.error("Error submitting idea:", err);
       setError("Failed to submit idea. Please try again.");
