@@ -19,10 +19,18 @@ interface HomePageViewProps {
   onStartTour: () => void;
 }
 
-interface ChallengeCardProps {
-  iconUrl: string;
+interface Challenge {
+  id: string;
+  emoji: string;
   title: string;
-  description: string;
+  shortDescription: string;
+  fullContent: {
+    intro: string;
+    paragraphs: string[];
+    listTitle?: string;
+    list?: string[];
+    challenge: string;
+  };
 }
 
 interface Idea {
@@ -36,13 +44,12 @@ interface Idea {
 interface Evaluation {
   ideaId: string;
   ImpactScore: string;
-  FeasibilityScore: string; // Added for risk-adjustment
+  FeasibilityScore: string;
 }
 
 const TARGET_SAVINGS_MILLIONS = 25;
 const TARGET_SAVINGS_VALUE = TARGET_SAVINGS_MILLIONS * 1_000_000;
 
-// A mapping from feasibility to a risk-adjustment multiplier.
 const feasibilityToRiskAdjustment: { [key: string]: number } = {
   "Very Easy To do": 0.9,
   Manageable: 0.7,
@@ -52,31 +59,71 @@ const feasibilityToRiskAdjustment: { [key: string]: number } = {
 };
 
 // --- ASSET URLS ---
-const supplyChainIconUrl =
-  "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/SupplyChainIcon.png?alt=media&token=f159705a-e5bc-4845-b1b5-956d737e50b8";
-const innovationIconUrl =
-  "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/InnovationIcon.png?alt=media&token=a3b44e89-2b77-4769-8587-1b4a9ed6e733";
-const wasteIconUrl =
-  "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/WasteIcon.png?alt=media&token=638d527e-9609-4f71-8a73-9299a48e3009";
-
 const chrisTopHatImage =
   "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/Video_Placeholder.png?alt=media&token=ac8ca86c-d067-4de9-9f7a-b1bdf59bff59";
 const monopolyJailImage =
   "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/ChrisOutOfJail.png?alt=media&token=159ff161-6ada-45eb-939a-f7eb795afb4c";
 
-// --- SUB-COMPONENTS ---
+// --- CHALLENGE DATA ---
+const challenges: Challenge[] = [
+  {
+    id: "supply-chain",
+    emoji: "🏗️",
+    title: "TOUCHLESS SUPPLY CHAIN",
+    shortDescription:
+      "How can we reduce 50% of the touches in our supply chain from the complete process of producing goods, from sourcing raw materials to delivering the finished product to customers?",
+    fullContent: {
+      intro:
+        "How can we reduce 50% of the touches in our supply chain from the complete process of producing goods, from sourcing raw materials to delivering the finished product to customers?",
+      paragraphs: [
+        "Whether you’re in a Plant or working with a Contract Manufacturer, in Operations or non-Operations, this is about making every step smoother, smarter and faster. We’re looking for ways to remove unnecessary work, reduce handoffs, and reimagine how things get done (think automation or digital tools), to boldly questioning whether certain steps need to exist at all.",
+        "Because fewer touches mean fewer time demands, lower costs and more time for what really matters.",
+      ],
+      challenge:
+        "Help reimagine how things get done, from raw materials arriving to finished products shipping out. No touch is off the table.",
+    },
+  },
+  {
+    id: "innovation",
+    emoji: "🚀",
+    title: "TOUCHLESS INNOVATION",
+    shortDescription:
+      "How can we reduce 50% of the effort it takes to launch something new including reducing our GMC costs by 50%?",
+    fullContent: {
+      intro:
+        "How can we reduce 50% of the effort it takes to launch something new including reducing our GMC costs by 50%?",
+      paragraphs: [
+        "From product concept to qualification, there's a LOT that goes into every new initiative. With the upcoming Initiative masterplan including 3D and Formula restages, we will place pressure on on our resources, capacity, and costs, but what if we could make it all simpler, faster and more efficient, without compromising quality?",
+      ],
+      listTitle: "We’re looking for ideas that:",
+      list: [
+        "Redesign workflows for fewer touches or rework",
+        "Automate manual steps (like master data, base plan or artwork processes)",
+        "Enable alternatives to online development and testing that eliminates the need for expensive full-scale qualifications",
+      ],
+      challenge:
+        "Help us build a launch engine that runs lean; optimising our processes and methods to streamline our initiatives minimising impact on resources, capacity and cost.",
+    },
+  },
+  {
+    id: "zero-waste",
+    emoji: "♻️",
+    title: "ZERO WASTE CHALLENGE",
+    shortDescription:
+      "How can we reduce 50% of the materials we waste in production?",
+    fullContent: {
+      intro: "How can we reduce 50% of the materials we waste in production?",
+      paragraphs: [
+        "Whether it’s scraps on the line, changeover, or processes losses, we know there’s gold hiding in our waste bins. What if we could halve that? Where are the hidden wins in our equipment, our processes or operating strategies to make it happen.",
+        "We're not just aiming for tweaks, we’re looking for breakthrough ideas that reduce material use at every site, from P&G sites to contract manufacturers.",
+      ],
+      challenge:
+        "Help us use less, waste less, maximise value from any waste that can’t be eliminated.",
+    },
+  },
+];
 
-const ChallengeCard: React.FC<ChallengeCardProps> = ({
-  iconUrl,
-  title,
-  description,
-}) => (
-  <div className="bg-white border border-gray-200 rounded-lg shadow-md p-6 text-center hover:shadow-xl transition-shadow duration-300 flex flex-col items-center h-full">
-    <img src={iconUrl} alt={`${title} icon`} className="h-16 mb-4" />
-    <h3 className="text-xl font-bold text-gray-800 mb-2 uppercase">{title}</h3>
-    <p className="text-base text-gray-600">{description}</p>
-  </div>
-);
+// --- SUB-COMPONENTS ---
 
 const HowItWorksCard: React.FC<{
   icon: React.ReactNode;
@@ -109,11 +156,18 @@ const HomePageView: React.FC<HomePageViewProps> = ({
   const [loadingSavings, setLoadingSavings] = useState(true);
   const [isInfoVisible, setIsInfoVisible] = useState(false);
   const { user } = useContext(AuthContext) as AuthContextType;
+  const [expandedChallengeId, setExpandedChallengeId] = useState<string | null>(
+    null
+  );
 
   const savingsTrackerRef = useRef<HTMLDivElement>(null);
 
   const handleScrollToTracker = () => {
     savingsTrackerRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleChallengeClick = (id: string) => {
+    setExpandedChallengeId(id);
   };
 
   useEffect(() => {
@@ -225,9 +279,13 @@ const HomePageView: React.FC<HomePageViewProps> = ({
     100
   );
 
+  const expandedChallenge =
+    challenges.find((c) => c.id === expandedChallengeId) || null;
+  const compactChallenges =
+    challenges.filter((c) => c.id !== expandedChallengeId) || [];
+
   return (
     <div className="bg-gray-100 min-h-screen">
-      {/* --- HEADER --- */}
       <header
         data-tour-id="home-welcome"
         className="text-center relative px-5 pt-20 pb-12 bg-white shadow-md"
@@ -243,7 +301,6 @@ const HomePageView: React.FC<HomePageViewProps> = ({
 
       <main className="p-8 md:p-12 bg-monopoly-green-light">
         <div className="max-w-6xl mx-auto">
-          {/* --- TOP SECTION: Intro & Image --- */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center mb-16">
             <div className="text-left bg-white p-8 rounded-lg shadow-md">
               <p className="text-gray-700 mb-6">
@@ -282,7 +339,6 @@ const HomePageView: React.FC<HomePageViewProps> = ({
             </div>
           </div>
 
-          {/* --- HIGH STAKES CHALLENGES --- */}
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-800 mb-2">
               Our Three High Stakes Challenges
@@ -293,26 +349,95 @@ const HomePageView: React.FC<HomePageViewProps> = ({
               possibilities. Where do you see hidden potential, or a chance to
               do things differently?
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <ChallengeCard
-                iconUrl={supplyChainIconUrl}
-                title="TOUCHLESS SUPPLY CHAIN"
-                description="How can we reduce 50% of the touches and complexity from the complete process of producing goods?"
-              />
-              <ChallengeCard
-                iconUrl={innovationIconUrl}
-                title="TOUCHLESS INNOVATION"
-                description="How can we reduce 50% of the cost to prove to learn something new including reducing our GMC costs by 50%?"
-              />
-              <ChallengeCard
-                iconUrl={wasteIconUrl}
-                title="ZERO WASTE CHALLENGE"
-                description="How can we reduce our material and packaging waste in production?"
-              />
+            <div className="flex flex-col md:flex-row gap-8">
+              {expandedChallenge ? (
+                <>
+                  <div className="w-full md:w-3/4">
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-xl p-8 text-left h-full flex flex-col">
+                      <div className="flex justify-between items-start">
+                        <span className="text-6xl mb-4">
+                          {expandedChallenge.emoji}
+                        </span>
+                        <button
+                          onClick={() => handleChallengeClick("")}
+                          className="text-sm text-gray-500 text-bold hover:text-gray-800 cursor-pointer"
+                        >
+                          <b>Read Less X </b>
+                        </button>
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-800 mb-4 uppercase">
+                        {expandedChallenge.title}
+                      </h3>
+                      <div className="text-base text-gray-600 space-y-4">
+                        <p className="font-semibold text-gray-700">
+                          {expandedChallenge.fullContent.intro}
+                        </p>
+                        {expandedChallenge.fullContent.paragraphs.map(
+                          (p, i) => (
+                            <p key={i}>{p}</p>
+                          )
+                        )}
+                        {expandedChallenge.fullContent.listTitle && (
+                          <h4 className="font-bold text-gray-700 pt-2">
+                            {expandedChallenge.fullContent.listTitle}
+                          </h4>
+                        )}
+                        {expandedChallenge.fullContent.list && (
+                          <ul className="list-disc list-inside space-y-1">
+                            {expandedChallenge.fullContent.list.map(
+                              (item, i) => (
+                                <li key={i}>{item}</li>
+                              )
+                            )}
+                          </ul>
+                        )}
+                        <h4 className="font-bold text-gray-700 pt-2">
+                          Your Challenge:
+                        </h4>
+                        <p>{expandedChallenge.fullContent.challenge}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="w-full md:w-1/4 flex flex-col gap-8">
+                    {compactChallenges.map((challenge) => (
+                      <div
+                        key={challenge.id}
+                        onClick={() => handleChallengeClick(challenge.id)}
+                        className="bg-white border border-gray-200 rounded-lg shadow-md p-6 text-center hover:shadow-xl transition-shadow duration-300 flex flex-col items-center justify-center cursor-pointer h-full"
+                      >
+                        <span className="text-5xl mb-3">{challenge.emoji}</span>
+                        <h3 className="text-lg font-bold text-gray-800 uppercase">
+                          {challenge.title}
+                        </h3>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                challenges.map((challenge) => (
+                  <div
+                    key={challenge.id}
+                    className="w-full md:w-1/3 flex"
+                    onClick={() => handleChallengeClick(challenge.id)}
+                  >
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-md p-6 text-center hover:shadow-xl transition-shadow duration-300 flex flex-col items-center h-full cursor-pointer">
+                      <span className="text-5xl mb-4">{challenge.emoji}</span>
+                      <h3 className="text-xl font-bold text-gray-800 mb-2 uppercase">
+                        {challenge.title}
+                      </h3>
+                      <p className="text-base text-gray-600 flex-grow">
+                        {challenge.shortDescription}
+                      </p>
+                      <button className="text-monopoly-red-darker font-semibold mt-4 cursor-pointer">
+                        Read More
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
-          {/* --- HOW TO PARTICIPATE --- */}
           <div className="text-center mb-16 bg-white p-12 rounded-lg shadow-lg">
             <h2 className="text-3xl font-bold text-gray-800 mb-2">
               How to Participate?
@@ -348,7 +473,6 @@ const HomePageView: React.FC<HomePageViewProps> = ({
             </button>
           </div>
 
-          {/* --- SAVINGS TRACKER --- */}
           <div
             ref={savingsTrackerRef}
             id="savings-tracker"
