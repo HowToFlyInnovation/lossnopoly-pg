@@ -178,7 +178,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
           <MenuItem
             id="PlayerRankingView"
             onClick={handleItemClick as any}
-            text="Player Ranking"
+            text="Rankings"
             visibleContent={visibleContent}
             customTheme={customTheme}
             icon={RankingIcon}

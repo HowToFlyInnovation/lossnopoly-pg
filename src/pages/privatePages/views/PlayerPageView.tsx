@@ -14,7 +14,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { FaInfoCircle } from "react-icons/fa"; // Import the info icon
+import { FaInfoCircle } from "react-icons/fa";
 
 // --- TYPE DEFINITIONS ---
 interface PlayerStats {
@@ -34,11 +34,16 @@ interface DailyStat {
   xpCollected: number;
 }
 
+interface PlayerDetails {
+  email: string;
+  team: string;
+}
+
 // --- [NEW] INFO MODAL COMPONENT ---
 const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
+      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-5000"
       onClick={onClose}
     >
       <div
@@ -114,11 +119,14 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 to see the exact numbers for a specific day.
               </li>
               <li>
-                <strong>"Only Me" vs. "All Players" Toggle:</strong> Use the
-                toggle at the top of this section to switch the view. 'Only Me'
-                shows your personal activity, while 'All Players' shows the
-                combined activity of everyone in the ideation space. This is
-                great for comparing your contributions to the overall trends.
+                <strong>
+                  "Only Me" vs. "All Players" vs. "Other Teams" drop-down:
+                </strong>{" "}
+                Use the drop-down at the top of this section to switch the view.
+                'Only Me' shows your personal activity, while 'All Players'
+                shows the combined activity of everyone in the ideation space.
+                This is great for comparing your contributions to the overall
+                trends.
               </li>
             </ul>
           </div>
@@ -132,17 +140,30 @@ const PlayerPageView = () => {
   const authContext = useContext<AuthContextType | null>(AuthContext);
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
-  const [showAllPlayers, setShowAllPlayers] = useState(false);
+  const [filter, setFilter] = useState("me");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false); // State for info modal
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [playerDetails, setPlayerDetails] = useState<PlayerDetails[]>([]);
 
   if (!authContext) {
     return <div>Loading...</div>;
   }
 
   const { user: currentUser } = authContext;
+
+  useEffect(() => {
+    const fetchPlayerDetails = async () => {
+      const playerDetailsCollection = collection(db, "playerDetailsCollection");
+      const playerDetailsSnapshot = await getDocs(playerDetailsCollection);
+      const details = playerDetailsSnapshot.docs.map(
+        (doc) => doc.data() as PlayerDetails
+      );
+      setPlayerDetails(details);
+    };
+    fetchPlayerDetails();
+  }, []);
 
   useEffect(() => {
     const fetchAndProcessData = async () => {
@@ -152,12 +173,17 @@ const PlayerPageView = () => {
         return;
       }
 
-      const [ideasSnapshot, commentsSnapshot, evaluationsSnapshot] =
-        await Promise.all([
-          getDocs(collection(db, "ideas")),
-          getDocs(collection(db, "comments")),
-          getDocs(collection(db, "evaluations")),
-        ]);
+      const [
+        ideasSnapshot,
+        commentsSnapshot,
+        evaluationsSnapshot,
+        playersSnapshot,
+      ] = await Promise.all([
+        getDocs(collection(db, "ideas")),
+        getDocs(collection(db, "comments")),
+        getDocs(collection(db, "evaluations")),
+        getDocs(collection(db, "players")),
+      ]);
 
       const ideas = ideasSnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -171,8 +197,25 @@ const PlayerPageView = () => {
         id: doc.id,
         ...doc.data(),
       })) as any[];
+      const players = playersSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as any[];
 
-      // --- All-Time Stats Calculation ---
+      const getPlayerTeam = (email: string) => {
+        const player = playerDetails.find((p) => p.email === email);
+        return player ? player.team : "OTHERS";
+      };
+
+      const filteredPlayerEmails = players
+        .filter((p) => {
+          if (filter === "me") return p.id === currentUser.uid;
+          if (filter === "all") return true;
+          return getPlayerTeam(p.email) === filter;
+        })
+        .map((p) => p.email);
+
+      // --- All-Time Stats Calculation for the current user ---
       const allPlayerIdeas = ideas.filter((i) => i.userId === currentUser.uid);
       const allPlayerComments = comments.filter(
         (c) => c.userId === currentUser.uid
@@ -267,9 +310,19 @@ const PlayerPageView = () => {
         return dailyStatsMap.get(date)!;
       };
 
+      const filterActionByUser = (userEmail: string) => {
+        if (filter === "me") return userEmail === currentUser.email;
+        if (filter === "all") return true;
+        return filteredPlayerEmails.includes(userEmail);
+      };
+
       ideas.forEach((doc) => {
-        const shouldCount = showAllPlayers || doc.userId === currentUser.uid;
-        if (shouldCount && doc.createdAt?.toDate) {
+        const player = players.find((p) => p.id === doc.userId);
+        if (
+          player &&
+          filterActionByUser(player.email) &&
+          doc.createdAt?.toDate
+        ) {
           const date = doc.createdAt.toDate().toISOString().split("T")[0];
           const stats = getDailyStat(date);
           stats.ideasCreated += 1;
@@ -277,8 +330,12 @@ const PlayerPageView = () => {
         }
       });
       comments.forEach((doc) => {
-        const shouldCount = showAllPlayers || doc.userId === currentUser.uid;
-        if (shouldCount && doc.createdAt?.toDate) {
+        const player = players.find((p) => p.id === doc.userId);
+        if (
+          player &&
+          filterActionByUser(player.email) &&
+          doc.createdAt?.toDate
+        ) {
           const date = doc.createdAt.toDate().toISOString().split("T")[0];
           const stats = getDailyStat(date);
           stats.commentsMade += 1;
@@ -286,9 +343,12 @@ const PlayerPageView = () => {
         }
       });
       evaluations.forEach((doc) => {
-        const shouldCount =
-          showAllPlayers || doc.EvaluatorUserId === currentUser.uid;
-        if (shouldCount && doc.EvaluationDate?.toDate) {
+        const player = players.find((p) => p.id === doc.EvaluatorUserId);
+        if (
+          player &&
+          filterActionByUser(player.email) &&
+          doc.EvaluationDate?.toDate
+        ) {
           const date = doc.EvaluationDate.toDate().toISOString().split("T")[0];
           const stats = getDailyStat(date);
           stats.evaluationsMade += 1;
@@ -304,9 +364,10 @@ const PlayerPageView = () => {
               inspiringIdeaAuthorId !== idea.userId &&
               idea.createdAt?.toDate
             ) {
-              const shouldCount =
-                showAllPlayers || inspiringIdeaAuthorId === currentUser.uid;
-              if (shouldCount) {
+              const player = players.find(
+                (p) => p.id === inspiringIdeaAuthorId
+              );
+              if (player && filterActionByUser(player.email)) {
                 const date = idea.createdAt
                   .toDate()
                   .toISOString()
@@ -346,7 +407,7 @@ const PlayerPageView = () => {
     if (authContext.authIsReady) {
       fetchAndProcessData();
     }
-  }, [currentUser, showAllPlayers, authContext.authIsReady]);
+  }, [currentUser, filter, authContext.authIsReady, playerDetails]);
 
   const handleEditPicture = () => {
     fileInputRef.current?.click();
@@ -540,12 +601,18 @@ const PlayerPageView = () => {
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-bold text-gray-800">Daily Activity</h3>
             <select
-              value={showAllPlayers ? "all" : "me"}
-              onChange={(e) => setShowAllPlayers(e.target.value === "all")}
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
               className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
             >
               <option value="me">Only Me</option>
               <option value="all">All Players</option>
+              <option value="BLOIS PLANT">Only Blois Plant</option>
+              <option value="EUROPE TEAM">Only Europe Team</option>
+              <option value="GLOBAL TEAM">Only Global Team</option>
+              <option value="URLATI PLANT">Only Urlati Plant</option>
+              <option value="WARSAW (ESS/SNH)">Only Warsaw (ESS/SNH)</option>
+              <option value="OTHERS">Only Others</option>
             </select>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

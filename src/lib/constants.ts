@@ -6,8 +6,8 @@ export const costImpactOptions = [
   "$50K-$100K",
   "$100K-$250K",
   "$250K-$500K",
-  "$500K-$1M",
-  "$1M+",
+  "$500K-$1MM",
+  "$1MM+",
 ];
 
 export const feasibilityOptions = [
@@ -25,8 +25,8 @@ export const costImpactToMonetaryValue: { [key: string]: number } = {
   "$50K-$100K": 75000,
   "$100K-$250K": 175000,
   "$250K-$500K": 375000,
-  "$500K-$1M": 750000,
-  "$1M+": 1500000,
+  "$500K-$1MM": 750000,
+  "$1MM+": 1500000,
 };
 
 /**

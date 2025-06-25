@@ -59,7 +59,7 @@ const missionChartColors: { [key: string]: string } = {
 const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
+      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-5000"
       onClick={onClose}
     >
       <div
@@ -89,7 +89,7 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
               <p className="font-bold">
                 <img
-                  src="https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/PlayerDashboardVisual1.png?alt=media&token=16274965-6693-4a5e-b15b-67321fb43372"
+                  src="https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/IdeaAssessmentVisual1.png?alt=media&token=32dfe859-3851-405a-81c6-27587143ce5e"
                   className="w-full"
                 />
               </p>
@@ -197,7 +197,7 @@ const ImpactFeasibilityChart: React.FC<{
   const chartIdeas = selectedIdea ? [selectedIdea] : ideas;
 
   return (
-    <div className="w-full bg-gray-50 p-6 rounded-lg shadow-inner relative aspect-square">
+    <div className="w-[90%] md:w-[60%] ml-[5%] md:ml-[20%] bg-gray-50 p-6 rounded-lg shadow-inner relative aspect-square">
       {/* Grid lines and labels */}
       <div className="absolute top-0 left-1/2 w-px h-full bg-gray-300"></div>
       <div className="absolute top-1/2 left-0 h-px w-full bg-gray-300"></div>
@@ -219,7 +219,7 @@ const ImpactFeasibilityChart: React.FC<{
         Negative
       </span>
       <span className="absolute bottom-[-1.5rem] right-0 translate-x-1/2 text-gray-500 text-xs">
-        $1M+
+        $1MM+
       </span>
 
       {/* Dots representing ideas */}

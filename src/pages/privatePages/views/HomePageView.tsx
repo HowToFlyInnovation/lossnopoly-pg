@@ -448,20 +448,21 @@ const HomePageView: React.FC<HomePageViewProps> = ({
               contribute in three key ways.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <HowItWorksCard icon={<FaLightbulb />} title="Share an idea">
+              <HowItWorksCard icon={<FaLightbulb />} title="Ideate">
                 Submit your innovative solutions. Big or small, every idea has
                 the potential to make a huge impact.
                 <br />
                 <em className="text-sm">Remember it's anonymous.</em>
               </HowItWorksCard>
-              <HowItWorksCard icon={<FaBullseye />} title="Evaluate ideas">
+              <HowItWorksCard icon={<FaBullseye />} title="Evaluate">
                 Assess ideas from your colleagues on their impact and
                 feasibility. Your perspective is crucial for identifying top
                 solutions.
               </HowItWorksCard>
-              <HowItWorksCard icon={<FaComments />} title="Join the Discussion">
-                Comment, ask questions, and build upon the concepts shared by
-                others. Collaboration is the key to refining great ideas.
+              <HowItWorksCard icon={<FaComments />} title="Collaborate">
+                Comment, ask questions, and build upon the ideas of others by
+                combining them. Collaboration is the key to creating and shaping
+                great ideas.
               </HowItWorksCard>
             </div>
             <button
@@ -510,13 +511,13 @@ const HomePageView: React.FC<HomePageViewProps> = ({
                           <strong>Challenging:</strong> 25%
                         </li>
                         <li>
-                          <strong>Achievable:</strong> 50%
+                          <strong>Achievable with Effort:</strong> 50%
                         </li>
                         <li>
                           <strong>Manageable:</strong> 70%
                         </li>
                         <li>
-                          <strong>Very Easy:</strong> 90%
+                          <strong>Very Easy To Do:</strong> 90%
                         </li>
                       </ul>
                     </li>
@@ -556,11 +557,11 @@ const HomePageView: React.FC<HomePageViewProps> = ({
                   </div>
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>$0</span>
-                    <span>$5M</span>
-                    <span>$10M</span>
-                    <span>$15M</span>
-                    <span>$20M</span>
-                    <span>$25M</span>
+                    <span>$5MM</span>
+                    <span>$10MM</span>
+                    <span>$15MM</span>
+                    <span>$20MM</span>
+                    <span>$25MM</span>
                   </div>
                   <p className="text-lg font-semibold text-gray-700 mt-4">
                     Current Identified Savings:{" "}

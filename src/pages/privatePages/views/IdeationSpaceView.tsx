@@ -53,17 +53,6 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         </div>
 
         <div className="space-y-6 text-gray-300">
-          {/* Video Placeholder */}
-          <div className="bg-gray-700 p-4 rounded-lg text-center">
-            <p className="font-bold">
-              [VIDEO: A quick walkthrough of the Ideation Space]
-            </p>
-            <p className="text-sm mt-1">
-              Watch this short video to get a complete overview of all the
-              features on this page.
-            </p>
-          </div>
-
           <div>
             <h3 className="text-xl font-semibold mb-2 text-white">
               1. Sharing a New Idea
@@ -71,7 +60,7 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <p>
               To submit a completely new idea, simply click the{" "}
               <strong>+ Share Idea</strong> button at the top right of the page.
-              A form will appear where you can detail your concept.
+              A modal will appear where you can detail your idea.
             </p>
             <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
               <p className="font-bold">
@@ -95,7 +84,7 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </span>
               ) on up to three idea cards to select them. The button at the top
               will change to <strong>Build upon ideas</strong>. Clicking this
-              will open the idea submission form, pre-linking your new idea to
+              will open the idea submission modal, pre-linking your new idea to
               the ones that inspired you.
             </p>
             <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
@@ -153,10 +142,11 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 full description and reasoning.
               </li>
               <li>
-                <strong>Evaluate Card:</strong> Once expanded, you can provide
-                your own assessment of the idea's cost impact and feasibility.
-                You can also toggle between your evaluation and the average
-                score from all users.
+                <strong>Evaluate Card:</strong> Click on the STAR ican at the
+                bottom of the card to provide your own assessment of the idea's
+                cost impact and feasibility. You can also toggle between your
+                evaluation and the average score from all users. But this option
+                will only be available after you place your evaluation.
               </li>
               <li>
                 <strong>
