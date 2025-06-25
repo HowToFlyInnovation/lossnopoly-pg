@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { db } from "../../firebase/config";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { AuthContext, type AuthContextType } from "../../context/AuthContext";
@@ -8,6 +8,7 @@ import {
   FaBullseye,
   FaComments,
   FaArrowRight,
+  FaQuestionCircle,
 } from "react-icons/fa";
 import { costImpactToMonetaryValue } from "../../../lib/constants";
 
@@ -35,10 +36,20 @@ interface Idea {
 interface Evaluation {
   ideaId: string;
   ImpactScore: string;
+  FeasibilityScore: string; // Added for risk-adjustment
 }
 
 const TARGET_SAVINGS_MILLIONS = 25;
 const TARGET_SAVINGS_VALUE = TARGET_SAVINGS_MILLIONS * 1_000_000;
+
+// A mapping from feasibility to a risk-adjustment multiplier.
+const feasibilityToRiskAdjustment: { [key: string]: number } = {
+  "Very Easy To do": 0.9,
+  Manageable: 0.7,
+  "Achievable with Effort": 0.5,
+  Challenging: 0.25,
+  "Very Challenging": 0.1,
+};
 
 // --- ASSET URLS ---
 const supplyChainIconUrl =
@@ -48,7 +59,6 @@ const innovationIconUrl =
 const wasteIconUrl =
   "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/WasteIcon.png?alt=media&token=638d527e-9609-4f71-8a73-9299a48e3009";
 
-// TODO: Replace these with the actual URLs for your images
 const chrisTopHatImage =
   "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/Video_Placeholder.png?alt=media&token=ac8ca86c-d067-4de9-9f7a-b1bdf59bff59";
 const monopolyJailImage =
@@ -97,7 +107,14 @@ const HomePageView: React.FC<HomePageViewProps> = ({
   const [averageMonetaryValuePerIdea, setAverageMonetaryValuePerIdea] =
     useState<number>(0);
   const [loadingSavings, setLoadingSavings] = useState(true);
+  const [isInfoVisible, setIsInfoVisible] = useState(false);
   const { user } = useContext(AuthContext) as AuthContextType;
+
+  const savingsTrackerRef = useRef<HTMLDivElement>(null);
+
+  const handleScrollToTracker = () => {
+    savingsTrackerRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
     const fetchPlayerData = async () => {
@@ -138,6 +155,7 @@ const HomePageView: React.FC<HomePageViewProps> = ({
           return {
             ideaId: data.ideaId as string,
             ImpactScore: data.ImpactScore as string,
+            FeasibilityScore: data.FeasibilityScore as string,
           };
         }) as Evaluation[];
 
@@ -155,17 +173,21 @@ const HomePageView: React.FC<HomePageViewProps> = ({
         ideas.forEach((idea) => {
           const ideaEvaluations = evaluationsByIdea[idea.id] || [];
           if (ideaEvaluations.length > 0) {
-            let sumMonetaryValue = 0;
+            let sumRiskAdjustedValue = 0;
             ideaEvaluations.forEach((evalItem) => {
               const monetaryValue =
-                costImpactToMonetaryValue[evalItem.ImpactScore];
-              if (monetaryValue !== undefined) {
-                sumMonetaryValue += monetaryValue;
+                costImpactToMonetaryValue[evalItem.ImpactScore] || 0;
+              const riskAdjustment =
+                feasibilityToRiskAdjustment[evalItem.FeasibilityScore] || 0;
+              const riskAdjustedValue = monetaryValue * riskAdjustment;
+
+              if (riskAdjustedValue !== undefined) {
+                sumRiskAdjustedValue += riskAdjustedValue;
               }
             });
-            const averageMonetaryValue =
-              sumMonetaryValue / ideaEvaluations.length;
-            totalSavings += averageMonetaryValue;
+            const averageRiskAdjustedValue =
+              sumRiskAdjustedValue / ideaEvaluations.length;
+            totalSavings += averageRiskAdjustedValue;
             ideasContributing++;
           }
         });
@@ -237,9 +259,9 @@ const HomePageView: React.FC<HomePageViewProps> = ({
                 <FaArrowRight /> Take the guide tour to explore the platform
               </button>
               <div className="border-t border-gray-200 pt-4 mt-4">
-                <a
-                  href="#"
-                  className="text-monopoly-red font-bold flex items-center gap-2 hover:underline"
+                <button
+                  onClick={handleScrollToTracker}
+                  className="text-monopoly-red font-bold flex items-center gap-2 hover:underline text-left"
                 >
                   <FaArrowRight />
                   <div>
@@ -248,7 +270,7 @@ const HomePageView: React.FC<HomePageViewProps> = ({
                     <br />
                     <span>Are we close enough to break Chris out yet!?</span>
                   </div>
-                </a>
+                </button>
               </div>
             </div>
             <div className="flex justify-center items-center">
@@ -327,10 +349,71 @@ const HomePageView: React.FC<HomePageViewProps> = ({
           </div>
 
           {/* --- SAVINGS TRACKER --- */}
-          <div className="text-center bg-white p-12 rounded-lg shadow-lg">
-            <h2 className="text-3xl font-bold text-gray-800 mb-8">
-              Total Identified YoY Savings
-            </h2>
+          <div
+            ref={savingsTrackerRef}
+            id="savings-tracker"
+            className="text-center bg-white p-12 rounded-lg shadow-lg"
+          >
+            <div className="relative flex items-center justify-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-800">
+                Total Identified Annual Savings
+              </h2>
+              <button
+                onClick={() => setIsInfoVisible(!isInfoVisible)}
+                className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                aria-label="Show calculation info"
+              >
+                <FaQuestionCircle size={24} />
+              </button>
+              {isInfoVisible && (
+                <div className="absolute top-full right-0 mt-2 w-120 bg-white border border-gray-200 rounded-lg shadow-xl p-4 z-10 text-left">
+                  <h4 className="font-bold text-md mb-2">
+                    How is this calculated?
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    This is a <b>risk-adjusted</b> forecast. The savings from
+                    each evaluation are weighted by a risk factor based on its
+                    feasibility.
+                  </p>
+                  <ol className="list-decimal list-inside text-sm text-gray-600 mt-2 space-y-1">
+                    <li>
+                      An idea's monetary value is multiplied by a risk factor:
+                      <ul className="list-disc list-inside pl-4 mt-1">
+                        <li>
+                          <strong>Very Challenging:</strong> 10%
+                        </li>
+                        <li>
+                          <strong>Challenging:</strong> 25%
+                        </li>
+                        <li>
+                          <strong>Achievable:</strong> 50%
+                        </li>
+                        <li>
+                          <strong>Manageable:</strong> 70%
+                        </li>
+                        <li>
+                          <strong>Very Easy:</strong> 90%
+                        </li>
+                      </ul>
+                    </li>
+                    <li>
+                      We average these risk-adjusted values for each idea.{" "}
+                      <br />
+                      <b>
+                        So e.g. the average cost saving estimate is $500K and
+                        the average Feasibility is Achievable, the value taken
+                        into account from that idea will be $500k*0.5 = $250K.
+                      </b>
+                    </li>
+                    <li>
+                      The total is the sum of these averages for all evaluated
+                      ideas.
+                    </li>
+                  </ol>
+                </div>
+              )}
+            </div>
+
             <div className="flex flex-col items-center justify-center">
               <img
                 src={monopolyJailImage}
@@ -364,7 +447,7 @@ const HomePageView: React.FC<HomePageViewProps> = ({
                     <p className="text-md text-gray-600 mt-2">
                       This is based on{" "}
                       <strong>{numberOfIdeasWithEvaluations}</strong> ideas with
-                      an average estimated saving of{" "}
+                      an average risk-adjusted saving of{" "}
                       <strong>
                         {formatCurrency(averageMonetaryValuePerIdea)}
                       </strong>{" "}

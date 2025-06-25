@@ -136,6 +136,30 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <span className="font-bold text-green-400">+5 XP</span> (per day
                 in the streak)
               </li>
+              <li>
+                <strong>Idea you created gets shortlisted</strong>{" "}
+                <span className="font-bold text-green-400">+20 XP</span>
+              </li>
+              <li>
+                <strong>Idea you inspired gets shortlisted</strong>{" "}
+                <span className="font-bold text-green-400">+20 XP</span>
+              </li>
+              <li>
+                <strong>Idea you scored high gets shorltisted</strong>{" "}
+                <span className="font-bold text-green-400">+10 XP</span>
+              </li>
+              <li>
+                <strong>Idea you scored high gets NOT shorltisted</strong>{" "}
+                <span className="font-bold text-red-400">-3 XP</span>
+              </li>
+              <li>
+                <strong>Idea you scored low gets shorltisted</strong>{" "}
+                <span className="font-bold text-red-400">-5 XP</span>
+              </li>
+              <li>
+                <strong>Idea you scored low gets shorltisted</strong>{" "}
+                <span className="font-bold text-green-400">+5 XP</span>
+              </li>
             </ul>
           </div>
         </div>
