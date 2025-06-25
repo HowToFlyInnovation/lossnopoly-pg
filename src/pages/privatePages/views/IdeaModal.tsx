@@ -48,7 +48,7 @@ const FeasibilityHelpModal: React.FC<{ onClose: () => void }> = ({
         </div>
         <div className="space-y-4 text-sm">
           <div>
-            <h4 className="font-bold text-blue-300">Very Simple</h4>
+            <h4 className="font-bold text-blue-300">Very Easy To do</h4>
             <p className="text-gray-300">
               Suggests that the idea can be executed effortlessly with little
               planning or resources required, making it a quick and
@@ -93,7 +93,37 @@ const FeasibilityHelpModal: React.FC<{ onClose: () => void }> = ({
     </div>
   );
 };
-
+// Confirmation Modal for Cancel Action
+const CancelConfirmationModal: React.FC<{
+  onConfirm: () => void;
+  onCancel: () => void;
+}> = ({ onConfirm, onCancel }) => {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-[50002]">
+      <div className="bg-gray-800 text-white p-8 rounded-lg shadow-2xl max-w-sm w-full">
+        <h3 className="text-xl font-bold mb-4">Unsaved Changes</h3>
+        <p className="mb-6">
+          You have unsaved changes. Are you sure you want to cancel? Your
+          progress will be lost.
+        </p>
+        <div className="flex justify-end gap-4">
+          <button
+            onClick={onCancel}
+            className="py-2 px-4 bg-gray-600 rounded-lg hover:bg-gray-500"
+          >
+            No, continue editing
+          </button>
+          <button
+            onClick={onConfirm}
+            className="py-2 px-4 bg-red-600 rounded-lg hover:bg-red-700 font-semibold"
+          >
+            Yes, cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 const missionOptions = [
   "E2E Touchless Supply Chain",
   "E2E Touchless Innovation",
@@ -141,16 +171,15 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
   const [shortDescription, setShortDescription] = useState("");
   const [reasoning, setReasoning] = useState("");
   const [ideationMission, setIdeationMission] = useState("");
-  const [costEstimate, setCostEstimate] = useState(costImpactOptions[1]); // Default to second option
-  const [feasibilityEstimate, setFeasibilityEstimate] = useState(
-    feasibilityOptions[0]
-  ); // Default to first option
+  const [costEstimate, setCostEstimate] = useState(""); // Default to empty
+  const [feasibilityEstimate, setFeasibilityEstimate] = useState(""); // Default to empty
   const [ideaImage, setIdeaImage] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFeasibilityHelpVisible, setIsFeasibilityHelpVisible] =
     useState(false); // New state for help modal
-
+  const [isDirty, setIsDirty] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   // States for "People to involve" with @ feature
   const [peopleToInvolveInput, setPeopleToInvolveInput] = useState("");
   const [involvedPeople, setInvolvedPeople] = useState<string[]>([]); // Store display names
@@ -163,7 +192,18 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
 
   const MAX_TITLE_LENGTH = 30;
   const MIN_TITLE_LENGTH = 3;
+  const handleCancel = () => {
+    if (isDirty) {
+      setShowCancelConfirm(true);
+    } else {
+      onClose();
+    }
+  };
 
+  const handleConfirmCancel = () => {
+    setShowCancelConfirm(false);
+    onClose();
+  };
   useEffect(() => {
     const fetchInvitedPlayers = async () => {
       try {
@@ -223,18 +263,20 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
   ) => {
     const text = e.target.value;
     setPeopleToInvolveInput(text);
-
+    setIsDirty(true);
     const atIndex = text.lastIndexOf("@");
     if (atIndex > -1) {
       const searchTerm = text.substring(atIndex + 1).toLowerCase();
-      const filtered = allInvitedPlayers.filter(
-        (player) =>
-          player.firstName.toLowerCase().includes(searchTerm) ||
-          player.lastName.toLowerCase().includes(searchTerm) ||
-          `${player.firstName} ${player.lastName}`
-            .toLowerCase()
-            .includes(searchTerm)
-      );
+      const filtered = allInvitedPlayers
+        .filter(
+          (player) =>
+            player.firstName.toLowerCase().includes(searchTerm) ||
+            player.lastName.toLowerCase().includes(searchTerm) ||
+            `${player.firstName} ${player.lastName}`
+              .toLowerCase()
+              .includes(searchTerm)
+        )
+        .sort((a, b) => a.lastName.localeCompare(b.lastName)); // Sort by last name
       setPeopleSuggestions(filtered);
     } else {
       setPeopleSuggestions([]);
@@ -259,9 +301,16 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
       setError("You must be logged in to submit an idea.");
       return;
     }
-    if (!ideaTitle || !shortDescription || !reasoning || !ideationMission) {
+    if (
+      !ideaTitle ||
+      !shortDescription ||
+      !reasoning ||
+      !ideationMission ||
+      !costEstimate ||
+      !feasibilityEstimate
+    ) {
       setError(
-        "Please fill in all required fields, including the sub-challenge."
+        "Please fill in all required fields, including the sub-challenge, cost, and feasibility."
       );
       return;
     }
@@ -385,6 +434,12 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
           onClose={() => setIsFeasibilityHelpVisible(false)}
         />
       )}
+      {showCancelConfirm && (
+        <CancelConfirmationModal
+          onConfirm={handleConfirmCancel}
+          onCancel={() => setShowCancelConfirm(false)}
+        />
+      )}
       <div className="bg-gray-800 text-white p-8 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <h2 className="text-2xl font-bold mb-6">
           {inspiredBy && inspiredBy.length > 0
@@ -392,7 +447,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
             : "Share Your Idea"}
         </h2>
         {error && <p className="text-red-500 mb-4">{error}</p>}
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} onChange={() => setIsDirty(true)}>
           {inspiredBy && inspiredBy.length > 0 && (
             <div className="mb-6 p-4 bg-gray-700 rounded-lg">
               <h3 className="text-lg font-semibold mb-3 text-white">
@@ -545,7 +600,11 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
                   value={costEstimate}
                   onChange={(e) => setCostEstimate(e.target.value)}
                   className="w-full p-2 bg-gray-700 rounded"
+                  required
                 >
+                  <option value="" disabled>
+                    Select Impact
+                  </option>
                   {costImpactOptions.map((option) => (
                     <option key={option} value={option}>
                       {option}
@@ -576,7 +635,11 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
                   value={feasibilityEstimate}
                   onChange={(e) => setFeasibilityEstimate(e.target.value)}
                   className="w-full p-2 bg-gray-700 rounded"
+                  required
                 >
+                  <option value="" disabled>
+                    Select Feasibility
+                  </option>
                   {feasibilityOptions.map((option) => (
                     <option key={option} value={option}>
                       {option}
@@ -591,7 +654,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
                 </label>
                 <textarea
                   id="reasoning"
-                  placeholder="What kind of help, resources & capabilities would be needed to make this happen?  What are the main risks & challenges to overcome to make your idea a reality?"
+                  placeholder="What help, resources, and capabilities are needed? What are the main risks & challenges?"
                   value={reasoning}
                   onChange={(e) => setReasoning(e.target.value)}
                   className="w-full p-2 bg-gray-700 rounded"
@@ -605,7 +668,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
                   htmlFor="peopleToInvolve"
                   className="block mb-2 font-semibold"
                 >
-                  People to involve
+                  People to involve (Optional)
                 </label>
                 <input
                   id="peopleToInvolve"
@@ -665,7 +728,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ onClose, inspiredBy }) => {
           <div className="flex justify-end gap-4 mt-6">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleCancel}
               className="py-2 px-4 bg-gray-600 rounded-lg hover:bg-gray-500"
             >
               Cancel
