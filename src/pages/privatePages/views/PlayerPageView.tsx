@@ -68,7 +68,10 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </p>
             <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
               <p className="font-bold">
-                [IMAGE: Screenshot of the Player Profile and Stats section]
+                <img
+                  src="https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/PlayerDashboardVisual1.png?alt=media&token=16274965-6693-4a5e-b15b-67321fb43372"
+                  className="w-full"
+                />
               </p>
             </div>
             <ul className="list-disc list-inside ml-4 my-2 space-y-1">
@@ -98,7 +101,10 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </p>
             <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
               <p className="font-bold">
-                [IMAGE: Screenshot of the Daily Activity charts]
+                <img
+                  src="https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/PlayerDashboardVisual2.png?alt=media&token=7204cbdf-796c-40c8-b206-7dc62fc45bbd"
+                  className="w-full"
+                />
               </p>
             </div>
             <ul className="list-disc list-inside ml-4 my-2 space-y-1">
@@ -380,7 +386,17 @@ const PlayerPageView = () => {
     <ResponsiveContainer width="100%" height={200}>
       <BarChart data={dailyStats}>
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" />
+        <XAxis
+          dataKey="date"
+          tickFormatter={(tick) => {
+            const [year, month, day] = tick.split("-").map(Number);
+            const date = new Date(year, month - 1, day);
+            return date.toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+            });
+          }}
+        />
         <YAxis />
         <Tooltip />
         <Legend />
@@ -523,24 +539,14 @@ const PlayerPageView = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-bold text-gray-800">Daily Activity</h3>
-            <div className="bg-gray-200 rounded-full p-1 flex">
-              <button
-                onClick={() => setShowAllPlayers(false)}
-                className={`px-4 py-1 text-sm font-semibold rounded-full ${
-                  !showAllPlayers ? "bg-white shadow" : "text-gray-600"
-                }`}
-              >
-                Only Me
-              </button>
-              <button
-                onClick={() => setShowAllPlayers(true)}
-                className={`px-4 py-1 text-sm font-semibold rounded-full ${
-                  showAllPlayers ? "bg-white shadow" : "text-gray-600"
-                }`}
-              >
-                All Players
-              </button>
-            </div>
+            <select
+              value={showAllPlayers ? "all" : "me"}
+              onChange={(e) => setShowAllPlayers(e.target.value === "all")}
+              className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
+            >
+              <option value="me">Only Me</option>
+              <option value="all">All Players</option>
+            </select>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>

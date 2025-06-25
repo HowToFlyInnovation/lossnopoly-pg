@@ -162,7 +162,7 @@ const PlatformSideMenu: React.FC<PlatformSideMenuProps> = ({
 
         <hr className="w-full mt-12 border-white/10" />
 
-        <div className="w-full mx-auto mb-4">
+        <div className="w-[90%] mx-auto mb-8 py-8 rounded bg-white/30">
           <h3 className="text-black text-base font-bold pl-[10%] mb-1">
             Game Stats
           </h3>

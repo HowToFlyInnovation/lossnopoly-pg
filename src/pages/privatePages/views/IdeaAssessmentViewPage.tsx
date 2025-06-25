@@ -88,7 +88,10 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </p>
             <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
               <p className="font-bold">
-                [IMAGE: Screenshot of the Impact vs. Feasibility Chart]
+                <img
+                  src="https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/PlayerDashboardVisual1.png?alt=media&token=16274965-6693-4a5e-b15b-67321fb43372"
+                  className="w-full"
+                />
               </p>
             </div>
             <ul className="list-disc list-inside ml-4 my-2 space-y-1">
@@ -134,8 +137,10 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </ul>
             <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
               <p className="font-bold">
-                [IMAGE: Screenshot of a selected idea, highlighted on the chart
-                and shown in detail]
+                <img
+                  src="https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/IdeaAssessmentVisual2.png?alt=media&token=c381dcb9-2f79-48e6-94eb-ac526d7e72a4"
+                  className="w-full"
+                />
               </p>
             </div>
           </div>

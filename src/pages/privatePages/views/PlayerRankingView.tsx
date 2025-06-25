@@ -83,7 +83,10 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </p>
             <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
               <p className="font-bold">
-                [IMAGE: Screenshot of the ranking table with a highlighted row]
+                <img
+                  src="https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/PlayerRankingVisual1.png?alt=media&token=b56ce684-1814-4c14-9f4b-4a2869f92133"
+                  className="w-full"
+                />
               </p>
             </div>
           </div>

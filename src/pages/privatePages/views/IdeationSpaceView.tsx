@@ -75,7 +75,10 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </p>
             <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
               <p className="font-bold">
-                [IMAGE: Screenshot of the 'Share Idea' modal]
+                <img
+                  src="https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/IdeationSpace_Visual1.png?alt=media&token=28ef3c26-1eed-4de7-ab37-dd81cc23958c"
+                  className="w-full"
+                />
               </p>
             </div>
           </div>
@@ -97,14 +100,10 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </p>
             <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
               <p className="font-bold">
-                [IMAGE: Screenshot of selected ideas and the 'Build upon ideas'
-                button]
-              </p>
-            </div>
-            <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
-              <p className="font-bold">
-                [IMAGE: Screenshot of the 'Build upon Idea' modal showing the
-                'Inspired By' section]
+                <img
+                  src="https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/IdeationSpace_Visual2.png?alt=media&token=5b59aeca-c55b-435f-9ecd-c19c8dba8e65"
+                  className="w-full"
+                />
               </p>
             </div>
           </div>
@@ -128,9 +127,10 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </li>
             </ul>
             <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
-              <p className="font-bold">
-                [IMAGE: Screenshot of the filter dropdowns]
-              </p>
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/IdeationSpace_Visual3.png?alt=media&token=53f80295-6877-441e-8a32-606460f52faa"
+                className="w-full"
+              />
             </div>
           </div>
 
