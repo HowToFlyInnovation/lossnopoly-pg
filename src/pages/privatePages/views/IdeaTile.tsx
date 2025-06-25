@@ -579,7 +579,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     <>
       <div
         data-tour-id={dataTourId}
-        className={`rounded-sm shadow-xl relative overflow-hidden break-words border-12  transition-all duration-300 ${
+        className={`rounded-sm shadow-xl relative break-words border-12  transition-all duration-300 ${
           isDarkMode ? "bg-gray-800" : "bg-white"
         } ${isSelected ? "border-green-500" : "border-white"}`}
       >
