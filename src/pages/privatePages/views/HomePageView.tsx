@@ -313,7 +313,7 @@ const HomePageView: React.FC<HomePageViewProps> = ({
                 onClick={onStartTour}
                 className="text-monopoly-red font-bold flex items-center gap-2 mb-4 hover:underline"
               >
-                <FaArrowRight /> Take the guide tour to explore the platform
+                <FaArrowRight /> Take the GUIDED TOUR to explore the platform
               </button>
               <div className="border-t border-gray-200 pt-4 mt-4">
                 <button
