@@ -62,7 +62,7 @@ const feasibilityToRiskAdjustment: { [key: string]: number } = {
 const chrisTopHatImage =
   "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/Video_Placeholder.png?alt=media&token=ac8ca86c-d067-4de9-9f7a-b1bdf59bff59";
 const monopolyJailImage =
-  "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/ChrisOutOfJail.png?alt=media&token=159ff161-6ada-45eb-939a-f7eb795afb4c";
+  "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/ChrisOutOfJail_Updated.png?alt=media&token=82021c46-b346-43d7-a98f-4433c7d63fe8";
 
 // --- CHALLENGE DATA ---
 const challenges: Challenge[] = [
