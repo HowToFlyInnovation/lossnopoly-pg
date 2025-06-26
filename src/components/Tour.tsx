@@ -1,5 +1,4 @@
-// src/components/Tour.tsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import type { TourStep } from "../lib/tourSteps";
 
 interface TourProps {
@@ -24,10 +23,12 @@ const Tour: React.FC<TourProps> = ({
     width: 0,
     height: 0,
   });
+  const [isTransitioning, setIsTransitioning] = useState(true); // Start as true to hide on initial load
 
   const step = steps[currentStepIndex];
+  const tourCardRef = useRef<HTMLDivElement>(null); // Ref for the tour card
 
-  const updatePosition = useCallback(() => {
+  const calculatePosition = useCallback(() => {
     const targetElement = document.querySelector(step.selector);
     if (targetElement) {
       const rect = targetElement.getBoundingClientRect();
@@ -37,170 +38,214 @@ const Tour: React.FC<TourProps> = ({
         width: rect.width,
         height: rect.height,
       });
+      return true;
     }
+    // Handle selector not found (for body-centered steps)
+    setPosition({
+      top: window.innerHeight / 2,
+      left: window.innerWidth / 2,
+      width: 0,
+      height: 0,
+    });
+    return false;
   }, [step.selector]);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    // The Tour component now directs the menu state
-    if (step.menuState === "open") {
-      setMenuActive(true);
-    } else if (step.menuState === "closed") {
-      setMenuActive(false);
-    }
+    setIsTransitioning(true); // Always hide during setup
 
-    const targetElement = document.querySelector(step.selector);
-    if (targetElement) {
-      targetElement.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-        inline: "center",
-      });
-    }
+    if (step.menuState === "open") setMenuActive(true);
+    else if (step.menuState === "closed") setMenuActive(false);
 
-    // Delay positioning to allow for menu animation
-    const timer = setTimeout(updatePosition, 300);
+    // Delay allows for screen transitions and menu animations
+    const setupTimer = setTimeout(() => {
+      const targetFound = calculatePosition();
 
-    window.addEventListener("resize", updatePosition);
-    document.addEventListener("scroll", updatePosition, true);
+      if (targetFound) {
+        const targetElement = document.querySelector(step.selector);
+        targetElement?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+          inline: "center",
+        });
+      }
+
+      // Allow a moment for scrolling to finish, then reveal the step
+      const revealTimer = setTimeout(() => {
+        calculatePosition(); // Recalculate after scroll
+        setIsTransitioning(false); // Fade in
+      }, 300); // This delay ensures scrolling is complete
+
+      return () => clearTimeout(revealTimer);
+    }, 200); // Initial delay for page load
+
+    window.addEventListener("resize", calculatePosition);
+    document.addEventListener("scroll", calculatePosition, true);
 
     return () => {
-      clearTimeout(timer);
-      window.removeEventListener("resize", updatePosition);
-      document.removeEventListener("scroll", updatePosition, true);
+      clearTimeout(setupTimer);
+      window.removeEventListener("resize", calculatePosition);
+      document.removeEventListener("scroll", calculatePosition, true);
     };
-  }, [currentStepIndex, isOpen, updatePosition, step.menuState, setMenuActive]);
+  }, [
+    currentStepIndex,
+    isOpen,
+    calculatePosition,
+    step.menuState,
+    setMenuActive,
+    step.selector,
+  ]);
 
-  if (!isOpen) {
-    return null;
-  }
+  const changeStep = (newIndex: number) => {
+    setIsTransitioning(true); // Fade out
+    setTimeout(() => {
+      const newStep = steps[newIndex];
+      const oldStep = steps[currentStepIndex];
+
+      if (newStep.path && newStep.path !== oldStep.path) {
+        onNavigate(newStep.path);
+        // A longer timeout is needed to allow the new page to load
+        setTimeout(() => setCurrentStepIndex(newIndex), 400);
+      } else {
+        setCurrentStepIndex(newIndex);
+      }
+    }, 300); // Match this with CSS transition duration
+  };
 
   const handleNext = () => {
     if (currentStepIndex < steps.length - 1) {
-      const nextStep = steps[currentStepIndex + 1];
-      if (nextStep.path && nextStep.path !== step.path) {
-        onNavigate(nextStep.path);
-      }
-      setCurrentStepIndex(currentStepIndex + 1);
+      changeStep(currentStepIndex + 1);
     } else {
-      onClose();
+      handleClose();
     }
   };
 
   const handlePrev = () => {
     if (currentStepIndex > 0) {
-      const prevStep = steps[currentStepIndex - 1];
-      if (prevStep.path && prevStep.path !== step.path) {
-        onNavigate(prevStep.path);
-      }
-      setCurrentStepIndex(currentStepIndex - 1);
+      changeStep(currentStepIndex - 1);
     }
   };
 
   const handleRestart = () => {
-    const firstStep = steps[0];
-    if (firstStep.path && firstStep.path !== step.path) {
-      onNavigate(firstStep.path);
-    }
-    setCurrentStepIndex(0);
+    changeStep(0);
   };
+
+  const handleClose = () => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      onClose();
+      setCurrentStepIndex(0);
+    }, 300);
+  };
+
+  if (!isOpen) return null;
 
   const targetElement = document.querySelector(step.selector);
 
   const getCardPosition = () => {
-    if (!targetElement)
+    if (!targetElement) {
+      // Center the card if no target
       return { top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
-    const cardWidth = 320;
-    const cardHeight = 200;
+    }
+
+    const card = tourCardRef.current;
+    const cardWidth = card ? card.offsetWidth : 320;
+    const cardHeight = card ? card.offsetHeight : 220;
     const margin = 15;
-    const screenWidth = window.innerWidth;
-    const screenHeight = window.innerHeight;
+
+    // Default position below the element
     let top = position.top + position.height + margin;
-    let left = position.left;
-    if (top + cardHeight > screenHeight)
-      top = position.top - cardHeight - margin;
-    if (top < margin) top = margin;
-    if (left + cardWidth > screenWidth) left = screenWidth - cardWidth - margin;
-    if (left < margin) left = margin;
-    return { top: `${top}px`, left: `${left}px`, width: `${cardWidth}px` };
+    let left = position.left + position.width / 2 - cardWidth / 2;
+
+    // Adjust if it overflows the viewport
+    if (top + cardHeight > window.innerHeight) {
+      top = position.top - cardHeight - margin; // Position above
+    }
+    if (left + cardWidth > window.innerWidth) {
+      left = window.innerWidth - cardWidth - margin;
+    }
+    if (left < margin) {
+      left = margin;
+    }
+    if (top < margin) {
+      top = margin;
+    }
+
+    return { top: `${top}px`, left: `${left}px` };
   };
 
-  const cardContent = (
-    <>
-      <h3 className="text-lg font-bold mb-2">{step.title}</h3>
-      <p className="text-sm mb-4">{step.content}</p>
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-x-4">
-          <button
-            onClick={onClose}
-            className="text-sm text-gray-400 hover:text-white"
-          >
-            Skip
-          </button>
-          {currentStepIndex > 0 && (
+  return (
+    <div
+      className="fixed inset-0 z-[10000] transition-opacity duration-300"
+      style={{
+        opacity: isTransitioning ? 0 : 1,
+        pointerEvents: isTransitioning ? "none" : "auto",
+      }}
+    >
+      {/* OVERLAY */}
+      <div
+        className="fixed inset-0 bg-black"
+        style={{
+          clipPath: targetElement
+            ? `path(evenodd, 'M0 0 H ${window.innerWidth} V ${
+                window.innerHeight
+              } H 0 Z M ${position.left - 6} ${position.top - 6} H ${
+                position.left + position.width + 6
+              } V ${position.top + position.height + 6} H ${
+                position.left - 6
+              } Z')`
+            : "none",
+          opacity: 0.65,
+        }}
+      ></div>
+
+      {/* TOUR CARD */}
+      <div
+        ref={tourCardRef}
+        className="fixed bg-gray-800 text-white p-4 rounded-lg shadow-xl w-80"
+        style={{ ...getCardPosition(), transition: "top 0.3s, left 0.3s" }}
+      >
+        <h3 className="text-lg font-bold mb-2">{step.title}</h3>
+        <p className="text-sm mb-4">{step.content}</p>
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-x-4">
             <button
-              onClick={handleRestart}
+              onClick={handleClose}
               className="text-sm text-gray-400 hover:text-white"
             >
-              Restart
+              Stop
             </button>
-          )}
-        </div>
-        <div>
-          {currentStepIndex > 0 && (
+            {currentStepIndex > 0 && (
+              <button
+                onClick={handleRestart}
+                className="text-sm text-gray-400 hover:text-white"
+              >
+                Restart
+              </button>
+            )}
+          </div>
+          <div>
+            {currentStepIndex > 0 && (
+              <button
+                onClick={handlePrev}
+                className="text-sm px-3 py-1 mr-2 bg-gray-600 rounded hover:bg-gray-500"
+              >
+                Previous
+              </button>
+            )}
             <button
-              onClick={handlePrev}
-              className="text-sm px-3 py-1 mr-2 bg-gray-600 rounded hover:bg-gray-500"
+              onClick={handleNext}
+              className="text-sm px-3 py-1 bg-blue-600 rounded hover:bg-blue-500"
             >
-              Previous
+              {currentStepIndex === steps.length - 1 ? "Finish" : "Next"}
             </button>
-          )}
-          <button
-            onClick={handleNext}
-            className="text-sm px-3 py-1 bg-blue-600 rounded hover:bg-blue-500"
-          >
-            {currentStepIndex === steps.length - 1 ? "Finish" : "Next"}
-          </button>
-        </div>
-      </div>
-      <div className="text-center mt-2 text-xs text-gray-500">
-        Step {currentStepIndex + 1} of {steps.length}
-      </div>
-    </>
-  );
-
-  return (
-    <div className="fixed inset-0 z-[10000] pointer-events-none">
-      {targetElement ? (
-        <>
-          <div
-            className="absolute rounded-md transition-all duration-300 ease-in-out"
-            style={{
-              top: `${position.top - 5}px`,
-              left: `${position.left - 5}px`,
-              width: `${position.width + 10}px`,
-              height: `${position.height + 10}px`,
-              boxShadow: "0 0 0 5000px rgba(0, 0, 0, 0.65)",
-            }}
-          ></div>
-          <div
-            className="absolute bg-gray-800 text-white p-4 rounded-lg shadow-xl pointer-events-auto transition-all duration-300 ease-in-out"
-            style={getCardPosition()}
-          >
-            {cardContent}
-          </div>
-        </>
-      ) : (
-        <div
-          className="absolute inset-0 flex items-center justify-center pointer-events-auto"
-          style={{ backgroundColor: "rgba(0, 0, 0, 0.65)" }}
-        >
-          <div className="bg-gray-800 text-white p-4 rounded-lg shadow-xl w-80 relative">
-            {cardContent}
           </div>
         </div>
-      )}
+        <div className="text-center mt-2 text-xs text-gray-500">
+          Step {currentStepIndex + 1} of {steps.length}
+        </div>
+      </div>
     </div>
   );
 };

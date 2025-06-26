@@ -426,11 +426,26 @@ const PlayerRankingView: React.FC = () => {
             longestStreak = 1;
             let currentStreak = 1;
             for (let i = 1; i < sortedDays.length; i++) {
-              if (sortedDays[i] === sortedDays[i - 1] + 1) {
+              const diff = sortedDays[i] - sortedDays[i - 1];
+              const previousDay = new Date(
+                sortedDays[i - 1] * 24 * 60 * 60 * 1000
+              );
+              const currentDay = new Date(sortedDays[i] * 24 * 60 * 60 * 1000);
+              const dayOfWeekPrevious = previousDay.getDay();
+              const dayOfWeekCurrent = currentDay.getDay();
+
+              if (diff === 1) {
+                currentStreak++;
+              } else if (
+                dayOfWeekPrevious === 5 &&
+                dayOfWeekCurrent === 1 &&
+                diff === 3
+              ) {
                 currentStreak++;
               } else {
                 currentStreak = 1;
               }
+
               if (currentStreak > longestStreak) {
                 longestStreak = currentStreak;
               }
