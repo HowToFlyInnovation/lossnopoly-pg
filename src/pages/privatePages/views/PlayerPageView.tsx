@@ -52,7 +52,7 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       >
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">
-            How to Use the Player Dashboard
+            How to Use the Activity Dashboard
           </h2>
           <button
             onClick={onClose}
@@ -470,7 +470,7 @@ const PlayerPageView = () => {
     return (
       <div className="w-full py-[11vh] px-8 md:px-20 text-black bg-gray-100 min-h-screen">
         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase mb-8 text-left">
-          Player Dashboard
+          Activity Dashboard
         </h1>
         <p className="text-center">Loading dashboard...</p>
       </div>
