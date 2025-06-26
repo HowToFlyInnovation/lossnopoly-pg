@@ -21,7 +21,7 @@ import {
   FaThumbsUp,
   FaComment,
   FaLightbulb,
-  FaStar,
+  FaSearchDollar,
   FaPen,
 } from "react-icons/fa"; // Added FaStar and FaPen
 import { PiLegoBold } from "react-icons/pi";
@@ -646,7 +646,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
           {item.inspiredBy && item.inspiredBy.length > 0 && (
             <button
               onClick={() => setInspiredByVisible(true)}
-              className="bg-gray-700/60 absolute top-2 left-2 hover:bg-yellow-600 text-white rounded-full w-8 h-8 flex items-center justify-center"
+              className="bg-gray-700/60 absolute top-2 left-2 hover:bg-yellow-600 text-white rounded-full w-12 h-12 flex items-center justify-center"
               title="Inspired by other ideas"
             >
               <FaLightbulb />
@@ -769,7 +769,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
               {userEvaluation && ( // Only show if already rated
                 <button
                   onClick={() => setEvaluationVisible(!evaluationVisible)}
-                  className={`rounded-full w-8 h-8 flex items-center justify-center transition-colors
+                  className={`rounded-full w-12 h-12 flex items-center justify-center transition-colors
                     ${
                       getEvaluationClasses(
                         userEvaluation.ImpactScore,
@@ -785,7 +785,8 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                     `}
                   title="Toggle Evaluation Details"
                 >
-                  <FaStar
+                  <FaSearchDollar
+                    size={24}
                     className={isDarkMode ? "text-white" : "text-gray-800"}
                   />
                 </button>
@@ -796,11 +797,11 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   isDarkMode
                     ? "bg-gray-700 hover:bg-gray-600 text-gray-300"
                     : "bg-gray-200 hover:bg-gray-300 text-gray-700"
-                } rounded-full w-8 h-8 flex items-center justify-center`}
+                } rounded-full w-12 h-12 flex items-center justify-center`}
                 title="Comments"
               >
                 <div className="flex items-center relative">
-                  <FaComment />
+                  <FaComment size={24} />
                   {comments.length > 0 && (
                     <span className="text-xs text-amber-400 font-bold absolute left-1">
                       {comments.length}
@@ -810,7 +811,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
               </button>
               <button
                 onClick={() => onSelect(item)}
-                className={`rounded-full w-8 h-8 flex items-center justify-center transition-colors ${
+                className={`rounded-full w-12 h-12 flex items-center justify-center transition-colors ${
                   isSelected
                     ? "bg-green-500 text-white"
                     : isSelectionLocked
@@ -828,7 +829,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                 }
                 disabled={isSelectionLocked && !isSelected}
               >
-                <PiLegoBold />
+                <PiLegoBold size={24} />
               </button>
             </div>
           </div>
@@ -983,9 +984,10 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                         className={`${getEvaluationClasses(
                           userEvaluation.ImpactScore,
                           userEvaluation.FeasibilityScore
-                        )} h-10 w-10 rounded-full flex items-center justify-center`}
+                        )} h-18 w-18 rounded-full flex items-center justify-center`}
                       >
-                        <FaStar
+                        <FaSearchDollar
+                          size={28}
                           className={
                             isDarkMode ? "text-white" : "text-gray-800"
                           }
@@ -1020,9 +1022,10 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                           className={`${getEvaluationClasses(
                             averageScores.impact,
                             averageScores.feasibility
-                          )} h-10 w-10 rounded-full flex items-center justify-center`}
+                          )} h-18 w-18 rounded-full flex items-center justify-center`}
                         >
-                          <FaStar
+                          <FaSearchDollar
+                            size={28}
                             className={
                               isDarkMode ? "text-white" : "text-gray-800"
                             }

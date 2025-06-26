@@ -477,7 +477,7 @@ const HomePageView: React.FC<HomePageViewProps> = ({
           <div
             ref={savingsTrackerRef}
             id="savings-tracker"
-            className="text-center bg-white p-12 rounded-lg shadow-lg"
+            className="text-center bg-white p-6 lg:p-12 rounded-lg shadow-lg"
           >
             <div className="relative flex items-center justify-center mb-8">
               <h2 className="text-3xl font-bold text-gray-800">
@@ -485,20 +485,21 @@ const HomePageView: React.FC<HomePageViewProps> = ({
               </h2>
               <button
                 onClick={() => setIsInfoVisible(!isInfoVisible)}
-                className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                className="absolute -right-3 top-1/6 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 aria-label="Show calculation info"
               >
                 <FaQuestionCircle size={24} />
               </button>
               {isInfoVisible && (
-                <div className="absolute top-full right-0 mt-2 w-120 bg-white border border-gray-200 rounded-lg shadow-xl p-4 z-10 text-left">
-                  <h4 className="font-bold text-md mb-2">
+                <div className="absolute top-full right-0 mt-2 w-[100%] md:w-[70%] lg:w-[60%] xl:-w-[50%] bg-white border border-gray-200 rounded-lg shadow-xl p-4 z-10 text-left">
+                  <h4 className="font-bold text-sm mb-2">
                     How is this calculated?
                   </h4>
-                  <p className="text-sm text-gray-600">
-                    This is a <b>risk-adjusted</b> forecast. The savings from
-                    each evaluation are weighted by a risk factor based on its
-                    feasibility.
+                  <p className="text-xs text-gray-600">
+                    This is a <b>risk-adjusted</b> forecast.
+                    <br />
+                    The savings from each evaluation are weighted by a risk
+                    factor based on its feasibility.
                   </p>
                   <ol className="list-decimal list-inside text-sm text-gray-600 mt-2 space-y-1">
                     <li>

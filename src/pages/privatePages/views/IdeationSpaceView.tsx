@@ -131,7 +131,7 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
               <p className="font-bold">
                 <img
-                  src="https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/CardInteraction.png?alt=media&token=c731443c-a61a-4597-898d-315ff6f92ad7"
+                  src="https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/CardInteraction.png?alt=media&token=cdd5c047-fce0-48e8-a787-c1f63056c79f"
                   className="w-full"
                 />
               </p>
@@ -142,11 +142,12 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 full description and reasoning.
               </li>
               <li>
-                <strong>Evaluate Card:</strong> Click on the STAR ican at the
-                bottom of the card to provide your own assessment of the idea's
-                cost impact and feasibility. You can also toggle between your
-                evaluation and the average score from all users. But this option
-                will only be available after you place your evaluation.
+                <strong>Evaluate Card:</strong> Click on the Magnifying Glass
+                Icon at the bottom of the card to provide your own assessment of
+                the idea's cost impact and feasibility. You can also toggle
+                between your evaluation and the average score from all users.
+                But this option will only be available after you place your
+                evaluation.
               </li>
               <li>
                 <strong>
@@ -527,7 +528,7 @@ const IdeationSpaceView: React.FC = () => {
               <option value="unvoted">Not Evaluated By Me</option>
               <option value="taggedIn">All Ideas I'm tagged in</option>
               <option value="taggedUncommented">
-                Uncommented Ideas I'm tagged in
+                I must respond - Ideas I'm tagged in
               </option>
               <option value="topVoted">My Top Ideas</option>
               <option value="mediumVoted">My Medium Ideas</option>

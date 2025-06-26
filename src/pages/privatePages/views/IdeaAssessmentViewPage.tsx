@@ -197,16 +197,18 @@ const ImpactFeasibilityChart: React.FC<{
   const chartIdeas = selectedIdea ? [selectedIdea] : ideas;
 
   return (
-    <div className="w-[90%] md:w-[60%] ml-[5%] md:ml-[20%] bg-gray-50 p-6 rounded-lg shadow-inner relative aspect-square">
+    <div className="w-[80%] md:w-[60%] mx-auto bg-gray-50 p-6 rounded-lg shadow-inner relative aspect-square">
       {/* Grid lines and labels */}
       <div className="absolute top-0 left-1/2 w-px h-full bg-gray-300"></div>
       <div className="absolute top-1/2 left-0 h-px w-full bg-gray-300"></div>
       <span className="absolute bottom-[-3.5rem] left-1/2 -translate-x-1/2 text-gray-600 font-semibold">
         Impact
       </span>
-      <span className="absolute left-[-3.5rem] top-1/2 -translate-y-1/2 -rotate-90 text-gray-600 font-semibold">
+      <span className="absolute left-[-4.5rem] top-1/2 -translate-y-1/2 -rotate-90 text-gray-600 font-semibold">
         Feasibility
       </span>
+
+      {/* Y-axis labels */}
       <span className="absolute bottom-0 left-[-2.5rem] text-gray-500 text-sm">
         Low
       </span>
@@ -214,13 +216,19 @@ const ImpactFeasibilityChart: React.FC<{
         High
       </span>
 
-      {/* X-axis labels for Cost Impact */}
-      <span className="absolute bottom-[-1.5rem] left-0 -translate-x-1/2 text-gray-500 text-xs">
-        Negative
-      </span>
-      <span className="absolute bottom-[-1.5rem] right-0 translate-x-1/2 text-gray-500 text-xs">
-        $1MM+
-      </span>
+      {/* X-axis labels */}
+      {costImpactOptions.map((label, index) => (
+        <span
+          key={label}
+          className="absolute bottom-[-1.5rem] text-gray-500 text-[5px] md:text-xs text-center"
+          style={{
+            left: `${(index / (costImpactOptions.length - 1)) * 100}%`,
+            transform: "translateX(-50%)",
+          }}
+        >
+          {label}
+        </span>
+      ))}
 
       {/* Dots representing ideas */}
       {chartIdeas.map((idea) => {
