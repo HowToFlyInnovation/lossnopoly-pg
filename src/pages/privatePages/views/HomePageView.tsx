@@ -64,68 +64,9 @@ const feasibilityToRiskAdjustment: { [key: string]: number } = {
 const chrisTopHatVideo =
   "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/ChrisPlatformWelcomeVideo.mp4?alt=media&token=1db5159a-9af5-4b5a-8a0c-af9807d1fd44";
 const chrisTopHatThumbnail =
-  "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/ChristStartingImageJailComputer.png?alt=media&token=0c04611d-9ba5-4521-be8c-921c62aa6cb3"; // <-- REPLACE WITH YOUR THUMBNAIL IMAGE URL
+  "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/ChristStartingImageJailComputer.png?alt=media&token=0c04611d-9ba5-4521-be8c-921c62aa6cb3";
 const monopolyJailImage =
   "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/ChrisOutOfJail_Updated.png?alt=media&token=82021c46-b346-43d7-a98f-4433c7d63fe8";
-
-// --- CHALLENGE DATA ---
-const challenges: Challenge[] = [
-  {
-    id: "supply-chain",
-    emoji: "🏗️",
-    title: "TOUCHLESS SUPPLY CHAIN",
-    shortDescription:
-      "How can we reduce 50% of the touches in our supply chain from the complete process of producing goods, from sourcing raw materials to delivering the finished product to customers?",
-    fullContent: {
-      intro:
-        "How can we reduce 50% of the touches in our supply chain from the complete process of producing goods, from sourcing raw materials to delivering the finished product to customers?",
-      paragraphs: [
-        "Whether you’re in a Plant or working with a Contract Manufacturer, in Operations or non-Operations, this is about making every step smoother, smarter and faster. We’re looking for ways to remove unnecessary work, reduce handoffs, and reimagine how things get done (think automation or digital tools), to boldly questioning whether certain steps need to exist at all.",
-        "Because fewer touches mean fewer time demands, lower costs and more time for what really matters.",
-      ],
-      challenge:
-        "Help reimagine how things get done, from raw materials arriving to finished products shipping out. No touch is off the table.",
-    },
-  },
-  {
-    id: "innovation",
-    emoji: "🚀",
-    title: "TOUCHLESS INNOVATION",
-    shortDescription:
-      "How can we reduce 50% of the effort it takes to launch something new including reducing our GMC costs by 50%?",
-    fullContent: {
-      intro:
-        "How can we reduce 50% of the effort it takes to launch something new including reducing our GMC costs by 50%?",
-      paragraphs: [
-        "From product concept to qualification, there's a LOT that goes into every new initiative. With the upcoming Initiative masterplan including 3D and Formula restages, we will place pressure on on our resources, capacity, and costs, but what if we could make it all simpler, faster and more efficient, without compromising quality?",
-      ],
-      listTitle: "We’re looking for ideas that:",
-      list: [
-        "Redesign workflows for fewer touches or rework",
-        "Automate manual steps (like master data, base plan or artwork processes)",
-        "Enable alternatives to online development and testing that eliminates the need for expensive full-scale qualifications",
-      ],
-      challenge:
-        "Help us build a launch engine that runs lean; optimising our processes and methods to streamline our initiatives minimising impact on resources, capacity and cost.",
-    },
-  },
-  {
-    id: "zero-waste",
-    emoji: "♻️",
-    title: "ZERO WASTE CHALLENGE",
-    shortDescription:
-      "How can we reduce 50% of the materials we waste in production?",
-    fullContent: {
-      intro: "How can we reduce 50% of the materials we waste in production?",
-      paragraphs: [
-        "Whether it’s scraps on the line, changeover, or processes losses, we know there’s gold hiding in our waste bins. What if we could halve that? Where are the hidden wins in our equipment, our processes or operating strategies to make it happen.",
-        "We're not just aiming for tweaks, we’re looking for breakthrough ideas that reduce material use at every site, from P&G sites to contract manufacturers.",
-      ],
-      challenge:
-        "Help us use less, waste less, maximise value from any waste that can’t be eliminated.",
-    },
-  },
-];
 
 // --- SUB-COMPONENTS ---
 
@@ -151,6 +92,64 @@ const HomePageView: React.FC<HomePageViewProps> = ({
   onStartTour,
 }) => {
   const [playerName, setPlayerName] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null); // CORRECT: Initialize as null
+  const [challenges, setChallenges] = useState<Challenge[]>([
+    {
+      id: "supply-chain",
+      emoji: "🏗️",
+      title: "TOUCHLESS SUPPLY CHAIN",
+      shortDescription:
+        "How can we reduce 50% of the touches in our supply chain from the complete process of producing goods, from sourcing raw materials to delivering the finished product to customers?",
+      fullContent: {
+        intro:
+          "How can we reduce 50% of the touches in our supply chain from the complete process of producing goods, from sourcing raw materials to delivering the finished product to customers?",
+        paragraphs: [
+          "Whether you’re in a Plant or working with a Contract Manufacturer, in Operations or non-Operations, this is about making every step smoother, smarter and faster. We’re looking for ways to remove unnecessary work, reduce handoffs, and reimagine how things get done (think automation or digital tools), to boldly questioning whether certain steps need to exist at all.",
+          "Because fewer touches mean fewer time demands, lower costs and more time for what really matters.",
+        ],
+        challenge:
+          "Help reimagine how things get done, from raw materials arriving to finished products shipping out. No touch is off the table.",
+      },
+    },
+    {
+      id: "innovation",
+      emoji: "🚀",
+      title: "TOUCHLESS INNOVATION",
+      shortDescription:
+        "How can we reduce 50% of the effort it takes to launch something new including reducing our GMC costs by 50%?",
+      fullContent: {
+        intro:
+          "How can we reduce 50% of the effort it takes to launch something new including reducing our GMC costs by 50%?",
+        paragraphs: [
+          "From product concept to qualification, there's a LOT that goes into every new initiative. With the upcoming Initiative masterplan including 3D and Formula restages, we will place pressure on on our resources, capacity, and costs, but what if we could make it all simpler, faster and more efficient, without compromising quality?",
+        ],
+        listTitle: "We’re looking for ideas that:",
+        list: [
+          "Redesign workflows for fewer touches or rework",
+          "Automate manual steps (like master data, base plan or artwork processes)",
+          "Enable alternatives to online development and testing that eliminates the need for expensive full-scale qualifications",
+        ],
+        challenge:
+          "Help us build a launch engine that runs lean; optimising our processes and methods to streamline our initiatives minimising impact on resources, capacity and cost.",
+      },
+    },
+    {
+      id: "zero-waste",
+      emoji: "♻️",
+      title: "ZERO WASTE CHALLENGE",
+      shortDescription:
+        "How can we reduce 50% of the materials we waste in production?",
+      fullContent: {
+        intro: "How can we reduce 50% of the materials we waste in production?",
+        paragraphs: [
+          "Whether it’s scraps on the line, changeover, or processes losses, we know there’s gold hiding in our waste bins. What if we could halve that? Where are the hidden wins in our equipment, our processes or operating strategies to make it happen.",
+          "We're not just aiming for tweaks, we’re looking for breakthrough ideas that reduce material use at every site, from our company sites to contract manufacturers.", // Generic fallback
+        ],
+        challenge:
+          "Help us use less, waste less, maximise value from any waste that can’t be eliminated.",
+      },
+    },
+  ]);
   const [totalIdentifiedSavings, setTotalIdentifiedSavings] =
     useState<number>(0);
   const [numberOfIdeasWithEvaluations, setNumberOfIdeasWithEvaluations] =
@@ -210,6 +209,52 @@ const HomePageView: React.FC<HomePageViewProps> = ({
 
     fetchPlayerData();
   }, [user]);
+
+  useEffect(() => {
+    const fetchCompanyInfo = async () => {
+      try {
+        const challengeInfoCollection = collection(db, "challengeInfo");
+        const challengeInfoSnapshot = await getDocs(challengeInfoCollection);
+        if (!challengeInfoSnapshot.empty) {
+          const companyDoc = challengeInfoSnapshot.docs[0];
+          const companyData = companyDoc.data();
+          if (companyData.company) {
+            setCompanyName(companyData.company);
+          }
+        }
+      } catch (error) {
+        console.error(
+          "Failed to fetch company info (likely due to permissions):",
+          error
+        );
+        setCompanyName(null); // Explicitly set to null on failure
+      }
+    };
+
+    fetchCompanyInfo();
+  }, []);
+
+  useEffect(() => {
+    if (companyName) {
+      setChallenges((prevChallenges) =>
+        prevChallenges.map((challenge) => {
+          if (challenge.id === "zero-waste") {
+            return {
+              ...challenge,
+              fullContent: {
+                ...challenge.fullContent,
+                paragraphs: [
+                  "Whether it’s scraps on the line, changeover, or processes losses, we know there’s gold hiding in our waste bins. What if we could halve that? Where are the hidden wins in our equipment, our processes or operating strategies to make it happen.",
+                  `We're not just aiming for tweaks, we’re looking for breakthrough ideas that reduce material use at every site, from ${companyName} sites to contract manufacturers.`,
+                ],
+              },
+            };
+          }
+          return challenge;
+        })
+      );
+    }
+  }, [companyName]);
 
   useEffect(() => {
     const calculateTotalSavings = async () => {
