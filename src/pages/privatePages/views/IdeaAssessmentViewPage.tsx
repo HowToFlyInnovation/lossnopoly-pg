@@ -197,7 +197,7 @@ const ImpactFeasibilityChart: React.FC<{
   const chartIdeas = selectedIdea ? [selectedIdea] : ideas;
 
   return (
-    <div className="w-[80%] md:w-[60%] mx-auto bg-gray-50 p-6 rounded-lg shadow-inner relative aspect-square">
+    <div className="w-[80%] md:w-[70%] mx-auto bg-gray-50 p-6 rounded-lg shadow-inner relative aspect-square">
       {/* Grid lines and labels */}
       <div className="absolute top-0 left-1/2 w-px h-full bg-gray-300"></div>
       <div className="absolute top-1/2 left-0 h-px w-full bg-gray-300"></div>
@@ -220,7 +220,7 @@ const ImpactFeasibilityChart: React.FC<{
       {costImpactOptions.map((label, index) => (
         <span
           key={label}
-          className="absolute bottom-[-1.5rem] text-gray-500 text-[5px] md:text-[10px] text-center"
+          className="absolute bottom-[-1.5rem] text-gray-500 text-[5px] md:text-[8px] text-center"
           style={{
             left: `${(index / (costImpactOptions.length - 1)) * 100}%`,
             transform: "translateX(-50%)",
