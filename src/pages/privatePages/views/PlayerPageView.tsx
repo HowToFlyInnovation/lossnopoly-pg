@@ -486,7 +486,7 @@ const PlayerPageView = () => {
         <FaInfoCircle size={20} />
       </button>
       <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase mb-8 text-left">
-        Player Dashboard
+        Activity Dashboard
       </h1>
       <div>
         <div
