@@ -3,32 +3,34 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // --- FUNCTION TO CHECK IF A USER IS ON THE INVITE LIST ---
+    function isInvited() {
+      return exists(/databases/$(database)/documents/playerDetailsCollection/$(request.auth.token.email));
+    }
+
     // --- MODIFIED RULES FOR 'ideas' COLLECTION ---
     match /ideas/{ideaId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-
-      // WARNING: This allows ANY authenticated user to update or delete ANY idea.
-      allow update, delete: if request.auth != null;
+      allow read, create: if request.auth != null && isInvited();
+      allow update, delete: if request.auth != null && isInvited() && resource.data.userId == request.auth.uid;
     }
 
     // Rules for 'ideasVotes' collection
     match /ideasVotes/{voteId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null && voteId == request.auth.uid + '_' + request.resource.data.ideaId;
+        allow read: if request.auth != null && isInvited();
+        allow write: if request.auth != null && isInvited() && voteId == request.auth.uid + '_' + request.resource.data.ideaId;
     }
 
     // Rules for the 'evaluations' collection
     match /evaluations/{evaluationId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null && evaluationId == request.auth.uid + '_' + request.resource.data.ideaId;
+        allow read: if request.auth != null && isInvited();
+        allow create: if request.auth != null && isInvited() && evaluationId == request.auth.uid + '_' + request.resource.data.ideaId;
         allow update, delete: if false;
     }
 
     // Rules for the 'comments' collection
     match /comments/{commentId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
+      allow read: if request.auth != null && isInvited();
+      allow create: if request.auth != null && isInvited()
                       && request.resource.data.userId == request.auth.uid
                       && request.resource.data.ideaId is string
                       && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() < 2000
@@ -37,39 +39,39 @@ service cloud.firestore {
                       && request.resource.data.likes == []
                       && (request.resource.data.parentId is string || request.resource.data.parentId == null)
                       && request.resource.data.keys().hasAll(['ideaId', 'userId', 'displayName', 'text', 'createdAt', 'likes', 'parentId']);
-      allow update: if request.auth != null
+      allow update: if request.auth != null && isInvited()
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
                       && (
                         request.resource.data.likes == resource.data.likes.concat([request.auth.uid]) ||
                         resource.data.likes == request.resource.data.likes.concat([request.auth.uid])
                       );
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null && isInvited() && resource.data.userId == request.auth.uid;
     }
 
     // Rules for the 'playerTaggings' collection
     match /playerTaggings/{taggingId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
+      allow read: if request.auth != null && isInvited();
+      allow create: if request.auth != null && isInvited();
       allow update, delete: if false;
     }
 
     // Rules for the 'inviteList' collection
     match /inviteList/{documentId} {
-      allow read: if true;
+      allow read: if true; // WARNING: This collection is publicly readable.
       allow write: if false;
     }
 
     // Rules for the 'players' collection
     match /players/{userId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null && isInvited();
       allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && isInvited() && request.auth.uid == userId;
     }
 
     // Rules for the 'playerDetailsCollection'
     match /playerDetailsCollection/{email} {
         allow read: if request.auth != null;
-        allow write: if false; // Or adjust as needed
+        allow write: if false;
     }
 
 
