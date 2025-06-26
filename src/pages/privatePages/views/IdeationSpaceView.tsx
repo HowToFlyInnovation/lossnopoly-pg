@@ -506,10 +506,7 @@ const IdeationSpaceView: React.FC = () => {
         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase">
           Ideation Space
         </h1>
-        <div
-          data-tour-id="ideation-space-filters"
-          className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto"
-        >
+        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <button
             onClick={() => setIsInfoModalOpen(true)}
             className="p-3 bg-gray-800 text-white rounded-lg shadow-md hover:bg-black focus:outline-none absolute top-5 right-5 cursor-pointer"
@@ -517,38 +514,40 @@ const IdeationSpaceView: React.FC = () => {
           >
             <FaInfoCircle size={20} />
           </button>
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="bg-gray-800 text-white font-bold py-2 px-4 rounded-lg focus:outline-none w-full md:w-auto"
-          >
-            <option value="all">All Ideas</option>
-            <option value="userCreated">My Ideas</option>
-            <option value="commented">Commented By Me</option>
-            <option value="userVoted">Evaluated By Me</option>
-            <option value="unvoted">Not Evaluated By Me</option>
-            <option value="taggedIn">All Ideas I'm tagged in</option>
-            <option value="taggedUncommented">
-              Uncommented Ideas I'm tagged in
-            </option>
-            <option value="topVoted">My Top Ideas</option>
-            <option value="mediumVoted">My Medium Ideas</option>
-            <option value="lowVoted">My Low Ideas</option>
-          </select>
-          <select
-            value={missionFilter}
-            onChange={(e) => setMissionFilter(e.target.value)}
-            className="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none w-full md:w-auto"
-          >
-            <option value="all">All Sub-Challenges</option>
-            <option value="E2E Touchless Supply Chain">
-              E2E Touchless Supply Chain
-            </option>
-            <option value="E2E Touchless Innovation">
-              E2E Touchless Innovation
-            </option>
-            <option value="Zero Waste">Zero Waste</option>
-          </select>
+          <span data-tour-id="ideation-space-filters">
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="bg-gray-800 text-white font-bold py-2 px-4 mb-2 md:mb-0 md:mr-2 rounded-lg focus:outline-none w-full md:w-auto"
+            >
+              <option value="all">All Ideas</option>
+              <option value="userCreated">My Ideas</option>
+              <option value="commented">Commented By Me</option>
+              <option value="userVoted">Evaluated By Me</option>
+              <option value="unvoted">Not Evaluated By Me</option>
+              <option value="taggedIn">All Ideas I'm tagged in</option>
+              <option value="taggedUncommented">
+                Uncommented Ideas I'm tagged in
+              </option>
+              <option value="topVoted">My Top Ideas</option>
+              <option value="mediumVoted">My Medium Ideas</option>
+              <option value="lowVoted">My Low Ideas</option>
+            </select>
+            <select
+              value={missionFilter}
+              onChange={(e) => setMissionFilter(e.target.value)}
+              className="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none w-full md:w-auto"
+            >
+              <option value="all">All Sub-Challenges</option>
+              <option value="E2E Touchless Supply Chain">
+                E2E Touchless Supply Chain
+              </option>
+              <option value="E2E Touchless Innovation">
+                E2E Touchless Innovation
+              </option>
+              <option value="Zero Waste">Zero Waste</option>
+            </select>
+          </span>
           <button
             onClick={handleOpenModal}
             data-tour-id="ideation-space-share-idea"
