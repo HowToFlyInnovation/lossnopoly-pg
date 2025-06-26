@@ -1,3 +1,4 @@
+// src/pages/privatePages/views/HomePageView.tsx
 import React, { useState, useEffect, useContext, useRef } from "react";
 import { db } from "../../firebase/config";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
@@ -9,6 +10,7 @@ import {
   FaComments,
   FaArrowRight,
   FaQuestionCircle,
+  FaPlay,
 } from "react-icons/fa";
 import { costImpactToMonetaryValue } from "../../../lib/constants";
 
@@ -59,8 +61,10 @@ const feasibilityToRiskAdjustment: { [key: string]: number } = {
 };
 
 // --- ASSET URLS ---
-const chrisTopHatImage =
-  "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/Video_Placeholder.png?alt=media&token=ac8ca86c-d067-4de9-9f7a-b1bdf59bff59";
+const chrisTopHatVideo =
+  "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/ChrisPlatformWelcomeVideo.mp4?alt=media&token=1db5159a-9af5-4b5a-8a0c-af9807d1fd44";
+const chrisTopHatThumbnail =
+  "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/ChristStartingImageJailComputer.png?alt=media&token=0c04611d-9ba5-4521-be8c-921c62aa6cb3"; // <-- REPLACE WITH YOUR THUMBNAIL IMAGE URL
 const monopolyJailImage =
   "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/ChrisOutOfJail_Updated.png?alt=media&token=82021c46-b346-43d7-a98f-4433c7d63fe8";
 
@@ -155,12 +159,28 @@ const HomePageView: React.FC<HomePageViewProps> = ({
     useState<number>(0);
   const [loadingSavings, setLoadingSavings] = useState(true);
   const [isInfoVisible, setIsInfoVisible] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const { user } = useContext(AuthContext) as AuthContextType;
   const [expandedChallengeId, setExpandedChallengeId] = useState<string | null>(
     null
   );
 
   const savingsTrackerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handlePlayButtonClick = () => {
+    const video = videoRef.current;
+    if (video) {
+      video.play();
+      setIsVideoPlaying(true);
+    }
+  };
+
+  const handleVideoPlayPause = () => {
+    if (videoRef.current) {
+      setIsVideoPlaying(!videoRef.current.paused);
+    }
+  };
 
   const handleScrollToTracker = () => {
     savingsTrackerRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -330,12 +350,28 @@ const HomePageView: React.FC<HomePageViewProps> = ({
                 </button>
               </div>
             </div>
-            <div className="flex justify-center items-center">
-              <img
-                src={chrisTopHatImage}
-                alt="Man in top hat"
+            <div className="relative flex justify-center items-center">
+              <video
+                ref={videoRef}
+                src={chrisTopHatVideo}
+                poster={chrisTopHatThumbnail}
+                playsInline
+                controls
                 className="rounded-lg shadow-lg max-w-full h-auto"
-              />
+                onPlay={handleVideoPlayPause}
+                onPause={handleVideoPlayPause}
+              ></video>
+              {!isVideoPlaying && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg pointer-events-none">
+                  <button
+                    onClick={handlePlayButtonClick}
+                    className="pointer-events-auto p-4"
+                    aria-label="Play video"
+                  >
+                    <FaPlay className="text-white text-6xl drop-shadow-lg" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

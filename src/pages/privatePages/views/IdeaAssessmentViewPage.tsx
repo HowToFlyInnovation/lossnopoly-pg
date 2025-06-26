@@ -220,7 +220,7 @@ const ImpactFeasibilityChart: React.FC<{
       {costImpactOptions.map((label, index) => (
         <span
           key={label}
-          className="absolute bottom-[-1.5rem] text-gray-500 text-[5px] md:text-xs text-center"
+          className="absolute bottom-[-1.5rem] text-gray-500 text-[5px] md:text-[10px] text-center"
           style={{
             left: `${(index / (costImpactOptions.length - 1)) * 100}%`,
             transform: "translateX(-50%)",

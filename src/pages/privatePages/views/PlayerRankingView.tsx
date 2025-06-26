@@ -79,7 +79,7 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">How the Player Ranking Works</h2>
+          <h2 className="text-2xl font-bold">How the Rankings Work</h2>
           <button
             onClick={onClose}
             className="text-2xl font-bold text-white hover:text-gray-400"
@@ -235,45 +235,46 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   <span className="text-green-400">+20 XP</span> | Your Idea is
                   Shortlisted:
                 </strong>{" "}
-                For each of your ideas that gets selected for further review.
+                For each of your ideas that got selected for further review.
               </li>
               <li>
                 <strong>
                   <span className="text-green-400">+5 XP</span> | Inspired Idea
                   is Shortlisted:
                 </strong>{" "}
-                If an idea that was inspired by one of yours gets shortlisted.
+                If an idea that was inspired by one of yours got shortlisted.
               </li>
               <li>
                 <strong>
                   <span className="text-green-400">+3 XP</span> | Accurate
                   High-Scoring:
                 </strong>{" "}
-                When an idea you rated highly (e.g., 4 or 5 stars) is
-                shortlisted by the core team.
+                When an idea you rated highly (top-right quadrant in assessment
+                matrix) got shortlisted by the core team.
               </li>
               <li>
                 <strong>
                   <span className="text-green-400">+3 XP</span> | Accurate
                   Low-Scoring:
                 </strong>{" "}
-                When an idea you rated poorly (e.g., 1 or 2 stars) is not
-                shortlisted, confirming your assessment.
+                When an idea you rated poorly (lower-left quadrant in assessment
+                matrix) didn't got shortlisted, confirming your assessment.
               </li>
               <li>
                 <strong>
                   <span className="text-red-400">-3 XP </span>| Inaccurate
                   High-Scoring:
                 </strong>{" "}
-                When an idea you rated highly is not shortlisted by the core
-                team.
+                When an idea you rated highly (top-right quadrant in assessment
+                matrix) didn't got shortlisted by the core team.
               </li>
               <li>
                 <strong>
                   <span className="text-red-400">-3 XP</span> | Inaccurate
                   Low-Scoring:
                 </strong>{" "}
-                When an idea you rated poorly is shortlisted by the core team.
+                When an idea you rated poorly (lower-left quadrant in assessment
+                matrix) is shortlisted by the core team.
               </li>
             </ul>
           </div>
@@ -640,7 +641,7 @@ const PlayerRankingView: React.FC = () => {
       </button>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 uppercase text-left">
-          Player Rankings
+          Rankings
         </h1>
         <select
           value={viewLevel}
