@@ -43,12 +43,16 @@ service cloud.firestore {
                       && request.resource.data.likes == []
                       && (request.resource.data.parentId is string || request.resource.data.parentId == null)
                       && request.resource.data.keys().hasAll(['ideaId', 'userId', 'displayName', 'text', 'createdAt', 'likes', 'parentId']);
-      allow update: if request.auth != null && isInvited()
-                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
-                      && (
-                        request.resource.data.likes == resource.data.likes.concat([request.auth.uid]) ||
-                        resource.data.likes == request.resource.data.likes.concat([request.auth.uid])
-                      );
+      allow update: if request.auth != null && isInvited() && (
+        (
+          // Liking comments
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+        ) ||
+        (
+          // Editing own comment
+          resource.data.userId == request.auth.uid
+        )
+      );
       allow delete: if request.auth != null && isInvited() && resource.data.userId == request.auth.uid;
     }
 
@@ -56,7 +60,8 @@ service cloud.firestore {
     match /playerTaggings/{taggingId} {
       allow read: if request.auth != null && isInvited();
       allow create: if request.auth != null && isInvited();
-      allow update, delete: if false;
+      allow delete: if request.auth != null && isInvited() && get(/databases/$(database)/documents/comments/$(resource.data.commentId)).data.userId == request.auth.uid;
+      allow update: if false;
     }
 
     // Rules for the 'inviteList' collection

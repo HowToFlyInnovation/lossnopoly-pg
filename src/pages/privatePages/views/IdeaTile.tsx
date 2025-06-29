@@ -14,6 +14,7 @@ import {
   arrayUnion,
   arrayRemove,
   getDocs as firestoreGetDocs, // Renamed to avoid conflict
+  writeBatch,
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Import storage functions
 import DOMPurify from "dompurify";
@@ -94,6 +95,7 @@ export interface Comment {
   displayName: string;
   text: string;
   createdAt: Timestamp;
+  editedAt?: Timestamp;
   likes: string[];
   parentId: string | null;
 }
@@ -146,6 +148,8 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editedCommentText, setEditedCommentText] = useState("");
   const [replyingTo, setReplyingTo] = useState<{
     id: string;
     name: string;
@@ -171,6 +175,9 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   const [commentSuggestions, setCommentSuggestions] = useState<InvitedPlayer[]>(
     []
   );
+  const [editedCommentSuggestions, setEditedCommentSuggestions] = useState<
+    InvitedPlayer[]
+  >([]);
 
   // --- Creator Check ---
   const isCreator = user?.uid === item.userId;
@@ -399,6 +406,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
           taggedPlayerEmail: player.email,
           timestamp: Timestamp.now(),
           type: "comment", // Indicates this tagging is from a comment
+          commentOwnerId: user.uid,
         });
       }
 
@@ -420,6 +428,77 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
       await updateDoc(commentRef, { likes: arrayRemove(user.uid) });
     } else {
       await updateDoc(commentRef, { likes: arrayUnion(user.uid) });
+    }
+  };
+
+  const handleEditComment = (comment: Comment) => {
+    setEditingCommentId(comment.id);
+    setEditedCommentText(comment.text);
+  };
+
+  const handleUpdateComment = async (commentId: string) => {
+    if (!user) return;
+
+    const commentRef = doc(db, "comments", commentId);
+    try {
+      // Update comment text and timestamp
+      await updateDoc(commentRef, {
+        text: editedCommentText,
+        editedAt: Timestamp.now(),
+      });
+
+      // Manage player taggings
+      const existingTaggingsQuery = query(
+        collection(db, "playerTaggings"),
+        where("commentId", "==", commentId)
+      );
+      const existingTaggingsSnapshot = await firestoreGetDocs(
+        existingTaggingsQuery
+      );
+      const existingTaggings = existingTaggingsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      const newMentions = extractMentions(editedCommentText);
+      const newMentionEmails = newMentions.map((p) => p.email);
+      const existingMentionEmails = existingTaggings.map(
+        (t: any) => t.taggedPlayerEmail
+      );
+
+      const batch = writeBatch(db);
+
+      // Remove old taggings
+      existingTaggings.forEach((tagging: any) => {
+        if (!newMentionEmails.includes(tagging.taggedPlayerEmail)) {
+          const taggingRef = doc(db, "playerTaggings", tagging.id);
+          batch.delete(taggingRef);
+        }
+      });
+
+      // Add new taggings
+      newMentions.forEach((player) => {
+        if (!existingMentionEmails.includes(player.email)) {
+          const newTaggingRef = doc(collection(db, "playerTaggings"));
+          batch.set(newTaggingRef, {
+            commentId: commentId,
+            ideaId: item.id,
+            commentText: editedCommentText,
+            taggedPlayerDisplayName: `${player.firstName} ${player.lastName}`,
+            taggedPlayerEmail: player.email,
+            timestamp: Timestamp.now(),
+            type: "comment",
+            commentOwnerId: user.uid,
+          });
+        }
+      });
+
+      await batch.commit();
+
+      setEditingCommentId(null);
+      setEditedCommentText("");
+    } catch (error) {
+      console.error("Error updating comment:", error);
     }
   };
 
@@ -489,6 +568,30 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     }
   };
 
+  const handleEditedCommentInputChangeWithMention = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const text = e.target.value;
+    setEditedCommentText(text);
+
+    const atIndex = text.lastIndexOf("@");
+    if (atIndex > -1) {
+      const searchTerm = text.substring(atIndex + 1).toLowerCase();
+      // Filter by first name, last name, or combined name for suggestions
+      const filtered = allInvitedPlayers.filter(
+        (player) =>
+          player.firstName.toLowerCase().includes(searchTerm) ||
+          player.lastName.toLowerCase().includes(searchTerm) ||
+          `${player.firstName} ${player.lastName}`
+            .toLowerCase()
+            .includes(searchTerm)
+      );
+      setEditedCommentSuggestions(filtered);
+    } else {
+      setEditedCommentSuggestions([]);
+    }
+  };
+
   const handleSelectCommentSuggestion = (player: InvitedPlayer) => {
     const atIndex = newComment.lastIndexOf("@");
     if (atIndex > -1) {
@@ -497,6 +600,17 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
         `@${player.firstName} ${player.lastName} `;
       setNewComment(newText);
       setCommentSuggestions([]);
+    }
+  };
+
+  const handleSelectEditedCommentSuggestion = (player: InvitedPlayer) => {
+    const atIndex = editedCommentText.lastIndexOf("@");
+    if (atIndex > -1) {
+      const newText =
+        editedCommentText.substring(0, atIndex) +
+        `@${player.firstName} ${player.lastName} `;
+      setEditedCommentText(newText);
+      setEditedCommentSuggestions([]);
     }
   };
 
@@ -528,14 +642,71 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
               }`}
             >
               {comment.createdAt.toDate().toLocaleDateString()}
+              {comment.editedAt && (
+                <span className="text-xs text-gray-500 ml-2">(edited)</span>
+              )}
             </span>
           </div>
-          <p
-            className={`${isDarkMode ? "text-gray-300" : "text-gray-700"} my-1`}
-            dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(highlightMentions(comment.text)),
-            }}
-          ></p>
+          {editingCommentId === comment.id ? (
+            <div className="relative">
+              <textarea
+                value={editedCommentText}
+                onChange={handleEditedCommentInputChangeWithMention}
+                className={`w-full p-2 rounded mt-1 ${
+                  isDarkMode
+                    ? "bg-gray-700 text-white"
+                    : "bg-gray-200 text-gray-800"
+                }`}
+              />
+              {editedCommentSuggestions.length > 0 && (
+                <ul
+                  className={`absolute z-10 w-full rounded-b-md max-h-40 overflow-y-auto mt-1 ${
+                    isDarkMode
+                      ? "bg-gray-700 text-white"
+                      : "bg-gray-200 text-gray-800"
+                  }`}
+                >
+                  {editedCommentSuggestions.map((player) => (
+                    <li
+                      key={player.email}
+                      onMouseDown={() =>
+                        handleSelectEditedCommentSuggestion(player)
+                      }
+                      className={`p-2 cursor-pointer ${
+                        isDarkMode ? "hover:bg-gray-600" : "hover:bg-gray-300"
+                      }`}
+                    >
+                      {player.firstName} {player.lastName}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => handleUpdateComment(comment.id)}
+                  className="py-1 px-3 bg-green-500 rounded text-white font-semibold"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setEditingCommentId(null)}
+                  className="py-1 px-3 bg-red-500 rounded text-white font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p
+              className={`${
+                isDarkMode ? "text-gray-300" : "text-gray-700"
+              } my-1`}
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(highlightMentions(comment.text)),
+              }}
+            ></p>
+          )}
+
           <div
             className={`flex items-center gap-4 text-xs ${
               isDarkMode ? "text-gray-400" : "text-gray-500"
@@ -564,6 +735,17 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
             >
               Reply
             </button>
+            {user?.uid === comment.userId &&
+              editingCommentId !== comment.id && (
+                <button
+                  onClick={() => handleEditComment(comment)}
+                  className={`font-semibold hover:text-blue-600 ${
+                    isDarkMode ? "text-gray-400" : "text-gray-500"
+                  }`}
+                >
+                  Edit
+                </button>
+              )}
           </div>
           {renderComments(comment.id)}
         </div>
