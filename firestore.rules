@@ -1,5 +1,3 @@
-rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -12,6 +10,12 @@ service cloud.firestore {
     match /ideas/{ideaId} {
       allow read, create: if request.auth != null && isInvited();
       allow update, delete: if request.auth != null && isInvited() && resource.data.userId == request.auth.uid;
+    }
+    
+    // --- RULE FOR 'challengeInfo' COLLECTION ---
+    match /challengeInfo/{challengeInfoId} {
+      allow read: if request.auth != null && isInvited();
+      allow write, update, delete: if false;
     }
 
     // Rules for 'ideasVotes' collection

@@ -457,15 +457,12 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   };
 
   const highlightMentions = (text: string) => {
-    // Regex to highlight only the first @ followed by First Name Last Name
-    const mentionRegex = /@([a-zA-Z]+\s[a-zA-Z]+(?:\s[a-zA-Z]+)*)/;
-    const match = text.match(mentionRegex);
-
-    if (match) {
-      const highlightedPart = `<span class="text-blue-500 font-bold">${match[0]}</span>`;
-      return text.replace(mentionRegex, highlightedPart);
-    }
-    return text;
+    // Regex to highlight all occurrences of @ followed by First Name Last Name
+    const mentionRegex = /@([a-zA-Z]+\s[a-zA-Z]+(?:\s[a-zA-Z]+)*)/g;
+    return text.replace(
+      mentionRegex,
+      '<span class="text-blue-500 font-bold">$&</span>'
+    );
   };
 
   const handleCommentInputChangeWithMention = (
