@@ -1,3 +1,6 @@
+/*
+This is an altered file: src/pages/privatePages/IdeationPlatform.tsx
+*/
 // src/pages/privatePages/IdeationPlatform.tsx
 import React, { useContext, useState } from "react";
 import { signOut } from "firebase/auth";
@@ -12,6 +15,7 @@ import PlayerRankingView from "./views/PlayerRankingView";
 import PlayerPageView from "./views/PlayerPageView";
 import Tour from "../../components/Tour";
 import { tourSteps } from "../../lib/tourSteps";
+import AdminView from "./views/AdminView";
 
 // --- Type Definitions ---
 interface IdeationPlatformProps {
@@ -110,6 +114,8 @@ const IdeationPlatform: React.FC<IdeationPlatformProps> = ({
         return <PlayerPageView />;
       case "PlayerRankingView":
         return <PlayerRankingView />;
+      case "AdminView":
+        return <AdminView />;
       default:
         return (
           <div className="w-full h-screen flex justify-center items-center">

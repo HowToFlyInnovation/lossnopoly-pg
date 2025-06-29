@@ -1,3 +1,6 @@
+/*
+This is an altered file: src/App.tsx
+*/
 // src/App.tsx
 import React, { useContext, useState, useEffect } from "react";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
@@ -9,6 +12,7 @@ import { doc, getDoc } from "firebase/firestore"; // Import doc and getDoc
 import LoginPage from "./pages/publicPages/LoginPage";
 import RegisterPage from "./pages/publicPages/RegisterPage";
 import IdeationPlatform from "./pages/privatePages/IdeationPlatform";
+import AdminView from "./pages/privatePages/views/AdminView";
 
 /**
  * A component to protect routes that require authentication.
@@ -185,6 +189,14 @@ function App() {
                   visibleContent={visibleContent} // Pass the state directly
                   setVisibleContent={setVisibleContent} // Pass the state setter
                 />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dhfjdhfjhufdvspiopzindfoiezubsdkslkhd"
+            element={
+              <ProtectedRoute>
+                <AdminView />
               </ProtectedRoute>
             }
           />
