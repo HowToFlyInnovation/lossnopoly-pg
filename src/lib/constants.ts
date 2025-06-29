@@ -29,6 +29,14 @@ export const costImpactToMonetaryValue: { [key: string]: number } = {
   "$1MM+": 1500000,
 };
 
+export const feasibilityToRiskAdjustment: { [key: string]: number } = {
+  "Very Easy To do": 0.9,
+  Manageable: 0.7,
+  "Achievable with Effort": 0.5,
+  Challenging: 0.3,
+  "Very Challenging": 0.1,
+};
+
 /**
  * Determines the evaluation category ('green', 'yellow', 'red') based on impact and feasibility scores.
  * The logic is dynamic and based on the length of the options arrays.

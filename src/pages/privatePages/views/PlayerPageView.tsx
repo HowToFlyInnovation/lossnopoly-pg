@@ -7,14 +7,18 @@ import { updateProfile } from "firebase/auth";
 import {
   BarChart,
   Bar,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
+  Legend,
 } from "recharts";
 import { FaInfoCircle } from "react-icons/fa";
+import { costImpactToMonetaryValue } from "../../../lib/constants";
 
 // --- TYPE DEFINITIONS ---
 interface PlayerStats {
@@ -38,6 +42,33 @@ interface PlayerDetails {
   email: string;
   team: string;
 }
+
+interface Evaluation {
+  id: string;
+  ideaId: string;
+  ImpactScore: string;
+  FeasibilityScore: string;
+  EvaluatorUserId: string;
+  EvaluationDate: any;
+}
+
+interface TeamData {
+  name: string;
+  ideas: number;
+  comments: number;
+  inspirations: number;
+  evaluations: number;
+  xp: number;
+  value: number;
+}
+
+const feasibilityToRiskAdjustment: { [key: string]: number } = {
+  "Very Easy To do": 0.9,
+  Manageable: 0.7,
+  "Achievable with Effort": 0.5,
+  Challenging: 0.25,
+  "Very Challenging": 0.1,
+};
 
 // --- [NEW] INFO MODAL COMPONENT ---
 const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -136,10 +167,29 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   );
 };
 
+const COLORS = [
+  "#0088FE",
+  "#00C49F",
+  "#FFBB28",
+  "#FF8042",
+  "#AF19FF",
+  "#FF1919",
+];
+
+interface CustomizedLabelProps {
+  cx: number;
+  cy: number;
+  midAngle: number;
+  outerRadius: number;
+  value: number;
+  name: string;
+}
+
 const PlayerPageView = () => {
   const authContext = useContext<AuthContextType | null>(AuthContext);
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
+  const [teamChartData, setTeamChartData] = useState<TeamData[]>([]);
   const [filter, setFilter] = useState("me");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -193,10 +243,17 @@ const PlayerPageView = () => {
         id: doc.id,
         ...doc.data(),
       })) as any[];
-      const evaluations = evaluationsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as any[];
+      const evaluations = evaluationsSnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ideaId: data.ideaId,
+          ImpactScore: data.ImpactScore,
+          FeasibilityScore: data.FeasibilityScore,
+          EvaluatorUserId: data.EvaluatorUserId,
+          EvaluationDate: data.EvaluationDate,
+        };
+      }) as Evaluation[];
       const players = playersSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -380,6 +437,189 @@ const PlayerPageView = () => {
           });
         }
       });
+      // --- Team Data Calculation for Pie Charts ---
+      const teams: {
+        [key: string]: {
+          ideas: number;
+          comments: number;
+          inspirations: number;
+          evaluations: number;
+          xp: number;
+          value: number;
+          playerCount: number;
+        };
+      } = {
+        "BLOIS PLANT": {
+          ideas: 0,
+          comments: 0,
+          inspirations: 0,
+          evaluations: 0,
+          xp: 0,
+          value: 0,
+          playerCount: 0,
+        },
+        "EUROPE TEAM": {
+          ideas: 0,
+          comments: 0,
+          inspirations: 0,
+          evaluations: 0,
+          xp: 0,
+          value: 0,
+          playerCount: 0,
+        },
+        "GLOBAL TEAM": {
+          ideas: 0,
+          comments: 0,
+          inspirations: 0,
+          evaluations: 0,
+          xp: 0,
+          value: 0,
+          playerCount: 0,
+        },
+        "URLATI PLANT": {
+          ideas: 0,
+          comments: 0,
+          inspirations: 0,
+          evaluations: 0,
+          xp: 0,
+          value: 0,
+          playerCount: 0,
+        },
+        "WARSAW (ESS/SNH)": {
+          ideas: 0,
+          comments: 0,
+          inspirations: 0,
+          evaluations: 0,
+          xp: 0,
+          value: 0,
+          playerCount: 0,
+        },
+        OTHERS: {
+          ideas: 0,
+          comments: 0,
+          inspirations: 0,
+          evaluations: 0,
+          xp: 0,
+          value: 0,
+          playerCount: 0,
+        },
+      };
+
+      // Group evaluations by idea
+      const evaluationsByIdea: { [ideaId: string]: Evaluation[] } = {};
+      evaluations.forEach((evalItem) => {
+        if (!evaluationsByIdea[evalItem.ideaId]) {
+          evaluationsByIdea[evalItem.ideaId] = [];
+        }
+        evaluationsByIdea[evalItem.ideaId].push(evalItem);
+      });
+
+      // Calculate average risk-adjusted value for each idea
+      const ideaValues: { [ideaId: string]: number } = {};
+      ideas.forEach((idea) => {
+        const ideaEvaluations = evaluationsByIdea[idea.id] || [];
+        if (ideaEvaluations.length > 0) {
+          let sumRiskAdjustedValue = 0;
+          ideaEvaluations.forEach((evalItem) => {
+            const monetaryValue =
+              costImpactToMonetaryValue[evalItem.ImpactScore] || 0;
+            const riskAdjustment =
+              feasibilityToRiskAdjustment[evalItem.FeasibilityScore] || 0;
+            sumRiskAdjustedValue += monetaryValue * riskAdjustment;
+          });
+          ideaValues[idea.id] = sumRiskAdjustedValue / ideaEvaluations.length;
+        }
+      });
+
+      players.forEach((player) => {
+        const teamName = getPlayerTeam(player.email);
+        if (teams[teamName]) {
+          teams[teamName].playerCount++;
+        }
+      });
+
+      ideas.forEach((idea) => {
+        const player = players.find((p) => p.id === idea.userId);
+        if (player) {
+          const teamName = getPlayerTeam(player.email);
+          if (teams[teamName]) {
+            teams[teamName].ideas++;
+            if (ideaValues[idea.id]) {
+              teams[teamName].value += ideaValues[idea.id];
+            }
+          }
+        }
+      });
+
+      comments.forEach((comment) => {
+        const player = players.find((p) => p.id === comment.userId);
+        if (player) {
+          const teamName = getPlayerTeam(player.email);
+          if (teams[teamName]) {
+            teams[teamName].comments++;
+          }
+        }
+      });
+
+      evaluations.forEach((evaluation) => {
+        const player = players.find((p) => p.id === evaluation.EvaluatorUserId);
+        if (player) {
+          const teamName = getPlayerTeam(player.email);
+          if (teams[teamName]) {
+            teams[teamName].evaluations++;
+          }
+        }
+      });
+
+      const inspirationCounts: { [userId: string]: number } = {};
+      ideas.forEach((idea) => {
+        if (idea.inspiredBy) {
+          idea.inspiredBy.forEach((inspiration: { id: string }) => {
+            const inspiringIdeaAuthorId = ideaAuthorMap.get(inspiration.id);
+            if (
+              inspiringIdeaAuthorId &&
+              inspiringIdeaAuthorId !== idea.userId
+            ) {
+              inspirationCounts[inspiringIdeaAuthorId] =
+                (inspirationCounts[inspiringIdeaAuthorId] || 0) + 1;
+            }
+          });
+        }
+      });
+
+      players.forEach((player) => {
+        const playerIdeas = ideas.filter((i) => i.userId === player.id);
+        const playerComments = comments.filter((c) => c.userId === player.id);
+        const playerEvaluations = evaluations.filter(
+          (e) => e.EvaluatorUserId === player.id
+        );
+        const ideasInspired = inspirationCounts[player.id] || 0;
+
+        let xp = 0;
+        playerIdeas
+          .sort((a, b) => a.createdAt.toMillis() - b.createdAt.toMillis())
+          .forEach((_, index) => {
+            if (index === 0) xp += 20;
+            else if (index === 1) xp += 15;
+            else if (index === 2) xp += 10;
+            else xp += 5;
+          });
+        xp += playerComments.length * 2;
+        xp += playerEvaluations.length * 2;
+        xp += ideasInspired * 10;
+
+        const teamName = getPlayerTeam(player.email);
+        if (teams[teamName]) {
+          teams[teamName].xp += xp;
+          teams[teamName].inspirations += ideasInspired;
+        }
+      });
+
+      const chartData: TeamData[] = Object.keys(teams).map((teamName) => ({
+        name: teamName,
+        ...teams[teamName],
+      }));
+      setTeamChartData(chartData);
 
       // --- Date Range and Final Stats Generation ---
       const dateRange = [];
@@ -464,6 +704,100 @@ const PlayerPageView = () => {
         <Bar dataKey={dataKey} fill={color} name={name} />
       </BarChart>
     </ResponsiveContainer>
+  );
+
+  const renderPieChart = (
+    dataKey: keyof TeamData,
+    title: string,
+    total: number
+  ) => {
+    const isValue = dataKey === "value";
+    const formattedTotal = isValue
+      ? `$${Math.round(total).toLocaleString("en-US")}`
+      : total.toLocaleString("en-US");
+
+    const RADIAN = Math.PI / 180;
+    const renderCustomizedLabel = ({
+      cx,
+      cy,
+      midAngle,
+      outerRadius,
+      value,
+    }: CustomizedLabelProps) => {
+      const radius = outerRadius * 1.25; // Increase radius to move labels further out
+      const x = cx + radius * Math.cos(-midAngle * RADIAN);
+      const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+      // Don't render a label if the value is 0
+      if (value === 0) {
+        return null;
+      }
+
+      const formattedValue = isValue
+        ? `$${Math.round(value).toLocaleString("en-US")}`
+        : value.toLocaleString("en-US");
+
+      return (
+        <text
+          x={x}
+          y={y}
+          fill="black"
+          textAnchor={x > cx ? "start" : "end"}
+          dominantBaseline="central"
+          fontSize={12}
+        >
+          {formattedValue}
+        </text>
+      );
+    };
+
+    return (
+      <div>
+        <h4 className="text-lg font-semibold mb-2 text-center">{`${title} (${formattedTotal})`}</h4>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={teamChartData}
+              dataKey={dataKey}
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius={80}
+              fill="#8884d8"
+              label={renderCustomizedLabel}
+              labelLine={false}
+            >
+              {teamChartData.map((_, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={COLORS[index % COLORS.length]}
+                />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value: number) =>
+                isValue
+                  ? `$${Math.round(value).toLocaleString("en-US")}`
+                  : value.toLocaleString("en-US")
+              }
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  };
+
+  const totals = teamChartData.reduce(
+    (acc, team) => {
+      acc.ideas += team.ideas;
+      acc.comments += team.comments;
+      acc.inspirations += team.inspirations;
+      acc.evaluations += team.evaluations;
+      acc.xp += team.xp;
+      acc.value += team.value;
+      return acc;
+    },
+    { ideas: 0, comments: 0, inspirations: 0, evaluations: 0, xp: 0, value: 0 }
   );
 
   if (loading) {
@@ -597,6 +931,7 @@ const PlayerPageView = () => {
             {/* End of changed section */}
           </div>
         </div>
+
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-bold text-gray-800">Daily Activity</h3>
@@ -646,6 +981,49 @@ const PlayerPageView = () => {
               </h4>
               {renderChart("xpCollected", "#00C49F", "XP Collected")}
             </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow-md p-6 mt-8">
+          <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">
+            Team Contributions
+          </h3>
+          <div className="flex justify-center flex-wrap gap-x-4 mb-4">
+            <div className="flex flex-row justify-center items-center gap-2">
+              <div className="bg-blue-400 w-3 h-3"></div>
+              <div className="text-[12px]">Blois Plant</div>
+            </div>
+            <div className="flex flex-row justify-center items-center gap-2">
+              <div className="bg-green-600 w-3 h-3"></div>
+              <div className="text-[12px]">Europe Team</div>
+            </div>
+            <div className="flex flex-row justify-center items-center gap-2">
+              <div className="bg-amber-300 w-3 h-3"></div>
+              <div className="text-[12px]">Global Team</div>
+            </div>
+            <div className="flex flex-row justify-center items-center gap-2">
+              <div className="bg-amber-600 w-3 h-3"></div>
+              <div className="text-[12px]">Urlati Team</div>
+            </div>
+            <div className="flex flex-row justify-center items-center gap-2">
+              <div className="bg-purple-700 w-3 h-3"></div>
+              <div className="text-[12px]">Warsaw Team</div>
+            </div>
+            <div className="flex flex-row justify-center items-center gap-2">
+              <div className="bg-red-500 w-3 h-3"></div>
+              <div className="text-[12px]">Others Team</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {renderPieChart("ideas", "Ideas", totals.ideas)}
+            {renderPieChart("comments", "Comments", totals.comments)}
+            {renderPieChart(
+              "inspirations",
+              "Inspirations",
+              totals.inspirations
+            )}
+            {renderPieChart("evaluations", "Evaluations", totals.evaluations)}
+            {renderPieChart("xp", "XP", totals.xp)}
+            {renderPieChart("value", "Total Value Created", totals.value)}
           </div>
         </div>
       </div>
