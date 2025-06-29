@@ -3,6 +3,11 @@ import { collection, getDocs, Timestamp } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { AuthContext } from "../../context/AuthContext";
 import { FaInfoCircle } from "react-icons/fa";
+import {
+  costImpactToMonetaryValue,
+  feasibilityOptions,
+  costImpactOptions,
+} from "../../../lib/constants";
 
 // --- TYPE DEFINITIONS ---
 
@@ -23,6 +28,8 @@ interface Idea {
   userId: string;
   createdAt: Timestamp;
   inspiredBy?: { id: string }[];
+  costEstimate: string;
+  feasibilityEstimate: string;
 }
 
 interface Comment {
@@ -33,6 +40,9 @@ interface Comment {
 interface Evaluation {
   EvaluatorUserId: string;
   createdAt: Timestamp;
+  ideaId: string;
+  ImpactScore: string;
+  FeasibilityScore: string;
 }
 
 interface PlayerStats {
@@ -57,6 +67,7 @@ interface TeamStats {
   ideasInspired: number;
   evaluationsMade: number;
   xp: number;
+  avgRiskAdjustedValue: number;
 }
 
 type SortableKeys = keyof Omit<PlayerStats, "userId" | "profilePic" | "email">;
@@ -66,6 +77,14 @@ interface SortConfig {
   key: SortableKeys;
   direction: SortDirection;
 }
+
+const feasibilityToRiskAdjustment: { [key: string]: number } = {
+  "Very Easy To do": 0.9,
+  Manageable: 0.7,
+  "Achievable with Effort": 0.5,
+  Challenging: 0.25,
+  "Very Challenging": 0.1,
+};
 
 // --- INFO MODAL COMPONENT ---
 const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -482,13 +501,42 @@ const PlayerRankingView: React.FC = () => {
 
         setPlayerStats(finalStats);
 
-        const teams: { [key: string]: PlayerStats[] } = {
-          "BLOIS PLANT": [],
-          "EUROPE TEAM": [],
-          "GLOBAL TEAM": [],
-          "URLATI PLANT": [],
-          "WARSAW (ESS/SNH)": [],
-          OTHERS: [],
+        const evaluationsByIdea: { [ideaId: string]: Evaluation[] } = {};
+        evaluations.forEach((evalItem) => {
+          if (!evaluationsByIdea[evalItem.ideaId]) {
+            evaluationsByIdea[evalItem.ideaId] = [];
+          }
+          evaluationsByIdea[evalItem.ideaId].push(evalItem);
+        });
+
+        const ideaValues: { [ideaId: string]: number } = {};
+        ideas.forEach((idea) => {
+          const ideaEvaluations = evaluationsByIdea[idea.id] || [];
+          if (ideaEvaluations.length > 0) {
+            let sumRiskAdjustedValue = 0;
+            ideaEvaluations.forEach((evalItem) => {
+              const monetaryValue =
+                costImpactToMonetaryValue[evalItem.ImpactScore] || 0;
+              const riskAdjustment =
+                feasibilityToRiskAdjustment[evalItem.FeasibilityScore] || 0;
+              sumRiskAdjustedValue += monetaryValue * riskAdjustment;
+            });
+            ideaValues[idea.id] = sumRiskAdjustedValue / ideaEvaluations.length;
+          }
+        });
+
+        const teams: {
+          [key: string]: {
+            players: PlayerStats[];
+            value: number;
+          };
+        } = {
+          "BLOIS PLANT": { players: [], value: 0 },
+          "EUROPE TEAM": { players: [], value: 0 },
+          "GLOBAL TEAM": { players: [], value: 0 },
+          "URLATI PLANT": { players: [], value: 0 },
+          "WARSAW (ESS/SNH)": { players: [], value: 0 },
+          OTHERS: { players: [], value: 0 },
         };
 
         const teamPlayerCounts: {
@@ -521,12 +569,23 @@ const PlayerRankingView: React.FC = () => {
           const detail = playerDetails.find((d) => d.email === player.email);
           const team = detail ? detail.team : "OTHERS";
           if (teams[team]) {
-            teams[team].push(player);
+            teams[team].players.push(player);
+          }
+        });
+
+        ideas.forEach((idea) => {
+          const playerDetail = playerDetails.find(
+            (d) =>
+              d.email === players.find((p) => p.userId === idea.userId)?.email
+          );
+          const teamName = playerDetail ? playerDetail.team : "OTHERS";
+          if (teams[teamName] && ideaValues[idea.id]) {
+            teams[teamName].value += ideaValues[idea.id];
           }
         });
 
         const calculatedTeamStats = Object.keys(teams).map((teamName) => {
-          const teamPlayers = teams[teamName];
+          const teamPlayers = teams[teamName].players;
           const { invited, registered } = teamPlayerCounts[teamName];
 
           const totalStats = teamPlayers.reduce(
@@ -557,6 +616,8 @@ const PlayerRankingView: React.FC = () => {
             evaluationsMade:
               invited > 0 ? totalStats.evaluationsMade / invited : 0,
             xp: invited > 0 ? totalStats.xp / invited : 0,
+            avgRiskAdjustedValue:
+              invited > 0 ? teams[teamName].value / invited : 0,
           };
         });
 
@@ -783,6 +844,9 @@ const PlayerRankingView: React.FC = () => {
                 <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">
                   Avg XP
                 </th>
+                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">
+                  Avg. Value
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -811,6 +875,9 @@ const PlayerRankingView: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
                     {team.xp.toFixed(1)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
+                    ${Math.round(team.avgRiskAdjustedValue).toLocaleString()}
                   </td>
                 </tr>
               ))}
