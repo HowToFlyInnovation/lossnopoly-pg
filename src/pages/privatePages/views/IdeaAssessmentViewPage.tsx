@@ -8,6 +8,8 @@ import {
   setDoc,
   deleteDoc,
   Timestamp,
+  where,
+  getDocs,
 } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { AuthContext } from "../../context/AuthContext";
@@ -299,6 +301,7 @@ const IdeaAssessmentViewPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedIdea, setSelectedIdea] = useState<ProcessedIdea | null>(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [isLeader, setIsLeader] = useState(false);
 
   useEffect(() => {
     if (!authContext?.user) {
@@ -306,6 +309,23 @@ const IdeaAssessmentViewPage: React.FC = () => {
       return;
     }
     const user = authContext.user;
+
+    const fetchUserRole = async () => {
+      const playerDetailsCollection = collection(db, "playerDetailsCollection");
+      const q = query(
+        playerDetailsCollection,
+        where("email", "==", user.email)
+      );
+      const playerDetailsSnapshot = await getDocs(q);
+      if (!playerDetailsSnapshot.empty) {
+        const playerData = playerDetailsSnapshot.docs[0].data();
+        if (playerData.role === "Leader") {
+          setIsLeader(true);
+        }
+      }
+    };
+
+    fetchUserRole();
 
     const ideasQuery = query(collection(db, "ideas"));
     const evaluationsQuery = query(collection(db, "evaluations"));
@@ -327,37 +347,39 @@ const IdeaAssessmentViewPage: React.FC = () => {
             .map((e) => e.ideaId)
         );
 
-        const newProcessedIdeas = ideasData
-          .filter((idea) => userEvaluatedIdeaIds.has(idea.id))
-          .map((idea) => {
-            const relatedEvals = evaluationsData.filter(
-              (e) => e.ideaId === idea.id
-            );
+        const ideasToProcess = isLeader
+          ? ideasData
+          : ideasData.filter((idea) => userEvaluatedIdeaIds.has(idea.id));
 
-            const totalImpact = relatedEvals.reduce((sum, e) => {
-              const score = costImpactOptions.indexOf(e.ImpactScore);
-              return sum + (score !== -1 ? score : 0); // Use 0-based index
-            }, 0);
+        const newProcessedIdeas = ideasToProcess.map((idea) => {
+          const relatedEvals = evaluationsData.filter(
+            (e) => e.ideaId === idea.id
+          );
 
-            const totalFeasibility = relatedEvals.reduce((sum, e) => {
-              const score = feasibilityOptions.indexOf(e.FeasibilityScore);
-              // Invert score so higher is better for feasibility
-              const invertedScore =
-                score !== -1 ? feasibilityOptions.length - 1 - score : 0;
-              return sum + invertedScore;
-            }, 0);
+          const totalImpact = relatedEvals.reduce((sum, e) => {
+            const score = costImpactOptions.indexOf(e.ImpactScore);
+            return sum + (score !== -1 ? score : 0); // Use 0-based index
+          }, 0);
 
-            return {
-              ...idea,
-              avgImpact:
-                relatedEvals.length > 0 ? totalImpact / relatedEvals.length : 0,
-              avgFeasibility:
-                relatedEvals.length > 0
-                  ? totalFeasibility / relatedEvals.length
-                  : 0,
-              evaluationCount: relatedEvals.length,
-            };
-          });
+          const totalFeasibility = relatedEvals.reduce((sum, e) => {
+            const score = feasibilityOptions.indexOf(e.FeasibilityScore);
+            // Invert score so higher is better for feasibility
+            const invertedScore =
+              score !== -1 ? feasibilityOptions.length - 1 - score : 0;
+            return sum + invertedScore;
+          }, 0);
+
+          return {
+            ...idea,
+            avgImpact:
+              relatedEvals.length > 0 ? totalImpact / relatedEvals.length : 0,
+            avgFeasibility:
+              relatedEvals.length > 0
+                ? totalFeasibility / relatedEvals.length
+                : 0,
+            evaluationCount: relatedEvals.length,
+          };
+        });
 
         newProcessedIdeas.sort((a, b) => {
           const categoryA = getEvaluationCategory(
@@ -396,7 +418,7 @@ const IdeaAssessmentViewPage: React.FC = () => {
       unsubIdeas();
       unsubVotes();
     };
-  }, [authContext]);
+  }, [authContext, isLeader]);
 
   const handleIdeaClick = (idea: ProcessedIdea) => {
     setSelectedIdea((prev) => (prev?.id === idea.id ? null : idea));
@@ -478,12 +500,18 @@ const IdeaAssessmentViewPage: React.FC = () => {
 
           <div className="w-full md:w-1/3 lg:w-2/5">
             <h2 className="text-xl font-bold text-gray-700 mb-2">
-              {selectedIdea ? "Selected Idea" : "Your Evaluated Ideas"}
+              {selectedIdea
+                ? "Selected Idea"
+                : isLeader
+                ? "All Ideas"
+                : "Your Evaluated Ideas"}
             </h2>
-            <p className="text-sm text-gray-600 mb-4">
-              This list shows only the ideas that you have personally evaluated.
-              To see all ideas, please visit the Ideation Space.
-            </p>
+            {!isLeader && (
+              <p className="text-sm text-gray-600 mb-4">
+                This list shows only the ideas that you have personally
+                evaluated. To see all ideas, please visit the Ideation Space.
+              </p>
+            )}
             {selectedIdea ? (
               <IdeaTile
                 key={selectedIdea.id}
