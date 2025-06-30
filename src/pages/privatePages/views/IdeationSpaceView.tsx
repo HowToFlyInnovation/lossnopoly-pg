@@ -117,6 +117,9 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <strong>Sub-Challenge:</strong> Focus on ideas related to a
                 specific sub-challenge.
               </li>
+              <li>
+                <strong>Area:</strong> Filter by a specific area of interest.
+              </li>
             </ul>
             <div className="bg-gray-900 p-4 rounded-lg text-center my-2">
               <img
@@ -221,6 +224,27 @@ const MasonryLayout: React.FC<{
   );
 };
 
+const areaOptions = [
+  "Bulk",
+  "RM",
+  "PM-Bottles",
+  "PM-Labels",
+  "PM - Caps",
+  "HW",
+  "IGMC - PrepProd",
+  "IGMC - Printing Plates",
+  "IGMC-SMC Others",
+  "Masterdata",
+  "Making",
+  "Packing",
+  "Inbound",
+  "Outbound",
+  "Quality",
+  "IMPD",
+  "Custo",
+  "Others",
+];
+
 // --- MAIN IDEATION SPACE VIEW ---
 const IdeationSpaceView: React.FC = () => {
   const { user } = useContext(AuthContext) as AuthContextType;
@@ -232,8 +256,9 @@ const IdeationSpaceView: React.FC = () => {
   const [filteredIdeas, setFilteredIdeas] = useState<Idea[]>([]);
   const [filter, setFilter] = useState("all");
   const [missionFilter, setMissionFilter] = useState("all");
-  const [scopeFilter, setScopeFilter] = useState("all"); // New state for scope filter
-  const [isAdmin, setIsAdmin] = useState(false); // New state for admin status
+  const [scopeFilter, setScopeFilter] = useState("all");
+  const [areaFilter, setAreaFilter] = useState("all"); // Changed to single string
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedIdeas, setSelectedIdeas] = useState<Idea[]>([]);
@@ -333,6 +358,13 @@ const IdeationSpaceView: React.FC = () => {
           (idea) => idea.outOfScope === true
         );
       }
+    }
+
+    // Area filter
+    if (areaFilter !== "all") {
+      newFilteredData = newFilteredData.filter((idea) =>
+        idea.areas?.includes(areaFilter)
+      );
     }
 
     // Main filter logic
@@ -476,6 +508,7 @@ const IdeationSpaceView: React.FC = () => {
     filter,
     missionFilter,
     scopeFilter,
+    areaFilter, // updated dependency
     isAdmin,
     ideasData,
     commentsData,
@@ -552,11 +585,14 @@ const IdeationSpaceView: React.FC = () => {
           >
             <FaInfoCircle size={20} />
           </button>
-          <span data-tour-id="ideation-space-filters">
+          <span
+            data-tour-id="ideation-space-filters"
+            className="flex items-center gap-2"
+          >
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="bg-gray-800 text-white font-bold py-2 px-4 mb-2 md:mb-0 md:mr-2 rounded-lg focus:outline-none w-full md:w-auto"
+              className="bg-gray-800 text-white font-bold py-2 px-4 rounded-lg focus:outline-none w-full md:w-auto"
             >
               <option value="all">All Ideas</option>
               <option value="userCreated">My Ideas</option>
@@ -585,6 +621,21 @@ const IdeationSpaceView: React.FC = () => {
               </option>
               <option value="Zero Waste">Zero Waste</option>
             </select>
+
+            {/* --- MODIFIED AREA FILTER --- */}
+            <select
+              value={areaFilter}
+              onChange={(e) => setAreaFilter(e.target.value)}
+              className="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none w-full md:w-auto"
+            >
+              <option value="all">All Areas</option>
+              {areaOptions.map((area) => (
+                <option key={area} value={area}>
+                  {area}
+                </option>
+              ))}
+            </select>
+
             {isAdmin && (
               <select
                 value={scopeFilter}
