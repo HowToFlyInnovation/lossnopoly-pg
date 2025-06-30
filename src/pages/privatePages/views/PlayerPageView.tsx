@@ -1,6 +1,13 @@
 import { useContext, useState, useEffect, useRef } from "react";
 import { AuthContext, type AuthContextType } from "../../context/AuthContext";
-import { doc, collection, getDocs, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  collection,
+  getDocs,
+  updateDoc,
+  where,
+  query,
+} from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { updateProfile } from "firebase/auth";
@@ -49,6 +56,7 @@ interface Idea {
   inspiredBy?: { id: string }[];
   createdAt: any; // Can be improved with a more specific type
   outOfScope?: boolean;
+  ideationMission: string;
 }
 
 interface Evaluation {
@@ -67,6 +75,12 @@ interface TeamData {
   inspirations: number;
   evaluations: number;
   xp: number;
+  value: number;
+}
+
+interface ChallengeData {
+  name: string;
+  ideas: number;
   value: number;
 }
 
@@ -184,6 +198,12 @@ const COLORS = [
   "#FF1919",
 ];
 
+const CHALLENGE_COLORS: { [key: string]: string } = {
+  "E2E Touchless Supply Chain": "rgb(252 211 77)",
+  "E2E Touchless Innovation": "rgb(217 119 6)",
+  "Zero Waste": "#63b3ed",
+};
+
 interface CustomizedLabelProps {
   cx: number;
   cy: number;
@@ -198,6 +218,9 @@ const PlayerPageView = () => {
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
   const [teamChartData, setTeamChartData] = useState<TeamData[]>([]);
+  const [challengeChartData, setChallengeChartData] = useState<ChallengeData[]>(
+    []
+  );
   const [filter, setFilter] = useState("me");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -634,6 +657,30 @@ const PlayerPageView = () => {
       }));
       setTeamChartData(chartData);
 
+      // --- Challenge Data Calculation for Pie Charts ---
+      const challenges: { [key: string]: { ideas: number; value: number } } = {
+        "E2E Touchless Supply Chain": { ideas: 0, value: 0 },
+        "E2E Touchless Innovation": { ideas: 0, value: 0 },
+        "Zero Waste": { ideas: 0, value: 0 },
+      };
+
+      ideas.forEach((idea) => {
+        if (challenges[idea.ideationMission]) {
+          challenges[idea.ideationMission].ideas++;
+          if (ideaValues[idea.id] && !idea.outOfScope) {
+            challenges[idea.ideationMission].value += ideaValues[idea.id];
+          }
+        }
+      });
+
+      const challengeData: ChallengeData[] = Object.keys(challenges).map(
+        (challengeName) => ({
+          name: challengeName,
+          ...challenges[challengeName],
+        })
+      );
+      setChallengeChartData(challengeData);
+
       // --- Date Range and Final Stats Generation ---
       const dateRange = [];
       for (let i = 6; i >= 0; i--) {
@@ -799,6 +846,84 @@ const PlayerPageView = () => {
       </div>
     );
   };
+  const renderChallengePieChart = (
+    dataKey: keyof ChallengeData,
+    title: string,
+    total: number
+  ) => {
+    const isValue = dataKey === "value";
+    const formattedTotal = isValue
+      ? `$${Math.round(total).toLocaleString("en-US")}`
+      : total.toLocaleString("en-US");
+
+    const RADIAN = Math.PI / 180;
+    const renderCustomizedLabel = ({
+      cx,
+      cy,
+      midAngle,
+      outerRadius,
+      value,
+    }: CustomizedLabelProps) => {
+      const radius = outerRadius * 1.25;
+      const x = cx + radius * Math.cos(-midAngle * RADIAN);
+      const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+      if (value === 0) {
+        return null;
+      }
+
+      const formattedValue = isValue
+        ? `$${Math.round(value).toLocaleString("en-US")}`
+        : value.toLocaleString("en-US");
+
+      return (
+        <text
+          x={x}
+          y={y}
+          fill="black"
+          textAnchor={x > cx ? "start" : "end"}
+          dominantBaseline="central"
+          fontSize={12}
+        >
+          {formattedValue}
+        </text>
+      );
+    };
+    return (
+      <div>
+        <h4 className="relative text-lg font-semibold mb-0 top-6 text-center">{`${title} (${formattedTotal})`}</h4>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={challengeChartData}
+              dataKey={dataKey}
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius={80}
+              fill="#8884d8"
+              label={renderCustomizedLabel}
+              labelLine={false}
+            >
+              {challengeChartData.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={CHALLENGE_COLORS[entry.name]}
+                />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value: number) =>
+                isValue
+                  ? `$${Math.round(value).toLocaleString("en-US")}`
+                  : value.toLocaleString("en-US")
+              }
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  };
 
   const totals = teamChartData.reduce(
     (acc, team) => {
@@ -811,6 +936,15 @@ const PlayerPageView = () => {
       return acc;
     },
     { ideas: 0, comments: 0, inspirations: 0, evaluations: 0, xp: 0, value: 0 }
+  );
+
+  const challengeTotals = challengeChartData.reduce(
+    (acc, challenge) => {
+      acc.ideas += challenge.ideas;
+      acc.value += challenge.value;
+      return acc;
+    },
+    { ideas: 0, value: 0 }
   );
 
   if (loading) {
@@ -855,7 +989,7 @@ const PlayerPageView = () => {
                 ref={fileInputRef}
                 onChange={handleFileChange}
                 style={{ display: "none" }}
-                accept="image/*, .gif"
+                accept="image/*,.gif"
               />
               <button
                 onClick={handleEditPicture}
@@ -1037,6 +1171,34 @@ const PlayerPageView = () => {
             {renderPieChart("evaluations", "Evaluations", totals.evaluations)}
             {renderPieChart("xp", "XP", totals.xp)}
             {renderPieChart("value", "Total Value Created", totals.value)}
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow-md p-6 mt-8">
+          <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">
+            Idea across Sub-Challenges
+          </h3>
+          <div className="flex justify-center flex-wrap gap-x-4 mb-4">
+            {Object.entries(CHALLENGE_COLORS).map(([name, color]) => (
+              <div key={name} className="flex items-center gap-2">
+                <div
+                  className="w-3 h-3"
+                  style={{ backgroundColor: color }}
+                ></div>
+                <span className="text-xs">{name}</span>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {renderChallengePieChart(
+              "ideas",
+              "Number of Ideas",
+              challengeTotals.ideas
+            )}
+            {renderChallengePieChart(
+              "value",
+              "Generated Value",
+              challengeTotals.value
+            )}
           </div>
         </div>
       </div>
