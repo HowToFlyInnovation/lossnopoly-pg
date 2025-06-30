@@ -1,53 +1,61 @@
-/*
-This is an altered file: src/pages/privatePages/views/AdminView.tsx
-*/
 import React, { useState, useEffect, useContext } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../firebase/config";
-import { AuthContext } from "../../context/AuthContext";
+import { AuthContext, type AuthContextType } from "../../context/AuthContext";
 
 interface Player {
   email: string;
   displayName: string;
 }
 
+interface PlayerDetails {
+  adminRights?: boolean;
+}
+
 const AdminView: React.FC = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useContext(AuthContext)!;
+  const [isAdmin, setIsAdmin] = useState(false);
+  const { user } = useContext(AuthContext) as AuthContextType;
 
   useEffect(() => {
-    const fetchPlayers = async () => {
-      if (
-        user?.email === "chevalier.j@pg.com" ||
-        user?.email === "gilles.rossou@howtofly.be" ||
-        user?.email === "j.judd@kineticc.com"
-      ) {
+    const checkAdminRights = async () => {
+      if (user) {
         try {
-          const playersSnapshot = await getDocs(collection(db, "players"));
-          const playersList = playersSnapshot.docs.map(
-            (doc) => doc.data() as Player
+          const playerDetailsQuery = query(
+            collection(db, "playerDetailsCollection"),
+            where("email", "==", user.email)
           );
-          setPlayers(playersList);
+          const querySnapshot = await getDocs(playerDetailsQuery);
+
+          if (!querySnapshot.empty) {
+            const playerDetailsDoc = querySnapshot.docs[0];
+            const playerData = playerDetailsDoc.data() as PlayerDetails;
+
+            if (playerData.adminRights === true) {
+              setIsAdmin(true);
+              const playersSnapshot = await getDocs(collection(db, "players"));
+              const playersList = playersSnapshot.docs.map(
+                (doc) => doc.data() as Player
+              );
+              setPlayers(playersList);
+            }
+          }
         } catch (error) {
-          console.error("Error fetching players:", error);
+          console.error("Error fetching player data:", error);
         }
       }
       setLoading(false);
     };
 
-    fetchPlayers();
+    checkAdminRights();
   }, [user]);
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  if (
-    user?.email !== "chevalier.j@pg.com" &&
-    user?.email !== "gilles.rossou@howtofly.be" &&
-    user?.email !== "j.judd@kineticc.com"
-  ) {
+  if (!isAdmin) {
     return <div>You are not authorized to view this page.</div>;
   }
 
