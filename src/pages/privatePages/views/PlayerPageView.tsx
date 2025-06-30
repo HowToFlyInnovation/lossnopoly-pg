@@ -753,7 +753,7 @@ const PlayerPageView = () => {
 
     return (
       <div>
-        <h4 className="text-lg font-semibold mb-2 text-center">{`${title} (${formattedTotal})`}</h4>
+        <h4 className="relative text-lg font-semibold mb-0 top-6 text-center">{`${title} (${formattedTotal})`}</h4>
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
             <Pie

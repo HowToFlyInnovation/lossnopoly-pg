@@ -20,7 +20,8 @@ const AdminView: React.FC = () => {
     const fetchPlayers = async () => {
       if (
         user?.email === "chevalier.j@pg.com" ||
-        user?.email === "gilles.rossou@howtofly.be"
+        user?.email === "gilles.rossou@howtofly.be" ||
+        user?.email === "j.judd@kineticc.com"
       ) {
         try {
           const playersSnapshot = await getDocs(collection(db, "players"));
@@ -44,7 +45,8 @@ const AdminView: React.FC = () => {
 
   if (
     user?.email !== "chevalier.j@pg.com" &&
-    user?.email !== "gilles.rossou@howtofly.be"
+    user?.email !== "gilles.rossou@howtofly.be" &&
+    user?.email !== "j.judd@kineticc.com"
   ) {
     return <div>You are not authorized to view this page.</div>;
   }

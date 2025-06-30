@@ -3,11 +3,7 @@ import { collection, getDocs, Timestamp } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { AuthContext } from "../../context/AuthContext";
 import { FaInfoCircle } from "react-icons/fa";
-import {
-  costImpactToMonetaryValue,
-  feasibilityOptions,
-  costImpactOptions,
-} from "../../../lib/constants";
+import { costImpactToMonetaryValue } from "../../../lib/constants";
 
 // --- TYPE DEFINITIONS ---
 
