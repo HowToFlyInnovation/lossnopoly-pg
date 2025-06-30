@@ -634,7 +634,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                 isDarkMode ? "text-white" : "text-gray-800"
               }`}
             >
-              {comment.displayName}
+              Comment
             </span>
             <span
               className={`ml-2 ${
