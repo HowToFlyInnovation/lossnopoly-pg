@@ -41,6 +41,7 @@ interface Idea {
   ideationMission: string;
   imageUrl?: string;
   ideaNumber?: number;
+  outOfScope?: boolean;
 }
 
 interface Evaluation {
@@ -290,6 +291,10 @@ const HomePageView: React.FC<HomePageViewProps> = ({
         let ideasContributing = 0;
 
         ideas.forEach((idea) => {
+          if (idea.outOfScope) {
+            return;
+          }
+
           const ideaEvaluations = evaluationsByIdea[idea.id] || [];
           if (ideaEvaluations.length > 0) {
             let sumRiskAdjustedValue = 0;

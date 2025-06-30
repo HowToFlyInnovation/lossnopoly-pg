@@ -7,6 +7,9 @@ import {
   Timestamp,
   onSnapshot,
   deleteDoc,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { AuthContext } from "../../context/AuthContext";
@@ -229,12 +232,33 @@ const IdeationSpaceView: React.FC = () => {
   const [filteredIdeas, setFilteredIdeas] = useState<Idea[]>([]);
   const [filter, setFilter] = useState("all");
   const [missionFilter, setMissionFilter] = useState("all");
+  const [scopeFilter, setScopeFilter] = useState("all"); // New state for scope filter
+  const [isAdmin, setIsAdmin] = useState(false); // New state for admin status
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedIdeas, setSelectedIdeas] = useState<Idea[]>([]);
   const [newlyCreatedIdeaId, setNewlyCreatedIdeaId] = useState<string | null>(
     null
   );
+
+  useEffect(() => {
+    const checkAdminRights = async () => {
+      if (user?.email) {
+        const q = query(
+          collection(db, "playerDetailsCollection"),
+          where("email", "==", user.email)
+        );
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const playerData = querySnapshot.docs[0].data();
+          if (playerData.adminRights === true) {
+            setIsAdmin(true);
+          }
+        }
+      }
+    };
+    checkAdminRights();
+  }, [user]);
 
   useEffect(() => {
     const fetchIdeas = onSnapshot(collection(db, "ideas"), (snapshot) => {
@@ -300,10 +324,21 @@ const IdeationSpaceView: React.FC = () => {
 
     let newFilteredData = [...ideasData];
 
+    // Scope filter (for admins)
+    if (isAdmin) {
+      if (scopeFilter === "inScope") {
+        newFilteredData = newFilteredData.filter((idea) => !idea.outOfScope);
+      } else if (scopeFilter === "outOfScope") {
+        newFilteredData = newFilteredData.filter(
+          (idea) => idea.outOfScope === true
+        );
+      }
+    }
+
     // Main filter logic
     switch (filter) {
       case "userCreated":
-        newFilteredData = ideasData.filter((s) => s.userId === user.uid);
+        newFilteredData = newFilteredData.filter((s) => s.userId === user.uid);
         break;
 
       case "userVoted": // "Evaluated By Me"
@@ -313,7 +348,7 @@ const IdeationSpaceView: React.FC = () => {
               .filter((e) => e.EvaluatorUserId === user.uid)
               .map((e) => e.ideaId)
           );
-          newFilteredData = ideasData.filter((idea) =>
+          newFilteredData = newFilteredData.filter((idea) =>
             evaluatedIdeaIds.has(idea.id)
           );
         }
@@ -326,7 +361,7 @@ const IdeationSpaceView: React.FC = () => {
               .filter((e) => e.EvaluatorUserId === user.uid)
               .map((e) => e.ideaId)
           );
-          newFilteredData = ideasData.filter(
+          newFilteredData = newFilteredData.filter(
             (idea) => !evaluatedIdeaIds.has(idea.id)
           );
         }
@@ -339,7 +374,7 @@ const IdeationSpaceView: React.FC = () => {
               .filter((c) => c.userId === user.uid)
               .map((c) => c.ideaId)
           );
-          newFilteredData = ideasData.filter((idea) =>
+          newFilteredData = newFilteredData.filter((idea) =>
             commentedIdeaIds.has(idea.id)
           );
         }
@@ -352,7 +387,7 @@ const IdeationSpaceView: React.FC = () => {
               .filter((tag) => tag.taggedPlayerEmail === user.email)
               .map((tag) => tag.ideaId)
           );
-          newFilteredData = ideasData.filter((idea) =>
+          newFilteredData = newFilteredData.filter((idea) =>
             taggedIdeaIds.has(idea.id)
           );
         }
@@ -364,7 +399,7 @@ const IdeationSpaceView: React.FC = () => {
             (tag) => tag.taggedPlayerEmail === user.email
           );
           const taggedIdeaIds = new Set(userTaggings.map((tag) => tag.ideaId));
-          const ideasToFilter = ideasData.filter((idea) =>
+          const ideasToFilter = newFilteredData.filter((idea) =>
             taggedIdeaIds.has(idea.id)
           );
 
@@ -417,7 +452,7 @@ const IdeationSpaceView: React.FC = () => {
               })
               .map((e) => e.ideaId)
           );
-          newFilteredData = ideasData.filter((idea) =>
+          newFilteredData = newFilteredData.filter((idea) =>
             categorizedIdeaIds.has(idea.id)
           );
         }
@@ -425,7 +460,7 @@ const IdeationSpaceView: React.FC = () => {
 
       case "all":
       default:
-        newFilteredData = [...ideasData];
+        // No change, keep newFilteredData as is
         break;
     }
 
@@ -440,6 +475,8 @@ const IdeationSpaceView: React.FC = () => {
   }, [
     filter,
     missionFilter,
+    scopeFilter,
+    isAdmin,
     ideasData,
     commentsData,
     evaluationsData,
@@ -548,6 +585,17 @@ const IdeationSpaceView: React.FC = () => {
               </option>
               <option value="Zero Waste">Zero Waste</option>
             </select>
+            {isAdmin && (
+              <select
+                value={scopeFilter}
+                onChange={(e) => setScopeFilter(e.target.value)}
+                className="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none w-full md:w-auto ml-2"
+              >
+                <option value="all">All Scopes</option>
+                <option value="inScope">In Scope</option>
+                <option value="outOfScope">Out Of Scope</option>
+              </select>
+            )}
           </span>
           <button
             onClick={handleOpenModal}

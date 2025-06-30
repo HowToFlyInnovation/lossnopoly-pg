@@ -43,6 +43,14 @@ interface PlayerDetails {
   team: string;
 }
 
+interface Idea {
+  id: string;
+  userId: string;
+  inspiredBy?: { id: string }[];
+  createdAt: any; // Can be improved with a more specific type
+  outOfScope?: boolean;
+}
+
 interface Evaluation {
   id: string;
   ideaId: string;
@@ -238,7 +246,7 @@ const PlayerPageView = () => {
       const ideas = ideasSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-      })) as any[];
+      })) as Idea[];
       const comments = commentsSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -517,6 +525,11 @@ const PlayerPageView = () => {
       // Calculate average risk-adjusted value for each idea
       const ideaValues: { [ideaId: string]: number } = {};
       ideas.forEach((idea) => {
+        // Exclude out of scope ideas from value calculation
+        if (idea.outOfScope) {
+          return;
+        }
+
         const ideaEvaluations = evaluationsByIdea[idea.id] || [];
         if (ideaEvaluations.length > 0) {
           let sumRiskAdjustedValue = 0;

@@ -24,11 +24,12 @@ import {
   FaLightbulb,
   FaSearchDollar,
   FaPen,
-} from "react-icons/fa"; // Added FaStar and FaPen
+  FaTimes, // Import the X icon
+} from "react-icons/fa";
 import { PiLegoBold } from "react-icons/pi";
 import { AuthContext, type AuthContextType } from "../../context/AuthContext";
 import { db } from "../../firebase/config";
-import { costImpactOptions, feasibilityOptions } from "../../../lib/constants"; // IMPORTED
+import { costImpactOptions, feasibilityOptions } from "../../../lib/constants";
 
 // Define the structure of a player from inviteList
 interface InvitedPlayer {
@@ -59,13 +60,14 @@ export interface Idea {
   ideationMission: string;
   tags: string[];
   areas?: string[];
-  whatIsNeeded?: string[]; // Added this field
+  whatIsNeeded?: string[];
   inspiredBy?: {
     id: string;
     ideaTitle: string;
     imageUrl: string;
     ideaNumber: number;
   }[];
+  outOfScope?: boolean; // Added outOfScope field
 }
 
 export interface Vote {
@@ -108,7 +110,7 @@ interface IdeaTileProps {
   onSelect: (item: Idea) => void;
   isSelected: boolean;
   isSelectionLocked: boolean;
-  isDarkMode: boolean; // New prop for dark mode
+  isDarkMode: boolean;
   "data-tour-id"?: string;
   startWithEvaluationOpen?: boolean;
 }
@@ -127,10 +129,11 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   isSelected,
   isSelectionLocked,
   isDarkMode,
-  "data-tour-id": dataTourId, // Destructure new prop
+  "data-tour-id": dataTourId,
   startWithEvaluationOpen = false,
 }) => {
   const { user } = useContext(AuthContext) as AuthContextType;
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // --- STATE ---
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -164,11 +167,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     "user"
   );
   const [inspiredByVisible, setInspiredByVisible] = useState(false);
-
-  // New state to control visibility of evaluation form/details panel
   const [evaluationVisible, setEvaluationVisible] = useState(false);
-
-  // New states for mention feature in comments
   const [allInvitedPlayers, setAllInvitedPlayers] = useState<InvitedPlayer[]>(
     []
   );
@@ -181,6 +180,26 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
 
   // --- Creator Check ---
   const isCreator = user?.uid === item.userId;
+
+  useEffect(() => {
+    const checkAdminRights = async () => {
+      if (user?.email) {
+        const docSnap = await firestoreGetDocs(
+          query(
+            collection(db, "playerDetailsCollection"),
+            where("email", "==", user.email)
+          )
+        );
+        if (!docSnap.empty) {
+          const adminData = docSnap.docs[0].data();
+          if (adminData.adminRights === true) {
+            setIsAdmin(true);
+          }
+        }
+      }
+    };
+    checkAdminRights();
+  }, [user]);
 
   useEffect(() => {
     if (startWithEvaluationOpen) {
@@ -614,6 +633,18 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     }
   };
 
+  const toggleOutOfScope = async () => {
+    if (!isAdmin) return;
+    const ideaRef = doc(db, "ideas", item.id);
+    try {
+      await updateDoc(ideaRef, {
+        outOfScope: !item.outOfScope,
+      });
+    } catch (error) {
+      console.error("Error toggling out of scope:", error);
+    }
+  };
+
   const renderComments = (parentId: string | null = null) => {
     return comments
       .filter((comment) => comment.parentId === parentId)
@@ -945,6 +976,23 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
               By {item.displayName} on {creationDate}
             </div>
             <div className="flex items-center gap-2">
+              {isAdmin && (
+                <button
+                  onClick={toggleOutOfScope}
+                  className={`rounded-full w-12 h-12 flex items-center justify-center transition-colors ${
+                    item.outOfScope
+                      ? "bg-red-500 text-white"
+                      : "bg-gray-200 text-gray-700"
+                  }`}
+                  title={
+                    item.outOfScope
+                      ? "Mark as in scope"
+                      : "Mark as out of scope"
+                  }
+                >
+                  <FaTimes size={24} />
+                </button>
+              )}
               {userEvaluation && ( // Only show if already rated
                 <button
                   onClick={() => setEvaluationVisible(!evaluationVisible)}

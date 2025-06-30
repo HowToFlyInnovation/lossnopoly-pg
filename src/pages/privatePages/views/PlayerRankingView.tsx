@@ -26,6 +26,7 @@ interface Idea {
   inspiredBy?: { id: string }[];
   costEstimate: string;
   feasibilityEstimate: string;
+  outOfScope?: boolean;
 }
 
 interface Comment {
@@ -507,6 +508,9 @@ const PlayerRankingView: React.FC = () => {
 
         const ideaValues: { [ideaId: string]: number } = {};
         ideas.forEach((idea) => {
+          if (idea.outOfScope) {
+            return; // Skip out-of-scope ideas from value calculation
+          }
           const ideaEvaluations = evaluationsByIdea[idea.id] || [];
           if (ideaEvaluations.length > 0) {
             let sumRiskAdjustedValue = 0;
