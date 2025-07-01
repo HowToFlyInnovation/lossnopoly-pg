@@ -8,7 +8,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { AuthContext, type AuthContextType } from "../../context/AuthContext";
-import * as XLSX from "xlsx";
+import * as ExcelJS from "exceljs"; // 👈 Import exceljs
 
 interface Player {
   userId: string;
@@ -100,10 +100,29 @@ const AdminView: React.FC = () => {
         ...doc.data(),
       })) as Idea[] | Evaluation[] | Comment[];
       const transformedData = transformDataForExport(data);
-      const worksheet = XLSX.utils.json_to_sheet(transformedData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
-      XLSX.writeFile(workbook, fileName);
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Data");
+
+      // Add headers
+      worksheet.columns = Object.keys(transformedData[0] || {}).map((key) => ({
+        header: key,
+        key: key,
+        width: 20, // Adjust column width as needed
+      }));
+
+      // Add data rows
+      worksheet.addRows(transformedData);
+
+      // Generate buffer and trigger download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
     } catch (error) {
       console.error("Error downloading data: ", error);
     }

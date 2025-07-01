@@ -1,13 +1,6 @@
 import { useContext, useState, useEffect, useRef } from "react";
 import { AuthContext, type AuthContextType } from "../../context/AuthContext";
-import {
-  doc,
-  collection,
-  getDocs,
-  updateDoc,
-  where,
-  query,
-} from "firebase/firestore";
+import { doc, collection, getDocs, updateDoc } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { updateProfile } from "firebase/auth";
