@@ -19,7 +19,7 @@ import {
   where,
   getDocs,
 } from "firebase/firestore";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom"; // Import Link
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = React.useState<string>("");
@@ -259,9 +259,13 @@ const LoginPage: React.FC = () => {
             Login
           </button>
           <div className="text-center">
-            <a href="#" className="text-sm" style={{ color: "black" }}>
+            <Link
+              to="/forgot-password"
+              className="text-sm"
+              style={{ color: "black" }}
+            >
               Forgot your password/reset
-            </a>
+            </Link>
           </div>
           <div className="text-center">
             <a href="./register" className="text-sm" style={{ color: "black" }}>

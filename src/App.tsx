@@ -11,6 +11,7 @@ import { doc, getDoc } from "firebase/firestore"; // Import doc and getDoc
 // Import your page components
 import LoginPage from "./pages/publicPages/LoginPage";
 import RegisterPage from "./pages/publicPages/RegisterPage";
+import ForgotPasswordPage from "./pages/publicPages/ForgotPasswordPage"; // Import the new page
 import IdeationPlatform from "./pages/privatePages/IdeationPlatform";
 import AdminView from "./pages/privatePages/views/AdminView";
 
@@ -161,7 +162,7 @@ function App() {
               )
             }
           />
-
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           {/* --- Private Routes --- */}
           {/* All private routes should now render IdeationPlatform with the shared visibleContent state */}
           <Route
