@@ -54,10 +54,11 @@ interface Evaluation {
 const genericTransformForExport = (data: any[]) => {
   return data.map((item) => {
     const newItem: { [key: string]: any } = { ...item };
-    // Remove email for privacy
+    // Remove email and approved fields for privacy/cleanliness
     delete newItem.email;
     delete newItem.EvaluatorEmail;
     delete newItem.IdeaOwnerEmail;
+    delete newItem.approved; // Removes the 'approved' column
 
     // Convert Timestamps to JS Dates for XLSX compatibility
     for (const key in newItem) {
@@ -79,6 +80,11 @@ const transformIdeasForExport = (
   return data.map((item) => {
     const newItem = { ...item }; // item is already a clean object
     const stats = evaluationStats[item.id];
+
+    // Add "New" and "Out of Scope" columns
+    newItem["New"] = item.isNew ? "Yes" : "No";
+    newItem["Out of Scope"] = item.outOfScope ? "Yes" : "No";
+
     if (stats && stats.count > 0) {
       const averageImpactScore = stats.impactSum / stats.count;
       const averageFeasibilityScore = stats.feasibilitySum / stats.count;
