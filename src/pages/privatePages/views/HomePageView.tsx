@@ -42,6 +42,7 @@ interface Idea {
   imageUrl?: string;
   ideaNumber?: number;
   outOfScope?: boolean;
+  isNew?: boolean; // Added isNew field
 }
 
 interface Evaluation {
@@ -291,7 +292,8 @@ const HomePageView: React.FC<HomePageViewProps> = ({
         let ideasContributing = 0;
 
         ideas.forEach((idea) => {
-          if (idea.outOfScope) {
+          // Skip out-of-scope ideas unless they are marked as new
+          if (idea.outOfScope && !idea.isNew) {
             return;
           }
 

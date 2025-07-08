@@ -68,6 +68,7 @@ export interface Idea {
     ideaNumber: number;
   }[];
   outOfScope?: boolean; // Added outOfScope field
+  isNew?: boolean;
 }
 
 export interface Vote {
@@ -645,6 +646,18 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
     }
   };
 
+  const toggleIsNew = async () => {
+    if (!isAdmin) return;
+    const ideaRef = doc(db, "ideas", item.id);
+    try {
+      await updateDoc(ideaRef, {
+        isNew: !item.isNew,
+      });
+    } catch (error) {
+      console.error("Error toggling isNew:", error);
+    }
+  };
+
   const renderComments = (parentId: string | null = null) => {
     return comments
       .filter((comment) => comment.parentId === parentId)
@@ -991,6 +1004,19 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   }
                 >
                   <FaTimes size={24} />
+                </button>
+              )}
+              {isAdmin && item.outOfScope && (
+                <button
+                  onClick={toggleIsNew}
+                  className={`rounded-full w-12 h-12 flex items-center justify-center transition-colors ${
+                    item.isNew
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200 text-gray-700"
+                  }`}
+                  title={item.isNew ? "Mark as not new" : "Mark as new"}
+                >
+                  N
                 </button>
               )}
               {userEvaluation && ( // Only show if already rated

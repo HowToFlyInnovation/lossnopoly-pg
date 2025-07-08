@@ -49,6 +49,7 @@ interface Idea {
   inspiredBy?: { id: string }[];
   createdAt: any; // Can be improved with a more specific type
   outOfScope?: boolean;
+  isNew?: boolean; // Added isNew
   ideationMission: string;
 }
 
@@ -541,8 +542,8 @@ const PlayerPageView = () => {
       // Calculate average risk-adjusted value for each idea
       const ideaValues: { [ideaId: string]: number } = {};
       ideas.forEach((idea) => {
-        // Exclude out of scope ideas from value calculation
-        if (idea.outOfScope) {
+        // Exclude out of scope ideas from value calculation unless new
+        if (idea.outOfScope && !idea.isNew) {
           return;
         }
 
@@ -660,7 +661,7 @@ const PlayerPageView = () => {
       ideas.forEach((idea) => {
         if (challenges[idea.ideationMission]) {
           challenges[idea.ideationMission].ideas++;
-          if (ideaValues[idea.id] && !idea.outOfScope) {
+          if (ideaValues[idea.id] && (!idea.outOfScope || idea.isNew)) {
             challenges[idea.ideationMission].value += ideaValues[idea.id];
           }
         }

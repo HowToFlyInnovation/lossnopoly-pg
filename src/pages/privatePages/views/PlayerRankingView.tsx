@@ -27,6 +27,7 @@ interface Idea {
   costEstimate: string;
   feasibilityEstimate: string;
   outOfScope?: boolean;
+  isNew?: boolean; // Added isNew field
 }
 
 interface Comment {
@@ -508,8 +509,8 @@ const PlayerRankingView: React.FC = () => {
 
         const ideaValues: { [ideaId: string]: number } = {};
         ideas.forEach((idea) => {
-          if (idea.outOfScope) {
-            return; // Skip out-of-scope ideas from value calculation
+          if (idea.outOfScope && !idea.isNew) {
+            return; // Skip out-of-scope ideas from value calculation unless new
           }
           const ideaEvaluations = evaluationsByIdea[idea.id] || [];
           if (ideaEvaluations.length > 0) {
