@@ -69,6 +69,8 @@ const chrisTopHatThumbnail =
   "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/ChristStartingImageJailComputer.png?alt=media&token=0c04611d-9ba5-4521-be8c-921c62aa6cb3";
 const monopolyJailImage =
   "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/ChrisOutOfJail_Updated.png?alt=media&token=82021c46-b346-43d7-a98f-4433c7d63fe8";
+const goalReachedVideo =
+  "https://firebasestorage.googleapis.com/v0/b/lossnopoly-hc.firebasestorage.app/o/ChrisOutOfJailVideo%20(1).mp4?alt=media&token=8d35441b-3306-4d66-baff-97f2b37796bd";
 
 // --- SUB-COMPONENTS ---
 
@@ -161,6 +163,7 @@ const HomePageView: React.FC<HomePageViewProps> = ({
   const [loadingSavings, setLoadingSavings] = useState(true);
   const [isInfoVisible, setIsInfoVisible] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isGoalVideoPlaying, setIsGoalVideoPlaying] = useState(false);
   const { user } = useContext(AuthContext) as AuthContextType;
   const [expandedChallengeId, setExpandedChallengeId] = useState<string | null>(
     null
@@ -168,6 +171,7 @@ const HomePageView: React.FC<HomePageViewProps> = ({
 
   const savingsTrackerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const goalVideoRef = useRef<HTMLVideoElement>(null);
 
   const handlePlayButtonClick = () => {
     const video = videoRef.current;
@@ -180,6 +184,20 @@ const HomePageView: React.FC<HomePageViewProps> = ({
   const handleVideoPlayPause = () => {
     if (videoRef.current) {
       setIsVideoPlaying(!videoRef.current.paused);
+    }
+  };
+
+  const handleGoalVideoPlayButtonClick = () => {
+    const video = goalVideoRef.current;
+    if (video) {
+      video.play();
+      setIsGoalVideoPlaying(true);
+    }
+  };
+
+  const handleGoalVideoPlayPause = () => {
+    if (goalVideoRef.current) {
+      setIsGoalVideoPlaying(!goalVideoRef.current.paused);
     }
   };
 
@@ -350,6 +368,8 @@ const HomePageView: React.FC<HomePageViewProps> = ({
     (totalIdentifiedSavings / TARGET_SAVINGS_VALUE) * 100,
     100
   );
+
+  const goalReached = progressPercentage >= 100;
 
   const expandedChallenge =
     challenges.find((c) => c.id === expandedChallengeId) || null;
@@ -629,18 +649,45 @@ const HomePageView: React.FC<HomePageViewProps> = ({
             </div>
 
             <div className="flex flex-col items-center justify-center">
-              <img
-                src={monopolyJailImage}
-                alt="Mr. Monopoly in jail"
-                className="w-48 h-auto mb-6"
-              />
+              {goalReached ? (
+                <div className="relative flex justify-center items-center w-80 h-auto mb-6">
+                  <video
+                    ref={goalVideoRef}
+                    src={goalReachedVideo}
+                    playsInline
+                    controls
+                    className="w-full h-full rounded-lg"
+                    onPlay={handleGoalVideoPlayPause}
+                    onPause={handleGoalVideoPlayPause}
+                  ></video>
+                  {!isGoalVideoPlaying && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg pointer-events-none">
+                      <button
+                        onClick={handleGoalVideoPlayButtonClick}
+                        className="pointer-events-auto p-4"
+                        aria-label="Play video"
+                      >
+                        <FaPlay className="text-white text-4xl drop-shadow-lg" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <img
+                  src={monopolyJailImage}
+                  alt="Mr. Monopoly in jail"
+                  className="w-48 h-auto mb-6"
+                />
+              )}
               {loadingSavings ? (
                 <p className="text-gray-600">Calculating savings...</p>
               ) : (
                 <div className="w-full max-w-3xl">
                   <div className="bg-gray-200 rounded-full h-4 relative">
                     <div
-                      className="bg-monopoly-red h-4 rounded-full"
+                      className={`${
+                        goalReached ? "bg-green-500" : "bg-monopoly-red"
+                      } h-4 rounded-full`}
                       style={{ width: `${progressPercentage}%` }}
                     />
                   </div>
