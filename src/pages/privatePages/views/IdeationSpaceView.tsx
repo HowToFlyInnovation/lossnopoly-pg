@@ -23,7 +23,10 @@ import IdeaTile, {
 } from "./IdeaTile"; // Import the new IdeaTile component and its types
 import { FaInfoCircle, FaComment, FaLightbulb } from "react-icons/fa"; // Added FaInfoCircle
 import { PiLegoBold } from "react-icons/pi";
-import { getEvaluationCategory } from "../../../lib/constants.ts";
+import {
+  getEvaluationCategory,
+  GAME_END_DATE,
+} from "../../../lib/constants.ts";
 
 // --- TYPE DEFINITIONS ---
 
@@ -265,6 +268,7 @@ const IdeationSpaceView: React.FC = () => {
   const [newlyCreatedIdeaId, setNewlyCreatedIdeaId] = useState<string | null>(
     null
   );
+  const isGameEnded = new Date() > GAME_END_DATE;
 
   useEffect(() => {
     const checkAdminRights = async () => {
@@ -651,8 +655,11 @@ const IdeationSpaceView: React.FC = () => {
           <button
             onClick={handleOpenModal}
             data-tour-id="ideation-space-share-idea"
+            disabled={isGameEnded}
             className={`font-semibold py-2 px-4 rounded-lg shadow-md w-full md:w-auto transition-colors duration-300 ${
-              hasSelection
+              isGameEnded
+                ? "bg-gray-400 cursor-not-allowed"
+                : hasSelection
                 ? "bg-green-500 hover:bg-green-600 text-white"
                 : "bg-red-500 hover:bg-red-700 text-white"
             }`}
@@ -661,6 +668,12 @@ const IdeationSpaceView: React.FC = () => {
           </button>
         </div>
       </div>
+      {isGameEnded && (
+        <div className="bg-red-500 text-white font-bold text-center p-4 mb-6">
+          The game has ended. You can still view ideas, but you can no longer
+          share ideas, comments, or evaluations.
+        </div>
+      )}
 
       <MasonryLayout gap={40}>
         {filteredIdeas.map((item, index) => (

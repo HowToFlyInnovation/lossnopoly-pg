@@ -29,7 +29,11 @@ import {
 import { PiLegoBold } from "react-icons/pi";
 import { AuthContext, type AuthContextType } from "../../context/AuthContext";
 import { db } from "../../firebase/config";
-import { costImpactOptions, feasibilityOptions } from "../../../lib/constants";
+import {
+  costImpactOptions,
+  feasibilityOptions,
+  GAME_END_DATE,
+} from "../../../lib/constants";
 
 // Define the structure of a player from inviteList
 interface InvitedPlayer {
@@ -135,6 +139,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
 }) => {
   const { user } = useContext(AuthContext) as AuthContextType;
   const [isAdmin, setIsAdmin] = useState(false);
+  const isGameEnded = new Date() > GAME_END_DATE;
 
   // --- STATE ---
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -973,6 +978,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
               userEvaluation ? "hidden" : ""
             }`}
             title="Evaluate Card"
+            disabled={isGameEnded}
           >
             Evaluate Card
           </button>
@@ -1124,19 +1130,28 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   value={newComment}
                   onChange={handleCommentInputChangeWithMention}
                   placeholder={
-                    user ? "Add a comment..." : "Please log in to comment"
+                    isGameEnded
+                      ? "Commenting is disabled."
+                      : user
+                      ? "Add a comment..."
+                      : "Please log in to comment"
                   }
                   className={`w-full p-2 rounded ${
                     isDarkMode
                       ? "bg-gray-700 text-white"
                       : "bg-gray-200 text-gray-800"
                   }`}
-                  disabled={!user || isPostingComment}
+                  disabled={!user || isPostingComment || isGameEnded}
                 />
                 <button
                   type="submit"
                   className="py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  disabled={!user || isPostingComment || !newComment.trim()}
+                  disabled={
+                    !user ||
+                    isPostingComment ||
+                    !newComment.trim() ||
+                    isGameEnded
+                  }
                 >
                   {isPostingComment ? "..." : "Post"}
                 </button>
@@ -1350,7 +1365,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                 <button
                   type="submit"
                   className="w-full py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isGameEnded}
                 >
                   {isSubmitting ? "Submitting..." : "Submit Evaluation"}
                 </button>

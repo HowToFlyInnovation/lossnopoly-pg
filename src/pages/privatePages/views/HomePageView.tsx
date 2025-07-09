@@ -12,7 +12,10 @@ import {
   FaQuestionCircle,
   FaPlay,
 } from "react-icons/fa";
-import { costImpactToMonetaryValue } from "../../../lib/constants";
+import {
+  costImpactToMonetaryValue,
+  GAME_END_DATE,
+} from "../../../lib/constants";
 
 // --- TYPE DEFINITIONS ---
 interface HomePageViewProps {
@@ -172,6 +175,7 @@ const HomePageView: React.FC<HomePageViewProps> = ({
   const savingsTrackerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const goalVideoRef = useRef<HTMLVideoElement>(null);
+  const isGameEnded = new Date() > GAME_END_DATE;
 
   const handlePlayButtonClick = () => {
     const video = videoRef.current;
@@ -382,6 +386,12 @@ const HomePageView: React.FC<HomePageViewProps> = ({
         data-tour-id="home-welcome"
         className="text-center relative px-5 pt-20 pb-12 bg-white shadow-md"
       >
+        {isGameEnded && (
+          <div className="bg-red-500 text-white font-bold text-center p-4 mb-6">
+            The game has ended. You can still view ideas, but you can no longer
+            share ideas, comments, or evaluations.
+          </div>
+        )}
         <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800">
           Welcome, {playerName || "TopHat"}!
         </h1>

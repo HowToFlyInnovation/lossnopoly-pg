@@ -1,5 +1,7 @@
 // src/lib/constants.ts
 
+export const GAME_END_DATE = new Date("2025-07-10T23:59:59+02:00"); // CEST is UTC+2
+
 export const costImpactOptions = [
   "Negative",
   "$0-$50K",
