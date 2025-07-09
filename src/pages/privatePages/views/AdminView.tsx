@@ -36,10 +36,13 @@ interface Player {
   userId: string;
   email: string;
   displayName: string;
+  id: string; // Add id to match player snapshot data
 }
 
 interface PlayerDetails {
   adminRights?: boolean;
+  email?: string;
+  team?: string;
 }
 
 interface Evaluation {
@@ -54,11 +57,11 @@ interface Evaluation {
 const genericTransformForExport = (data: any[]) => {
   return data.map((item) => {
     const newItem: { [key: string]: any } = { ...item };
-    // Remove email and approved fields for privacy/cleanliness
+    // Remove unnecessary/private fields
     delete newItem.email;
     delete newItem.EvaluatorEmail;
     delete newItem.IdeaOwnerEmail;
-    delete newItem.approved; // Removes the 'approved' column
+    delete newItem.approved;
 
     // Convert Timestamps to JS Dates for XLSX compatibility
     for (const key in newItem) {
@@ -75,11 +78,17 @@ const transformIdeasForExport = (
   data: any[],
   evaluationStats: {
     [key: string]: { count: number; impactSum: number; feasibilitySum: number };
-  }
+  },
+  playerTeams: { [email: string]: string },
+  userEmailMap: { [userId: string]: string }
 ) => {
   return data.map((item) => {
     const newItem = { ...item }; // item is already a clean object
     const stats = evaluationStats[item.id];
+
+    // Correctly find the team by chaining from userId -> email -> team
+    const ownerEmail = userEmailMap[item.userId];
+    newItem["Team"] = ownerEmail ? playerTeams[ownerEmail] || "N/A" : "N/A";
 
     // Add "New" and "Out of Scope" columns
     newItem["New"] = item.isNew ? "Yes" : "No";
@@ -144,7 +153,7 @@ const AdminView: React.FC = () => {
               setIsAdmin(true);
               const playersSnapshot = await getDocs(collection(db, "players"));
               const playersList = playersSnapshot.docs.map(
-                (doc) => doc.data() as Player
+                (doc) => ({ id: doc.id, ...doc.data() } as Player)
               );
               setPlayers(playersList);
             }
@@ -167,11 +176,17 @@ const AdminView: React.FC = () => {
         ...doc.data(),
       }));
 
-      // Apply generic transformations first
       let transformedData = genericTransformForExport(data);
 
-      // If downloading ideas, apply the additional specific transformations
       if (collectionName === "ideas") {
+        const [evaluationsSnapshot, playerDetailsSnapshot, playersSnapshot] =
+          await Promise.all([
+            getDocs(collection(db, "evaluations")),
+            getDocs(collection(db, "playerDetailsCollection")),
+            getDocs(collection(db, "players")),
+          ]);
+
+        // Create evaluation stats map
         const evaluationStats: {
           [key: string]: {
             count: number;
@@ -179,13 +194,9 @@ const AdminView: React.FC = () => {
             feasibilitySum: number;
           };
         } = {};
-        const evaluationsSnapshot = await getDocs(
-          collection(db, "evaluations")
-        );
         const evaluations = evaluationsSnapshot.docs.map(
           (doc) => ({ id: doc.id, ...doc.data() } as Evaluation)
         );
-
         evaluations.forEach((evaluation) => {
           const { ideaId, ImpactScore, FeasibilityScore } = evaluation;
           if (!evaluationStats[ideaId]) {
@@ -196,7 +207,6 @@ const AdminView: React.FC = () => {
             };
           }
           evaluationStats[ideaId].count++;
-          // Ensure scores are valid before calling indexOf
           if (ImpactScore && FeasibilityScore) {
             evaluationStats[ideaId].impactSum +=
               costImpactOptions.indexOf(ImpactScore);
@@ -205,9 +215,29 @@ const AdminView: React.FC = () => {
           }
         });
 
+        // Create email -> team map
+        const playerTeams: { [email: string]: string } = {};
+        playerDetailsSnapshot.forEach((doc) => {
+          const details = doc.data() as PlayerDetails;
+          if (details.email && details.team) {
+            playerTeams[details.email] = details.team;
+          }
+        });
+
+        // Create userId -> email map
+        const userEmailMap: { [userId: string]: string } = {};
+        playersSnapshot.forEach((doc) => {
+          const player = { id: doc.id, ...doc.data() } as Player;
+          if (player.id && player.email) {
+            userEmailMap[player.id] = player.email;
+          }
+        });
+
         transformedData = transformIdeasForExport(
           transformedData,
-          evaluationStats
+          evaluationStats,
+          playerTeams,
+          userEmailMap
         );
       }
 
