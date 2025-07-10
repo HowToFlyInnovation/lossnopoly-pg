@@ -17,6 +17,8 @@ import {
   serverTimestamp,
   query,
   where,
+  doc,
+  getDoc,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
@@ -30,6 +32,7 @@ const RegisterPage: React.FC = () => {
     React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isRegistrationClosed, setIsRegistrationClosed] = useState(false);
   const navigate = useNavigate();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -40,6 +43,20 @@ const RegisterPage: React.FC = () => {
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    const checkRegistrationDate = async () => {
+      const docRef = doc(db, "closingDates", "CloseRegistrationDate");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const closeDate = docSnap.data().date.toDate();
+        if (new Date() > closeDate) {
+          setIsRegistrationClosed(true);
+        }
+      }
+    };
+    checkRegistrationDate();
   }, []);
 
   const handlePasswordToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -56,6 +73,10 @@ const RegisterPage: React.FC = () => {
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isRegistrationClosed) {
+      setError("Registration is now closed.");
+      return;
+    }
     setError(null);
     setIsLoading(true);
 
@@ -318,7 +339,7 @@ const RegisterPage: React.FC = () => {
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || isRegistrationClosed}
             className="w-full py-2 px-4 bg-monopoly-red hover:bg-monopoly-red-darker text-white font-bold rounded-lg transition duration-300 cursor-pointer mt-6 disabled:opacity-75 disabled:cursor-not-allowed"
             style={{ background: "#E7262E" }}
           >
@@ -327,6 +348,8 @@ const RegisterPage: React.FC = () => {
                 <FaSpinner className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
                 Processing...
               </div>
+            ) : isRegistrationClosed ? (
+              "Registration Closed"
             ) : (
               "Register"
             )}
