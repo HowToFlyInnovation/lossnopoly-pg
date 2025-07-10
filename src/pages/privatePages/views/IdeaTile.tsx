@@ -975,7 +975,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
           <button
             onClick={() => setEvaluationVisible(true)} // Show the form to evaluate
             className={`w-full py-2 px-4 bg-gray-700 rounded-lg hover:bg-gray-800 text-white font-bold text-lg ${
-              userEvaluation ? "hidden" : ""
+              userEvaluation || isGameEnded ? "hidden" : ""
             }`}
             title="Evaluate Card"
             disabled={isGameEnded}
@@ -1130,28 +1130,19 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   value={newComment}
                   onChange={handleCommentInputChangeWithMention}
                   placeholder={
-                    isGameEnded
-                      ? "Commenting is disabled."
-                      : user
-                      ? "Add a comment..."
-                      : "Please log in to comment"
+                    user ? "Add a comment..." : "Please log in to comment"
                   }
                   className={`w-full p-2 rounded ${
                     isDarkMode
                       ? "bg-gray-700 text-white"
                       : "bg-gray-200 text-gray-800"
                   }`}
-                  disabled={!user || isPostingComment || isGameEnded}
+                  disabled={!user || isPostingComment}
                 />
                 <button
                   type="submit"
                   className="py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  disabled={
-                    !user ||
-                    isPostingComment ||
-                    !newComment.trim() ||
-                    isGameEnded
-                  }
+                  disabled={!user || isPostingComment || !newComment.trim()}
                 >
                   {isPostingComment ? "..." : "Post"}
                 </button>

@@ -670,8 +670,8 @@ const IdeationSpaceView: React.FC = () => {
       </div>
       {isGameEnded && (
         <div className="bg-red-500 text-white font-bold text-center p-4 mb-6">
-          The game has ended. You can still view ideas, but you can no longer
-          share ideas, comments, or evaluations.
+          The game has ended. You can still view ideas or share comments, but
+          you can no longer share ideas or evaluations.
         </div>
       )}
 

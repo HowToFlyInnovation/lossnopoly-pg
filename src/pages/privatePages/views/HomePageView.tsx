@@ -388,8 +388,8 @@ const HomePageView: React.FC<HomePageViewProps> = ({
       >
         {isGameEnded && (
           <div className="bg-red-500 text-white font-bold text-center p-4 mb-6">
-            The game has ended. You can still view ideas, but you can no longer
-            share ideas, comments, or evaluations.
+            The game has ended. You can still view ideas and share comments, but
+            you can no longer share ideas or evaluations.
           </div>
         )}
         <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800">
