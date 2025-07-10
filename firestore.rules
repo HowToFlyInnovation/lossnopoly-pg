@@ -11,6 +11,13 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/playerDetailsCollection/$(request.auth.token.email)).data.adminRights == true;
     }
 
+
+// Allow read access to closing dates for any authenticated user
+     match /closingDates/{document} {
+      allow read: if request.auth != null;
+      allow write: if false; // Or restrict to admin roles
+    }
+
     // --- MODIFIED RULES FOR 'ideas' COLLECTION ---
     match /ideas/{ideaId} {
       allow read, create: if request.auth != null && isInvited();

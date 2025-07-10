@@ -15,6 +15,7 @@ import {
   arrayRemove,
   getDocs as firestoreGetDocs, // Renamed to avoid conflict
   writeBatch,
+  getDoc,
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Import storage functions
 import DOMPurify from "dompurify";
@@ -29,11 +30,7 @@ import {
 import { PiLegoBold } from "react-icons/pi";
 import { AuthContext, type AuthContextType } from "../../context/AuthContext";
 import { db } from "../../firebase/config";
-import {
-  costImpactOptions,
-  feasibilityOptions,
-  GAME_END_DATE,
-} from "../../../lib/constants";
+import { costImpactOptions, feasibilityOptions } from "../../../lib/constants";
 
 // Define the structure of a player from inviteList
 interface InvitedPlayer {
@@ -139,7 +136,20 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
 }) => {
   const { user } = useContext(AuthContext) as AuthContextType;
   const [isAdmin, setIsAdmin] = useState(false);
-  const isGameEnded = new Date() > GAME_END_DATE;
+  const [closeCommentingDate, setCloseCommentingDate] = useState<Date | null>(
+    null
+  );
+  const [closeEvaluationDate, setCloseEvaluationDate] = useState<Date | null>(
+    null
+  );
+
+  const now = new Date();
+  const isCommentingEnded = closeCommentingDate
+    ? now > closeCommentingDate
+    : false;
+  const isEvaluationEnded = closeEvaluationDate
+    ? now > closeEvaluationDate
+    : false;
 
   // --- STATE ---
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -188,6 +198,25 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
   const isCreator = user?.uid === item.userId;
 
   useEffect(() => {
+    const fetchClosingDates = async () => {
+      const commentingDocRef = doc(db, "closingDates", "CloseCommentingDate");
+      const evaluationDocRef = doc(db, "closingDates", "CloseEvaluationDate");
+
+      const [commentingDocSnap, evaluationDocSnap] = await Promise.all([
+        getDoc(commentingDocRef),
+        getDoc(evaluationDocRef),
+      ]);
+
+      if (commentingDocSnap.exists()) {
+        setCloseCommentingDate(commentingDocSnap.data().date.toDate());
+      }
+      if (evaluationDocSnap.exists()) {
+        setCloseEvaluationDate(evaluationDocSnap.data().date.toDate());
+      }
+    };
+
+    fetchClosingDates();
+
     const checkAdminRights = async () => {
       if (user?.email) {
         const docSnap = await firestoreGetDocs(
@@ -406,7 +435,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !newComment.trim()) return;
+    if (!user || !newComment.trim() || isCommentingEnded) return;
 
     setIsPostingComment(true);
     try {
@@ -781,6 +810,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
               className={`font-semibold hover:text-blue-600 ${
                 isDarkMode ? "text-gray-400" : "text-gray-500"
               }`}
+              disabled={isCommentingEnded}
             >
               Reply
             </button>
@@ -791,6 +821,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   className={`font-semibold hover:text-blue-600 ${
                     isDarkMode ? "text-gray-400" : "text-gray-500"
                   }`}
+                  disabled={isCommentingEnded}
                 >
                   Edit
                 </button>
@@ -967,22 +998,23 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
         </div>
 
         {/* --- Evaluation Trigger Section --- */}
-        <div
-          className={`p-2 border-y ${
-            isDarkMode ? "border-gray-700" : "border-gray-300"
-          } ${isDarkMode ? "text-gray-300" : "text-gray-800"}`}
-        >
-          <button
-            onClick={() => setEvaluationVisible(true)} // Show the form to evaluate
-            className={`w-full py-2 px-4 bg-gray-700 rounded-lg hover:bg-gray-800 text-white font-bold text-lg ${
-              userEvaluation || isGameEnded ? "hidden" : ""
-            }`}
-            title="Evaluate Card"
-            disabled={isGameEnded}
+        {!isEvaluationEnded && (
+          <div
+            className={`p-2 border-y ${
+              isDarkMode ? "border-gray-700" : "border-gray-300"
+            } ${isDarkMode ? "text-gray-300" : "text-gray-800"}`}
           >
-            Evaluate Card
-          </button>
-        </div>
+            <button
+              onClick={() => setEvaluationVisible(true)}
+              className={`w-full py-2 px-4 bg-gray-700 rounded-lg hover:bg-gray-800 text-white font-bold text-lg ${
+                userEvaluation ? "hidden" : ""
+              }`}
+              title="Evaluate Card"
+            >
+              Evaluate Card
+            </button>
+          </div>
+        )}
 
         {/* --- Action Buttons Section (bottom bar) --- */}
         <div className={isDarkMode ? "bg-gray-800" : "bg-white"}>
@@ -1025,7 +1057,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   N
                 </button>
               )}
-              {userEvaluation && ( // Only show if already rated
+              {userEvaluation && (
                 <button
                   onClick={() => setEvaluationVisible(!evaluationVisible)}
                   className={`rounded-full w-12 h-12 flex items-center justify-center transition-colors
@@ -1109,7 +1141,7 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
               Comments ({comments.length})
             </h4>
             <form onSubmit={handleCommentSubmit} className="mb-4 relative">
-              {replyingTo && (
+              {replyingTo && !isCommentingEnded && (
                 <div
                   className={`text-sm mb-2 ${
                     isDarkMode ? "text-gray-400" : "text-gray-600"
@@ -1130,24 +1162,33 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                   value={newComment}
                   onChange={handleCommentInputChangeWithMention}
                   placeholder={
-                    user ? "Add a comment..." : "Please log in to comment"
+                    isCommentingEnded
+                      ? "Commenting has ended."
+                      : user
+                      ? "Add a comment..."
+                      : "Please log in to comment"
                   }
                   className={`w-full p-2 rounded ${
                     isDarkMode
                       ? "bg-gray-700 text-white"
                       : "bg-gray-200 text-gray-800"
                   }`}
-                  disabled={!user || isPostingComment}
+                  disabled={!user || isPostingComment || isCommentingEnded}
                 />
                 <button
                   type="submit"
                   className="py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  disabled={!user || isPostingComment || !newComment.trim()}
+                  disabled={
+                    !user ||
+                    isPostingComment ||
+                    !newComment.trim() ||
+                    isCommentingEnded
+                  }
                 >
                   {isPostingComment ? "..." : "Post"}
                 </button>
               </div>
-              {commentSuggestions.length > 0 && (
+              {commentSuggestions.length > 0 && !isCommentingEnded && (
                 <ul
                   className={`absolute z-10 w-full rounded-b-md max-h-40 overflow-y-auto mt-1 ${
                     isDarkMode
@@ -1303,8 +1344,8 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                     </div>
                   )}
               </div>
-            ) : (
-              // Show evaluation form
+            ) : !isEvaluationEnded ? (
+              // Show evaluation form if period is not ended
               <form onSubmit={handleEvaluationSubmit}>
                 <h5
                   className={`text-lg font-bold text-center mb-4 ${
@@ -1356,11 +1397,18 @@ const IdeaTile: React.FC<IdeaTileProps> = ({
                 <button
                   type="submit"
                   className="w-full py-2 px-4 bg-red-500 rounded-lg hover:bg-red-700 text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  disabled={isSubmitting || isGameEnded}
+                  disabled={isSubmitting}
                 >
                   {isSubmitting ? "Submitting..." : "Submit Evaluation"}
                 </button>
               </form>
+            ) : (
+              // Show message if evaluation period has ended and user hasn't evaluated
+              <div className="text-center p-4">
+                <p className={isDarkMode ? "text-gray-400" : "text-gray-600"}>
+                  The evaluation period has ended.
+                </p>
+              </div>
             )}
           </div>
         )}

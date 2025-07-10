@@ -1,5 +1,5 @@
 // src/pages/privatePages/views/IdeationSpaceView.tsx
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import {
   collection,
   doc,
@@ -10,6 +10,7 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { AuthContext } from "../../context/AuthContext";
@@ -23,10 +24,7 @@ import IdeaTile, {
 } from "./IdeaTile"; // Import the new IdeaTile component and its types
 import { FaInfoCircle, FaComment, FaLightbulb } from "react-icons/fa"; // Added FaInfoCircle
 import { PiLegoBold } from "react-icons/pi";
-import {
-  getEvaluationCategory,
-  GAME_END_DATE,
-} from "../../../lib/constants.ts";
+import { getEvaluationCategory } from "../../../lib/constants.ts";
 
 // --- TYPE DEFINITIONS ---
 
@@ -156,7 +154,8 @@ const InfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 the idea's cost impact and feasibility. You can also toggle
                 between your evaluation and the average score from all users.
                 But this option will only be available after you place your
-                evaluation.
+                evaluation. So if the Dollar sign is not there, click on
+                EVALUATE CARD first.
               </li>
               <li>
                 <strong>
@@ -260,7 +259,7 @@ const IdeationSpaceView: React.FC = () => {
   const [filter, setFilter] = useState("all");
   const [missionFilter, setMissionFilter] = useState("all");
   const [scopeFilter, setScopeFilter] = useState("all");
-  const [areaFilter, setAreaFilter] = useState("all"); // Changed to single string
+  const [areaFilter, setAreaFilter] = useState("all");
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
@@ -268,9 +267,50 @@ const IdeationSpaceView: React.FC = () => {
   const [newlyCreatedIdeaId, setNewlyCreatedIdeaId] = useState<string | null>(
     null
   );
-  const isGameEnded = new Date() > GAME_END_DATE;
+  const [closeIdeaSharingDate, setCloseIdeaSharingDate] = useState<Date | null>(
+    null
+  );
+  const [closeCommentingDate, setCloseCommentingDate] = useState<Date | null>(
+    null
+  );
+  const [closeEvaluationDate, setCloseEvaluationDate] = useState<Date | null>(
+    null
+  );
+
+  const now = new Date();
+  const isIdeaSharingEnded = closeIdeaSharingDate
+    ? now > closeIdeaSharingDate
+    : false;
+  const isCommentingEnded = closeCommentingDate
+    ? now > closeCommentingDate
+    : false;
+  const isEvaluationEnded = closeEvaluationDate
+    ? now > closeEvaluationDate
+    : false;
 
   useEffect(() => {
+    const fetchClosingDates = async () => {
+      const datesToFetch = [
+        "CloseIdeaSharingDate",
+        "CloseCommentingDate",
+        "CloseEvaluationDate",
+      ];
+      const dateSetters: { [key: string]: (date: Date) => void } = {
+        CloseIdeaSharingDate: setCloseIdeaSharingDate,
+        CloseCommentingDate: setCloseCommentingDate,
+        CloseEvaluationDate: setCloseEvaluationDate,
+      };
+
+      for (const dateName of datesToFetch) {
+        const docRef = doc(db, "closingDates", dateName);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          dateSetters[dateName](docSnap.data().date.toDate());
+        }
+      }
+    };
+    fetchClosingDates();
+
     const checkAdminRights = async () => {
       if (user?.email) {
         const q = query(
@@ -295,6 +335,7 @@ const IdeationSpaceView: React.FC = () => {
         ...doc.data(),
         id: doc.id,
       })) as Idea[];
+      // Default sort by creation date. Randomization will be applied later if needed.
       const sortedData = data.sort(
         (a, b) => b.createdAt.toMillis() - a.createdAt.toMillis()
       );
@@ -345,13 +386,28 @@ const IdeationSpaceView: React.FC = () => {
     };
   }, []);
 
+  // Memoize the processed ideas list to either be sorted or shuffled.
+  const processedIdeas = useMemo(() => {
+    if (isIdeaSharingEnded) {
+      // Fisher-Yates shuffle algorithm for random order on page refresh
+      const shuffled = [...ideasData];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+    // If idea sharing is open, return the default sorted list
+    return ideasData;
+  }, [ideasData, isIdeaSharingEnded]);
+
   useEffect(() => {
     if (!user) {
       setFilteredIdeas([]);
       return;
     }
 
-    let newFilteredData = [...ideasData];
+    let newFilteredData = [...processedIdeas];
 
     // Scope filter (for admins)
     if (isAdmin) {
@@ -512,9 +568,9 @@ const IdeationSpaceView: React.FC = () => {
     filter,
     missionFilter,
     scopeFilter,
-    areaFilter, // updated dependency
+    areaFilter,
     isAdmin,
-    ideasData,
+    processedIdeas, // Use the memoized list
     commentsData,
     evaluationsData,
     playerTaggings,
@@ -567,6 +623,20 @@ const IdeationSpaceView: React.FC = () => {
     console.log("Added to build deck:", card);
   };
 
+  const getBannerMessage = () => {
+    if (isEvaluationEnded) {
+      return "The game has ended. Thank you for your participation! You can still browse all the great ideas.";
+    }
+    if (isCommentingEnded) {
+      return "The commenting period has closed. You can no longer share comments, but you can still evaluate ideas.";
+    }
+    if (isIdeaSharingEnded) {
+      return "The idea sharing period has ended. You can still comment on and evaluate existing ideas.";
+    }
+    return null;
+  };
+
+  const bannerMessage = getBannerMessage();
   const isSelectionLocked = selectedIdeas.length >= 3;
   const hasSelection = selectedIdeas.length > 0;
 
@@ -655,9 +725,9 @@ const IdeationSpaceView: React.FC = () => {
           <button
             onClick={handleOpenModal}
             data-tour-id="ideation-space-share-idea"
-            disabled={isGameEnded}
+            disabled={isIdeaSharingEnded}
             className={`font-semibold py-2 px-4 rounded-lg shadow-md w-full md:w-auto transition-colors duration-300 ${
-              isGameEnded
+              isIdeaSharingEnded
                 ? "bg-gray-400 cursor-not-allowed"
                 : hasSelection
                 ? "bg-green-500 hover:bg-green-600 text-white"
@@ -668,10 +738,11 @@ const IdeationSpaceView: React.FC = () => {
           </button>
         </div>
       </div>
-      {isGameEnded && (
-        <div className="bg-red-500 text-white font-bold text-center p-4 mb-6">
-          The game has ended. You can still view ideas or share comments, but
-          you can no longer share ideas or evaluations.
+      {bannerMessage && (
+        <div className="bg-red-500 text-white font-bold text-center p-4 mb-6 rounded-lg">
+          {bannerMessage}
+          <br />
+          Ideas are now placed in a random order.
         </div>
       )}
 

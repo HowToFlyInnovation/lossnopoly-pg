@@ -12,10 +12,7 @@ import {
   FaQuestionCircle,
   FaPlay,
 } from "react-icons/fa";
-import {
-  costImpactToMonetaryValue,
-  GAME_END_DATE,
-} from "../../../lib/constants";
+import { costImpactToMonetaryValue } from "../../../lib/constants";
 
 // --- TYPE DEFINITIONS ---
 interface HomePageViewProps {
@@ -99,7 +96,7 @@ const HomePageView: React.FC<HomePageViewProps> = ({
   onStartTour,
 }) => {
   const [playerName, setPlayerName] = useState<string | null>(null);
-  const [companyName, setCompanyName] = useState<string | null>(null); // CORRECT: Initialize as null
+  const [companyName, setCompanyName] = useState<string | null>(null);
   const [challenges, setChallenges] = useState<Challenge[]>([
     {
       id: "supply-chain",
@@ -167,6 +164,16 @@ const HomePageView: React.FC<HomePageViewProps> = ({
   const [isInfoVisible, setIsInfoVisible] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [isGoalVideoPlaying, setIsGoalVideoPlaying] = useState(false);
+  const [closeIdeaSharingDate, setCloseIdeaSharingDate] = useState<Date | null>(
+    null
+  );
+  const [closeCommentingDate, setCloseCommentingDate] = useState<Date | null>(
+    null
+  );
+  const [closeEvaluationDate, setCloseEvaluationDate] = useState<Date | null>(
+    null
+  );
+
   const { user } = useContext(AuthContext) as AuthContextType;
   const [expandedChallengeId, setExpandedChallengeId] = useState<string | null>(
     null
@@ -175,7 +182,17 @@ const HomePageView: React.FC<HomePageViewProps> = ({
   const savingsTrackerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const goalVideoRef = useRef<HTMLVideoElement>(null);
-  const isGameEnded = new Date() > GAME_END_DATE;
+
+  const now = new Date();
+  const isIdeaSharingEnded = closeIdeaSharingDate
+    ? now > closeIdeaSharingDate
+    : false;
+  const isCommentingEnded = closeCommentingDate
+    ? now > closeCommentingDate
+    : false;
+  const isEvaluationEnded = closeEvaluationDate
+    ? now > closeEvaluationDate
+    : false;
 
   const handlePlayButtonClick = () => {
     const video = videoRef.current;
@@ -212,6 +229,30 @@ const HomePageView: React.FC<HomePageViewProps> = ({
   const handleChallengeClick = (id: string) => {
     setExpandedChallengeId(id);
   };
+
+  useEffect(() => {
+    const fetchClosingDates = async () => {
+      const datesToFetch = [
+        "CloseIdeaSharingDate",
+        "CloseCommentingDate",
+        "CloseEvaluationDate",
+      ];
+      const dateSetters: { [key: string]: (date: Date) => void } = {
+        CloseIdeaSharingDate: setCloseIdeaSharingDate,
+        CloseCommentingDate: setCloseCommentingDate,
+        CloseEvaluationDate: setCloseEvaluationDate,
+      };
+
+      for (const dateName of datesToFetch) {
+        const docRef = doc(db, "closingDates", dateName);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          dateSetters[dateName](docSnap.data().date.toDate());
+        }
+      }
+    };
+    fetchClosingDates();
+  }, []);
 
   useEffect(() => {
     const fetchPlayerData = async () => {
@@ -368,6 +409,21 @@ const HomePageView: React.FC<HomePageViewProps> = ({
     }).format(value);
   };
 
+  const getDisclaimerMessage = () => {
+    if (isEvaluationEnded) {
+      return "The game has ended. Thank you for your participation! You can still browse all the great ideas.";
+    }
+    if (isCommentingEnded) {
+      return "The commenting period has closed. You can no longer share comments, but you can still evaluate ideas.";
+    }
+    if (isIdeaSharingEnded) {
+      return "The idea sharing period has ended. You can still comment on and evaluate existing ideas.";
+    }
+    return null;
+  };
+
+  const disclaimerMessage = getDisclaimerMessage();
+
   const progressPercentage = Math.min(
     (totalIdentifiedSavings / TARGET_SAVINGS_VALUE) * 100,
     100
@@ -386,10 +442,9 @@ const HomePageView: React.FC<HomePageViewProps> = ({
         data-tour-id="home-welcome"
         className="text-center relative px-5 pt-20 pb-12 bg-white shadow-md"
       >
-        {isGameEnded && (
+        {disclaimerMessage && (
           <div className="bg-red-500 text-white font-bold text-center p-4 mb-6">
-            The game has ended. You can still view ideas and share comments, but
-            you can no longer share ideas or evaluations.
+            {disclaimerMessage}
           </div>
         )}
         <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800">
